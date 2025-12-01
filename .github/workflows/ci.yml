@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      etcd:
+        image: bitnami/etcd:latest
+        ports:
+          - 2379:2379
+        env:
+          ALLOW_NONE_AUTHENTICATION: yes
+          ETCD_ADVERTISE_CLIENT_URLS: http://0.0.0.0:2379
+          ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+        options: >-
+          --health-cmd "etcdctl endpoint health"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for better relevancy of analysis
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        env:
+          ETCD_ENDPOINTS: http://localhost:2379
+
+      - name: Run golangci-lint for SonarCloud
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --out-format checkstyle:golangci-lint-report.xml --timeout=5m
+        continue-on-error: true
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.out
+          flags: unittests
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: Build
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -v -o etu-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etu-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: etu-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
+          retention-days: 7

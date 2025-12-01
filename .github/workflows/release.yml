@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          BINARY_NAME="etu"
+          if [ "$GOOS" = "windows" ]; then
+            BINARY_NAME="etu.exe"
+          fi
+
+          go build -v -ldflags="-s -w -X main.version=$VERSION" -o $BINARY_NAME .
+
+          # Create archive
+          ARCHIVE_NAME="etu_${VERSION#v}_${GOOS}_${{ matrix.goarch }}"
+          if [ "$GOOS" = "windows" ]; then
+            zip "${ARCHIVE_NAME}.zip" $BINARY_NAME README.md LICENSE
+            echo "ASSET=${ARCHIVE_NAME}.zip" >> $GITHUB_ENV
+          else
+            tar czf "${ARCHIVE_NAME}.tar.gz" $BINARY_NAME README.md LICENSE
+            echo "ASSET=${ARCHIVE_NAME}.tar.gz" >> $GITHUB_ENV
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ASSET }}
+          path: ${{ env.ASSET }}
+          retention-days: 1
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git describe --abbrev=0 --tags ${GITHUB_REF}^ 2>/dev/null || echo "")
+          if [ -z "$PREVIOUS_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            CHANGELOG=$(git log ${PREVIOUS_TAG}..${GITHUB_REF} --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## What's Changed
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ## Installation
+
+            ### Linux (x86_64)
+            ```bash
+            curl -LO https://github.com/kazuma-desu/etu/releases/download/${{ steps.version.outputs.VERSION }}/etu_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz
+            tar xzf etu_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz
+            sudo mv etu /usr/local/bin/
+            ```
+
+            ### macOS (Apple Silicon)
+            ```bash
+            curl -LO https://github.com/kazuma-desu/etu/releases/download/${{ steps.version.outputs.VERSION }}/etu_${{ steps.version.outputs.VERSION }}_darwin_arm64.tar.gz
+            tar xzf etu_${{ steps.version.outputs.VERSION }}_darwin_arm64.tar.gz
+            sudo mv etu /usr/local/bin/
+            ```
+
+            ### Windows
+            Download the zip file and extract it to a directory in your PATH.
+
+            **Full Changelog**: https://github.com/kazuma-desu/etu/compare/${{ steps.changelog.outputs.PREVIOUS_TAG }}...${{ steps.version.outputs.VERSION }}
+          files: |
+            artifacts/**/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
