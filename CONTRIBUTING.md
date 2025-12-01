@@ -208,10 +208,13 @@ Integration tests require a running etcd instance:
 ```bash
 # Start etcd with Docker
 docker run -d --name etcd-test -p 2379:2379 \
-  -e ALLOW_NONE_AUTHENTICATION=yes bitnami/etcd:latest
+  quay.io/coreos/etcd:v3.5.12 \
+  /usr/local/bin/etcd \
+  --listen-client-urls http://0.0.0.0:2379 \
+  --advertise-client-urls http://0.0.0.0:2379
 
 # Run integration tests
-go test -v ./... -tags=integration
+go test -v ./...
 
 # Clean up
 docker rm -f etcd-test

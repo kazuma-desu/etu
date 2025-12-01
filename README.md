@@ -227,7 +227,10 @@ go test ./...
 
 # Test with local etcd
 docker run -d --name etcd-test -p 2379:2379 \
-  -e ALLOW_NONE_AUTHENTICATION=yes bitnami/etcd:latest
+  quay.io/coreos/etcd:v3.5.12 \
+  /usr/local/bin/etcd \
+  --listen-client-urls http://0.0.0.0:2379 \
+  --advertise-client-urls http://0.0.0.0:2379
 
 ./etu login dev --endpoints http://localhost:2379 --no-auth
 ./etu apply -f examples/sample.txt --dry-run
