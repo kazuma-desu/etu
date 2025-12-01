@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/validator"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/tree"
 	"github.com/charmbracelet/log"
 )
 
@@ -63,6 +65,25 @@ var (
 
 	infoPanelStyle = panelStyle.Copy().
 			BorderForeground(colorInfo)
+
+	// Tree styles
+	treeRootStyle = lipgloss.NewStyle().
+			Foreground(colorPrimary).
+			Bold(true)
+
+	treeFolderStyle = lipgloss.NewStyle().
+			Foreground(colorPrimary).
+			Bold(true)
+
+	treeKeyStyle = lipgloss.NewStyle().
+			Foreground(colorHighlight).
+			Bold(true)
+
+	treeValueStyle = lipgloss.NewStyle().
+			Foreground(colorMuted)
+
+	treeEnumeratorStyle = lipgloss.NewStyle().
+				Foreground(colorMuted)
 )
 
 // PrintConfigPairs prints configuration pairs in a human-readable format
@@ -253,4 +274,96 @@ func PrintSecurityWarning() {
 	fmt.Println("    - Use --password flag at runtime instead of storing it")
 	fmt.Println("    - Use ETCD_PASSWORD environment variable")
 	fmt.Println("    - Ensure config file permissions are restrictive (0600)")
+}
+
+// PrintTree renders etcd configuration as a tree structure
+func PrintTree(pairs []*models.ConfigPair) error {
+	log.Info(fmt.Sprintf("Found %d configuration items", len(pairs)))
+	fmt.Println()
+
+	t := buildEtcdTree(pairs)
+	fmt.Println(t)
+	return nil
+}
+
+// buildEtcdTree builds a lipgloss tree from config pairs
+func buildEtcdTree(pairs []*models.ConfigPair) *tree.Tree {
+	// Create root
+	root := tree.Root("/").
+		RootStyle(treeRootStyle).
+		Enumerator(tree.RoundedEnumerator).
+		EnumeratorStyle(treeEnumeratorStyle)
+
+	// Build hierarchical structure
+	pathMap := make(map[string]*tree.Tree)
+	pathMap["/"] = root
+
+	// Sort pairs by path for consistent output
+	sorted := make([]*models.ConfigPair, len(pairs))
+	copy(sorted, pairs)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Key < sorted[j].Key
+	})
+
+	for _, pair := range sorted {
+		parts := strings.Split(strings.Trim(pair.Key, "/"), "/")
+		currentPath := ""
+
+		for i, part := range parts {
+			if part == "" {
+				continue
+			}
+
+			parentPath := currentPath
+			if parentPath == "" {
+				parentPath = "/"
+			}
+			currentPath = currentPath + "/" + part
+
+			// Check if this path already exists
+			if _, exists := pathMap[currentPath]; !exists {
+				parent := pathMap[parentPath]
+
+				// Last part = leaf node with value
+				if i == len(parts)-1 {
+					valueStr := formatTreeValue(pair.Value)
+					display := treeKeyStyle.Render(part) + " " + treeValueStyle.Render(valueStr)
+					leaf := tree.New().Root(display)
+					parent.Child(leaf)
+				} else {
+					// Intermediate folder
+					folder := tree.New().
+						Root(treeFolderStyle.Render(part + "/")).
+						EnumeratorStyle(treeEnumeratorStyle)
+					parent.Child(folder)
+					pathMap[currentPath] = folder
+				}
+			}
+		}
+	}
+
+	return root
+}
+
+// formatTreeValue formats a value for tree display
+func formatTreeValue(val any) string {
+	switch v := val.(type) {
+	case string:
+		if strings.Contains(v, "\n") {
+			lines := strings.Split(strings.TrimSpace(v), "\n")
+			return "[" + fmt.Sprintf("%d lines", len(lines)) + "]"
+		}
+		if len(v) > 50 {
+			return v[:47] + "..."
+		}
+		return v
+	case map[string]any:
+		return "[dict: " + fmt.Sprintf("%d keys", len(v)) + "]"
+	default:
+		str := fmt.Sprintf("%v", v)
+		if len(str) > 50 {
+			return str[:47] + "..."
+		}
+		return str
+	}
 }

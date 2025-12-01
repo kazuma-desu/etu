@@ -14,6 +14,7 @@ import (
 
 var (
 	parseOpts models.ParseOptions
+	treeView  bool
 
 	parseCmd = &cobra.Command{
 		Use:   "parse -f FILE",
@@ -23,10 +24,14 @@ var (
 The parse command is useful for:
   - Inspecting configuration file contents
   - Converting between formats (with --json flag)
+  - Visualizing hierarchical structure (with --tree flag)
   - Debugging parser behavior
   - Integrating with other tools via JSON output`,
 		Example: `  # Parse and display configuration
   etu parse -f config.txt
+
+  # Display as a tree view
+  etu parse -f config.txt --tree
 
   # Output as JSON for scripting
   etu parse -f config.txt --json
@@ -46,8 +51,11 @@ func init() {
 		"file format: auto, etcdctl (overrides config)")
 	parseCmd.Flags().BoolVar(&parseOpts.JSONOutput, "json", false,
 		"output as JSON")
+	parseCmd.Flags().BoolVar(&treeView, "tree", false,
+		"display as tree view")
 
 	parseCmd.MarkFlagRequired("file")
+	parseCmd.MarkFlagsMutuallyExclusive("json", "tree")
 }
 
 func runParse(cmd *cobra.Command, args []string) error {
@@ -87,6 +95,11 @@ func runParse(cmd *cobra.Command, args []string) error {
 	pairs, err := parser.Parse(parseOpts.FilePath)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
+	}
+
+	// Display based on output format
+	if treeView {
+		return output.PrintTree(pairs)
 	}
 
 	return output.PrintConfigPairs(pairs, parseOpts.JSONOutput)

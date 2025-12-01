@@ -9,6 +9,7 @@
 
 - Multi-context management for multiple clusters
 - Beautiful terminal output using [Charm](https://charm.sh/)
+- Tree view visualization for hierarchical configuration paths
 - Comprehensive validation (keys, values, JSON/YAML, URLs)
 - Dry run mode to preview changes
 - JSON output for automation
@@ -36,6 +37,9 @@ etu login dev --endpoints http://localhost:2379 --no-auth
 # Parse and preview configuration
 etu parse -f config.txt
 
+# View configuration as a tree
+etu parse -f config.txt --tree
+
 # Validate before applying
 etu validate -f config.txt
 
@@ -58,10 +62,16 @@ etu config delete-context <context>
 ### Configuration Operations
 
 ```bash
-etu parse -f <file> [--json]          # Parse and display
+etu parse -f <file> [--json|--tree]   # Parse and display
 etu validate -f <file> [--strict]     # Validate configuration
 etu apply -f <file> [--dry-run]       # Apply to etcd
 ```
+
+#### Parse Output Formats
+
+- **Default**: List view showing all key-value pairs
+- **Tree view** (`--tree`): Hierarchical visualization of configuration paths
+- **JSON** (`--json`): Machine-readable output for automation
 
 ### Settings
 
@@ -119,6 +129,30 @@ es: Bienvenido
 ```
 
 Features: Auto type inference, multi-line values, dictionary parsing.
+
+### Visualizing Configuration
+
+Use the `--tree` flag to view your configuration hierarchically:
+
+```bash
+etu parse -f config.txt --tree
+```
+
+Output:
+```
+/
+╰──app/
+   ├──config/
+   │  ├──database/
+   │  │  ├──host db.example.com
+   │  │  └──port 5432
+   │  └──api/
+   │     └──base_url https://api.example.com
+   └──i18n/
+      └──welcome [dict: 2 keys]
+```
+
+This makes it easy to understand the hierarchical structure of your etcd paths at a glance.
 
 ## Security
 
