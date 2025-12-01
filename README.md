@@ -1,11 +1,11 @@
 # etu
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev/)
 
 **Etcd Terminal Utility**
 
-A modern, production-ready CLI tool and Go library for managing etcd configurations. Built with Go and designed with Kubernetes administrators in mind.
+A modern, production-ready CLI tool and Go library for managing etcd configurations. Built with Go and designed with kubectl like UX in mind.
 
 ## Features
 
@@ -323,7 +323,7 @@ etu/
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.24 or later
 - Access to an etcd cluster (for testing apply operations)
 
 ### Building
