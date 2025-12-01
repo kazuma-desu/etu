@@ -1,7 +1,7 @@
 # etu
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev/)
 [![CI](https://github.com/kazuma-desu/etu/workflows/CI/badge.svg)](https://github.com/kazuma-desu/etu/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kazuma-desu/etu)](https://goreportcard.com/report/github.com/kazuma-desu/etu)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kazuma-desu_etu&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kazuma-desu_etu)

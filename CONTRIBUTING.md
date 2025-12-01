@@ -27,7 +27,7 @@ Be respectful, inclusive, and professional in all interactions.
 
 ### Prerequisites
 
-- Go 1.25 or later
+- Go 1.24 or later
 - golangci-lint (for linting)
 - Docker (optional, for integration tests)
 

@@ -1,6 +1,6 @@
 module github.com/kazuma-desu/etu
 
-go 1.25.1
+go 1.24.0
 
 require (
 	github.com/charmbracelet/lipgloss v1.1.0
