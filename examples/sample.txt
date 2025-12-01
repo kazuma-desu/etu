@@ -1,0 +1,16 @@
+/app/config/database/host
+db.example.com
+/app/config/database/port
+5432
+/app/config/features/max_retries
+5
+/app/config/features/timeout_seconds
+30
+/app/i18n/welcome_message
+en: Welcome
+es: Bienvenido
+fr: Bienvenue
+/app/config/api/base_url
+https://api.example.com
+/app/config/feature_flags/enable_beta
+true

@@ -1,0 +1,54 @@
+# Binaries
+etu
+etu-*
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+coverage.txt
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+dist/
+bin/
+build/
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS specific
+Thumbs.db
+.Trash-*
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+docs/
+
+# Don't ignore empty internal directory
+!internal/.gitkeep

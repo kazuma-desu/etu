@@ -1,0 +1,171 @@
+package config
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"gopkg.in/yaml.v3"
+)
+
+// ContextConfig represents configuration for a single context
+type ContextConfig struct {
+	Endpoints []string `yaml:"endpoints"`
+	Username  string   `yaml:"username,omitempty"`
+	Password  string   `yaml:"password,omitempty"`
+}
+
+// Config represents the entire configuration file
+type Config struct {
+	CurrentContext string                    `yaml:"current-context,omitempty"`
+	LogLevel       string                    `yaml:"log-level,omitempty"`
+	DefaultFormat  string                    `yaml:"default-format,omitempty"`
+	Strict         bool                      `yaml:"strict,omitempty"`
+	NoValidate     bool                      `yaml:"no-validate,omitempty"`
+	Contexts       map[string]*ContextConfig `yaml:"contexts"`
+}
+
+// GetConfigPath returns the path to the config file
+func GetConfigPath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	configDir := filepath.Join(homeDir, ".config", "etu")
+	return filepath.Join(configDir, "config.yaml"), nil
+}
+
+// LoadConfig loads the configuration from the config file
+func LoadConfig() (*Config, error) {
+	configPath, err := GetConfigPath()
+	if err != nil {
+		return nil, err
+	}
+
+	// If config doesn't exist, return empty config
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return &Config{
+			Contexts: make(map[string]*ContextConfig),
+		}, nil
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	// Ensure contexts map is initialized
+	if cfg.Contexts == nil {
+		cfg.Contexts = make(map[string]*ContextConfig)
+	}
+
+	return &cfg, nil
+}
+
+// SaveConfig saves the configuration to the config file
+func SaveConfig(cfg *Config) error {
+	configPath, err := GetConfigPath()
+	if err != nil {
+		return err
+	}
+
+	// Create config directory if it doesn't exist
+	configDir := filepath.Dir(configPath)
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	// Write with restricted permissions (0600 = rw-------)
+	if err := os.WriteFile(configPath, data, 0600); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}
+
+// GetCurrentContext returns the current context configuration
+func GetCurrentContext() (*ContextConfig, string, error) {
+	cfg, err := LoadConfig()
+	if err != nil {
+		return nil, "", err
+	}
+
+	if cfg.CurrentContext == "" {
+		return nil, "", nil
+	}
+
+	ctxConfig, exists := cfg.Contexts[cfg.CurrentContext]
+	if !exists {
+		return nil, "", fmt.Errorf("current context %q not found in config", cfg.CurrentContext)
+	}
+
+	return ctxConfig, cfg.CurrentContext, nil
+}
+
+// SetContext adds or updates a context in the config
+func SetContext(name string, ctxConfig *ContextConfig, makeCurrent bool) error {
+	cfg, err := LoadConfig()
+	if err != nil {
+		return err
+	}
+
+	cfg.Contexts[name] = ctxConfig
+
+	if makeCurrent || cfg.CurrentContext == "" {
+		cfg.CurrentContext = name
+	}
+
+	return SaveConfig(cfg)
+}
+
+// DeleteContext removes a context from the config
+func DeleteContext(name string) error {
+	cfg, err := LoadConfig()
+	if err != nil {
+		return err
+	}
+
+	if _, exists := cfg.Contexts[name]; !exists {
+		return fmt.Errorf("context %q not found", name)
+	}
+
+	delete(cfg.Contexts, name)
+
+	// If we deleted the current context, clear it
+	if cfg.CurrentContext == name {
+		cfg.CurrentContext = ""
+		// Optionally set to first available context
+		for ctxName := range cfg.Contexts {
+			cfg.CurrentContext = ctxName
+			break
+		}
+	}
+
+	return SaveConfig(cfg)
+}
+
+// UseContext switches the current context
+func UseContext(name string) error {
+	cfg, err := LoadConfig()
+	if err != nil {
+		return err
+	}
+
+	if _, exists := cfg.Contexts[name]; !exists {
+		return fmt.Errorf("context %q not found", name)
+	}
+
+	cfg.CurrentContext = name
+	return SaveConfig(cfg)
+}
