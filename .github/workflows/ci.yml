@@ -28,9 +28,9 @@ jobs:
           cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.6
           args: --timeout=5m
 
   test:
@@ -71,9 +71,9 @@ jobs:
           ETCD_ENDPOINTS: http://localhost:2379
 
       - name: Run golangci-lint for SonarCloud
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.6
           args: --out-format checkstyle:golangci-lint-report.xml --timeout=5m
         continue-on-error: true
 

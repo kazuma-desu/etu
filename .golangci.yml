@@ -1,15 +1,15 @@
-version: "2"
-
 run:
   timeout: 5m
 
 linters:
   enable:
     - errcheck
+    - gosimple
     - govet
     - ineffassign
     - staticcheck
     - unused
+    - goimports
     - misspell
     - gocritic
     - revive
@@ -17,6 +17,18 @@ linters:
     - unparam
     - whitespace
 
-formatters:
-  enable:
-    - goimports
+linters-settings:
+  govet:
+    enable-all: true
+  goimports:
+    local-prefixes: github.com/kazuma-desu/etu
+  misspell:
+    locale: US
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+  max-same-issues: 0
