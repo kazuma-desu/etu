@@ -1,34 +1,45 @@
-run:
-  timeout: 5m
-
+version: "2"
 linters:
   enable:
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - unused
-    - goimports
-    - misspell
     - gocritic
+    - misspell
     - revive
     - unconvert
     - unparam
     - whitespace
-
-linters-settings:
-  govet:
-    enable-all: true
-  goimports:
-    local-prefixes: github.com/kazuma-desu/etu
-  misspell:
-    locale: US
-
+  settings:
+    govet:
+      enable-all: true
+    misspell:
+      locale: US
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+          - gosec
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
   max-same-issues: 0
+formatters:
+  enable:
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/kazuma-desu/etu
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
