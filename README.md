@@ -1,7 +1,12 @@
 # etu
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev/)
+[![CI](https://github.com/kazuma-desu/etu/workflows/CI/badge.svg)](https://github.com/kazuma-desu/etu/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kazuma-desu/etu)](https://goreportcard.com/report/github.com/kazuma-desu/etu)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kazuma-desu_etu&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kazuma-desu_etu)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=kazuma-desu_etu&metric=coverage)](https://sonarcloud.io/summary/new_code?id=kazuma-desu_etu)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=kazuma-desu_etu&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=kazuma-desu_etu)
 
 **Etcd Terminal Utility** - A modern CLI tool and Go library for managing etcd configurations with a kubectl-like UX.
 
@@ -17,16 +22,37 @@
 
 ## Installation
 
-```bash
-# Using go install
-go install github.com/kazuma-desu/etu@latest
+### Using go install
 
-# From source
+```bash
+go install github.com/kazuma-desu/etu@latest
+```
+
+### Download Binary
+
+Download pre-built binaries for your platform from the [releases page](https://github.com/kazuma-desu/etu/releases).
+
+```bash
+# Linux (x86_64)
+VERSION=v0.1.0  # Replace with latest version
+curl -LO https://github.com/kazuma-desu/etu/releases/download/${VERSION}/etu_${VERSION#v}_linux_amd64.tar.gz
+tar xzf etu_${VERSION#v}_linux_amd64.tar.gz
+sudo mv etu /usr/local/bin/
+
+# macOS (Apple Silicon)
+VERSION=v0.1.0  # Replace with latest version
+curl -LO https://github.com/kazuma-desu/etu/releases/download/${VERSION}/etu_${VERSION#v}_darwin_arm64.tar.gz
+tar xzf etu_${VERSION#v}_darwin_arm64.tar.gz
+sudo mv etu /usr/local/bin/
+
+```
+
+### From Source
+
+```bash
 git clone https://github.com/kazuma-desu/etu.git
 cd etu && go build -o etu .
 ```
-
-Download binaries from the [releases page](https://github.com/kazuma-desu/etu/releases).
 
 ## Quick Start
 
@@ -154,13 +180,6 @@ Output:
 
 This makes it easy to understand the hierarchical structure of your etcd paths at a glance.
 
-## Security
-
-Passwords are stored in plain text in config (like Docker). For better security:
-- Use `--password` flag at runtime
-- Use `ETCD_PASSWORD` environment variable
-- Avoid storing credentials in config for production
-
 ## Using as a Library
 
 ```go
@@ -224,7 +243,8 @@ docker run -d --name etcd-test -p 2379:2379 \
 
 ## Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and release process.
+
 
 ## License
 
