@@ -140,7 +140,10 @@ func runLogin(_ *cobra.Command, args []string) {
 		log.Fatal("Failed to save configuration", "error", err)
 	}
 
-	configPath, _ := config.GetConfigPath()
+	configPath, err := config.GetConfigPath()
+	if err != nil {
+		log.Fatal("Failed to get config path", "error", err)
+	}
 
 	if !loginNoTest && testPassed {
 		output.Success("Connected successfully")

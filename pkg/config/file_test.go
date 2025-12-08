@@ -63,7 +63,8 @@ func TestSaveAndLoadConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify file exists
-	configPath, _ := GetConfigPath()
+	configPath, err := GetConfigPath()
+	require.NoError(t, err)
 	_, err = os.Stat(configPath)
 	require.NoError(t, err)
 
@@ -93,7 +94,8 @@ func TestSaveConfig_CreatesDirectory(t *testing.T) {
 	err := SaveConfig(cfg)
 	require.NoError(t, err)
 
-	configPath, _ := GetConfigPath()
+	configPath, err := GetConfigPath()
+	require.NoError(t, err)
 	configDir := filepath.Dir(configPath)
 
 	// Verify directory exists
@@ -118,7 +120,8 @@ func TestSaveConfig_FilePermissions(t *testing.T) {
 	err := SaveConfig(cfg)
 	require.NoError(t, err)
 
-	configPath, _ := GetConfigPath()
+	configPath, err := GetConfigPath()
+	require.NoError(t, err)
 	info, err := os.Stat(configPath)
 	require.NoError(t, err)
 

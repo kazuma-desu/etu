@@ -61,80 +61,80 @@ func init() {
 	}
 }
 
-func runApply(cmd *cobra.Command, _ []string) error {
-	ctx := context.Background()
-
-	// Load config for defaults
-	appCfg, _ := config.LoadConfig()
-
-	// Apply config defaults if flags not set
-	// Priority: flag > config > default
-	format := applyOpts.Format
-	if format == "" && appCfg != nil && appCfg.DefaultFormat != "" {
-		format = models.FormatType(appCfg.DefaultFormat)
-	}
-	if format == "" {
-		format = models.FormatAuto
+func resolveApplyOptions(cmd *cobra.Command) (models.ApplyOptions, error) {
+	appCfg, err := config.LoadConfig()
+	if err != nil {
+		log.Warn("Failed to load config, using defaults", "error", err)
 	}
 
-	noValidate := applyOpts.NoValidate
+	opts := applyOpts
+
+	// Resolve format: flag > config > default
+	if opts.Format == "" && appCfg != nil && appCfg.DefaultFormat != "" {
+		opts.Format = models.FormatType(appCfg.DefaultFormat)
+	}
+	if opts.Format == "" {
+		opts.Format = models.FormatAuto
+	}
+
+	// Resolve no-validate flag
 	if !cmd.Flags().Changed("no-validate") && appCfg != nil {
-		noValidate = appCfg.NoValidate
+		opts.NoValidate = appCfg.NoValidate
 	}
 
-	strict := applyOpts.Strict
+	// Resolve strict flag
 	if !cmd.Flags().Changed("strict") && appCfg != nil {
-		strict = appCfg.Strict
+		opts.Strict = appCfg.Strict
 	}
 
-	// Parse the file
+	return opts, nil
+}
+
+func parseConfigurationFile(format models.FormatType) ([]*models.ConfigPair, error) {
 	registry := parsers.NewRegistry()
+
 	if format == models.FormatAuto {
-		var err error
-		format, err = registry.DetectFormat(applyOpts.FilePath)
+		detectedFormat, err := registry.DetectFormat(applyOpts.FilePath)
 		if err != nil {
-			return fmt.Errorf("failed to detect format: %w", err)
+			return nil, fmt.Errorf("failed to detect format: %w", err)
 		}
+		format = detectedFormat
 		log.Debug("Auto-detected format", "format", format)
 	}
 
 	parser, err := registry.GetParser(format)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Info("Parsing configuration", "file", applyOpts.FilePath, "format", format)
 	pairs, err := parser.Parse(applyOpts.FilePath)
 	if err != nil {
-		return fmt.Errorf("failed to parse file: %w", err)
+		return nil, fmt.Errorf("failed to parse file: %w", err)
 	}
 
 	log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
+	return pairs, nil
+}
 
-	// Validate unless --no-validate is set
-	if !noValidate {
-		log.Info("Validating configuration")
-		v := validator.NewValidator(strict)
-		result := v.Validate(pairs)
+func validateConfiguration(pairs []*models.ConfigPair, strict bool) error {
+	log.Info("Validating configuration")
+	v := validator.NewValidator(strict)
+	result := v.Validate(pairs)
 
-		output.PrintValidationResult(result, strict)
+	output.PrintValidationResult(result, strict)
 
-		if !result.Valid {
-			log.Error("Validation failed - not applying to etcd")
-			os.Exit(1)
-		}
-
-		log.Info("Validation passed")
-		fmt.Println()
+	if !result.Valid {
+		log.Error("Validation failed - not applying to etcd")
+		os.Exit(1)
 	}
 
-	// Dry run or apply
-	if applyOpts.DryRun {
-		output.PrintDryRun(pairs)
-		return nil
-	}
+	log.Info("Validation passed")
+	fmt.Println()
+	return nil
+}
 
-	// Apply to etcd
+func applyToEtcd(ctx context.Context, pairs []*models.ConfigPair) error {
 	log.Info("Connecting to etcd")
 	cfg, err := config.GetEtcdConfigWithContext(contextName)
 	if err != nil {
@@ -156,6 +156,32 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	}
 
 	output.PrintApplySuccess(len(pairs))
-
 	return nil
+}
+
+func runApply(cmd *cobra.Command, _ []string) error {
+	ctx := context.Background()
+
+	opts, err := resolveApplyOptions(cmd)
+	if err != nil {
+		return err
+	}
+
+	pairs, err := parseConfigurationFile(opts.Format)
+	if err != nil {
+		return err
+	}
+
+	if !opts.NoValidate {
+		if err := validateConfiguration(pairs, opts.Strict); err != nil {
+			return err
+		}
+	}
+
+	if opts.DryRun {
+		output.PrintDryRun(pairs)
+		return nil
+	}
+
+	return applyToEtcd(ctx, pairs)
 }

@@ -257,7 +257,10 @@ func runViewConfig(_ *cobra.Command, _ []string) {
 		log.Fatal("Failed to load configuration", "error", err)
 	}
 
-	configPath, _ := config.GetConfigPath()
+	configPath, err := config.GetConfigPath()
+	if err != nil {
+		log.Fatal("Failed to get config path", "error", err)
+	}
 
 	// Print header
 	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).Render(fmt.Sprintf("Configuration: %s", configPath)))

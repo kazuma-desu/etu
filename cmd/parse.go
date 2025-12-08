@@ -62,7 +62,10 @@ func init() {
 
 func runParse(_ *cobra.Command, _ []string) error {
 	// Load config for defaults
-	appCfg, _ := config.LoadConfig()
+	appCfg, err := config.LoadConfig()
+	if err != nil {
+		log.Warn("Failed to load config, using defaults", "error", err)
+	}
 
 	// Apply config defaults if flags not set
 	// Priority: flag > config > default

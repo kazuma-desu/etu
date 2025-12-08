@@ -142,14 +142,20 @@ func (p *EtcdctlParser) parseScalar(s string) any {
 	s = strings.TrimSpace(s)
 
 	// Try int
-	if matched, _ := regexp.MatchString(`^[+-]?\d+$`, s); matched {
+	if matched, err := regexp.MatchString(`^[+-]?\d+$`, s); matched {
+		if err != nil {
+			return s // fallback to string if regex fails
+		}
 		if val, err := strconv.ParseInt(s, 10, 64); err == nil {
 			return val
 		}
 	}
 
 	// Try float
-	if matched, _ := regexp.MatchString(`^[+-]?(?:\d+\.\d*|\d*\.\d+|\d+)$`, s); matched {
+	if matched, err := regexp.MatchString(`^[+-]?(?:\d+\.\d*|\d*\.\d+|\d+)$`, s); matched {
+		if err != nil {
+			return s // fallback to string if regex fails
+		}
 		if val, err := strconv.ParseFloat(s, 64); err == nil {
 			return val
 		}
