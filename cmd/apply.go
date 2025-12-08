@@ -61,7 +61,7 @@ func init() {
 	}
 }
 
-func resolveApplyOptions(cmd *cobra.Command) (models.ApplyOptions, error) {
+func resolveApplyOptions(cmd *cobra.Command) models.ApplyOptions {
 	appCfg, err := config.LoadConfig()
 	if err != nil {
 		log.Warn("Failed to load config, using defaults", "error", err)
@@ -87,7 +87,7 @@ func resolveApplyOptions(cmd *cobra.Command) (models.ApplyOptions, error) {
 		opts.Strict = appCfg.Strict
 	}
 
-	return opts, nil
+	return opts
 }
 
 func parseConfigurationFile(format models.FormatType) ([]*models.ConfigPair, error) {
@@ -162,10 +162,7 @@ func applyToEtcd(ctx context.Context, pairs []*models.ConfigPair) error {
 func runApply(cmd *cobra.Command, _ []string) error {
 	ctx := context.Background()
 
-	opts, err := resolveApplyOptions(cmd)
-	if err != nil {
-		return err
-	}
+	opts := resolveApplyOptions(cmd)
 
 	pairs, err := parseConfigurationFile(opts.Format)
 	if err != nil {

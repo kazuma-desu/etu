@@ -81,10 +81,10 @@ func runValidate(cmd *cobra.Command, _ []string) error {
 	// Parse the file
 	registry := parsers.NewRegistry()
 	if format == models.FormatAuto {
-		var err error
-		format, err = registry.DetectFormat(validateOpts.FilePath)
-		if err != nil {
-			return fmt.Errorf("failed to detect format: %w", err)
+		var detectErr error
+		format, detectErr = registry.DetectFormat(validateOpts.FilePath)
+		if detectErr != nil {
+			return fmt.Errorf("failed to detect format: %w", detectErr)
 		}
 		log.Debug("Auto-detected format", "format", format)
 	}
