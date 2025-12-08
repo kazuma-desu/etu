@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/kazuma-desu/etu/pkg/config"
@@ -208,28 +209,14 @@ func runSetConfig(_ *cobra.Command, args []string) {
 	case "log-level":
 		// Validate log level
 		validLevels := []string{"debug", "info", "warn", "error"}
-		valid := false
-		for _, level := range validLevels {
-			if value == level {
-				valid = true
-				break
-			}
-		}
-		if !valid {
+		if !slices.Contains(validLevels, value) {
 			log.Fatal("Invalid log level", "level", value, "valid", "debug, info, warn, error")
 		}
 		cfg.LogLevel = value
 	case "default-format":
 		// Validate format
 		validFormats := []string{"auto", "etcdctl"}
-		valid := false
-		for _, format := range validFormats {
-			if value == format {
-				valid = true
-				break
-			}
-		}
-		if !valid {
+		if !slices.Contains(validFormats, value) {
 			log.Fatal("Invalid format", "format", value, "valid", "auto, etcdctl")
 		}
 		cfg.DefaultFormat = value
