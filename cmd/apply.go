@@ -56,10 +56,12 @@ func init() {
 	applyCmd.Flags().BoolVar(&applyOpts.Strict, "strict", false,
 		"treat validation warnings as errors (overrides config)")
 
-	applyCmd.MarkFlagRequired("file")
+	if err := applyCmd.MarkFlagRequired("file"); err != nil {
+		panic(fmt.Sprintf("failed to mark flag as required: %v", err))
+	}
 }
 
-func runApply(cmd *cobra.Command, args []string) error {
+func runApply(cmd *cobra.Command, _ []string) error {
 	ctx := context.Background()
 
 	// Load config for defaults

@@ -51,10 +51,12 @@ func init() {
 	validateCmd.Flags().BoolVar(&validateOpts.Strict, "strict", false,
 		"treat validation warnings as errors (overrides config)")
 
-	validateCmd.MarkFlagRequired("file")
+	if err := validateCmd.MarkFlagRequired("file"); err != nil {
+		panic(fmt.Sprintf("failed to mark flag as required: %v", err))
+	}
 }
 
-func runValidate(cmd *cobra.Command, args []string) error {
+func runValidate(cmd *cobra.Command, _ []string) error {
 	// Load config for defaults
 	appCfg, _ := config.LoadConfig()
 

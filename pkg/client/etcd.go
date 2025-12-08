@@ -26,9 +26,9 @@ type Client struct {
 
 // Config holds etcd client configuration
 type Config struct {
-	Endpoints   []string
 	Username    string
 	Password    string
+	Endpoints   []string
 	DialTimeout time.Duration
 }
 
@@ -51,16 +51,16 @@ func (g *grpcLogger) Infof(format string, args ...any) {
 	log.Debugf(format, args...)
 }
 
-func (g *grpcLogger) Warning(args ...any) {
+func (g *grpcLogger) Warning(_ ...any) {
 	// Suppress gRPC warnings - they're too verbose for user-facing output
 	// Users will see our clean error messages instead
 }
 
-func (g *grpcLogger) Warningln(args ...any) {
+func (g *grpcLogger) Warningln(_ ...any) {
 	// Suppress gRPC warnings - they're too verbose for user-facing output
 }
 
-func (g *grpcLogger) Warningf(format string, args ...any) {
+func (g *grpcLogger) Warningf(_ string, _ ...any) {
 	// Suppress gRPC warnings - they're too verbose for user-facing output
 }
 

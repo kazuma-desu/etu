@@ -4,8 +4,8 @@ import "fmt"
 
 // ConfigPair represents a single etcd key-value configuration pair
 type ConfigPair struct {
-	Key   string
 	Value any
+	Key   string
 }
 
 // String returns a string representation of the config pair

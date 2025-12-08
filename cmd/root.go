@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"github.com/kazuma-desu/etu/pkg/config"
 	"fmt"
 	"os"
+
+	"github.com/kazuma-desu/etu/pkg/config"
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -20,7 +21,7 @@ var (
 
 It provides a familiar interface similar to kubectl for parsing, validating, and
 applying etcd configuration from various sources.`,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			configureLogging()
 		},
 	}

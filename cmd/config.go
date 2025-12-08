@@ -111,7 +111,7 @@ func init() {
 	configCmd.AddCommand(viewConfigCmd)
 }
 
-func runGetContexts(cmd *cobra.Command, args []string) {
+func runGetContexts(_ *cobra.Command, _ []string) {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal("Failed to load configuration", "error", err)
@@ -143,8 +143,8 @@ func runGetContexts(cmd *cobra.Command, args []string) {
 			marker = lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Render("* ")
 		}
 
-		contextName := lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Bold(true).Render(name)
-		fmt.Printf("%s%s\n", marker, contextName)
+		styledName := lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Bold(true).Render(name)
+		fmt.Printf("%s%s\n", marker, styledName)
 
 		// Print endpoints
 		for _, endpoint := range ctx.Endpoints {
@@ -161,7 +161,7 @@ func runGetContexts(cmd *cobra.Command, args []string) {
 	}
 }
 
-func runCurrentContext(cmd *cobra.Command, args []string) {
+func runCurrentContext(_ *cobra.Command, _ []string) {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal("Failed to load configuration", "error", err)
@@ -175,27 +175,27 @@ func runCurrentContext(cmd *cobra.Command, args []string) {
 	fmt.Print(cfg.CurrentContext)
 }
 
-func runUseContext(cmd *cobra.Command, args []string) {
-	contextName := args[0]
+func runUseContext(_ *cobra.Command, args []string) {
+	ctxName := args[0]
 
-	if err := config.UseContext(contextName); err != nil {
+	if err := config.UseContext(ctxName); err != nil {
 		log.Fatal("Failed to switch context", "error", err)
 	}
 
-	output.Success(fmt.Sprintf("Switched to context '%s'", contextName))
+	output.Success(fmt.Sprintf("Switched to context '%s'", ctxName))
 }
 
-func runDeleteContext(cmd *cobra.Command, args []string) {
-	contextName := args[0]
+func runDeleteContext(_ *cobra.Command, args []string) {
+	ctxName := args[0]
 
-	if err := config.DeleteContext(contextName); err != nil {
+	if err := config.DeleteContext(ctxName); err != nil {
 		log.Fatal("Failed to delete context", "error", err)
 	}
 
-	output.Success(fmt.Sprintf("Context '%s' deleted", contextName))
+	output.Success(fmt.Sprintf("Context '%s' deleted", ctxName))
 }
 
-func runSetConfig(cmd *cobra.Command, args []string) {
+func runSetConfig(_ *cobra.Command, args []string) {
 	key := args[0]
 	value := args[1]
 
@@ -235,20 +235,22 @@ func runSetConfig(cmd *cobra.Command, args []string) {
 		cfg.DefaultFormat = value
 	case "strict":
 		// Parse boolean
-		if value == "true" {
+		switch value {
+		case "true":
 			cfg.Strict = true
-		} else if value == "false" {
+		case "false":
 			cfg.Strict = false
-		} else {
+		default:
 			log.Fatal("Invalid boolean value", "value", value, "valid", "true, false")
 		}
 	case "no-validate":
 		// Parse boolean
-		if value == "true" {
+		switch value {
+		case "true":
 			cfg.NoValidate = true
-		} else if value == "false" {
+		case "false":
 			cfg.NoValidate = false
-		} else {
+		default:
 			log.Fatal("Invalid boolean value", "value", value, "valid", "true, false")
 		}
 	default:
@@ -262,7 +264,7 @@ func runSetConfig(cmd *cobra.Command, args []string) {
 	output.Success(fmt.Sprintf("Configuration updated: %s = %s", key, value))
 }
 
-func runViewConfig(cmd *cobra.Command, args []string) {
+func runViewConfig(_ *cobra.Command, _ []string) {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal("Failed to load configuration", "error", err)

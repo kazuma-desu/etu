@@ -10,19 +10,19 @@ import (
 
 // ContextConfig represents configuration for a single context
 type ContextConfig struct {
-	Endpoints []string `yaml:"endpoints"`
 	Username  string   `yaml:"username,omitempty"`
 	Password  string   `yaml:"password,omitempty"`
+	Endpoints []string `yaml:"endpoints"`
 }
 
 // Config represents the entire configuration file
 type Config struct {
+	Contexts       map[string]*ContextConfig `yaml:"contexts"`
 	CurrentContext string                    `yaml:"current-context,omitempty"`
 	LogLevel       string                    `yaml:"log-level,omitempty"`
 	DefaultFormat  string                    `yaml:"default-format,omitempty"`
 	Strict         bool                      `yaml:"strict,omitempty"`
 	NoValidate     bool                      `yaml:"no-validate,omitempty"`
-	Contexts       map[string]*ContextConfig `yaml:"contexts"`
 }
 
 // GetConfigPath returns the path to the config file
@@ -44,7 +44,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// If config doesn't exist, return empty config
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
 		return &Config{
 			Contexts: make(map[string]*ContextConfig),
 		}, nil
@@ -77,8 +77,8 @@ func SaveConfig(cfg *Config) error {
 
 	// Create config directory if it doesn't exist
 	configDir := filepath.Dir(configPath)
-	if err := os.MkdirAll(configDir, 0700); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
+	if mkdirErr := os.MkdirAll(configDir, 0700); mkdirErr != nil {
+		return fmt.Errorf("failed to create config directory: %w", mkdirErr)
 	}
 
 	data, err := yaml.Marshal(cfg)

@@ -256,27 +256,27 @@ func TestStripWrappingQuotes(t *testing.T) {
 func TestEtcdctlParser_ParseScalar(t *testing.T) {
 	parser := &EtcdctlParser{}
 	tests := []struct {
+		expected any
 		name     string
 		input    string
-		expected any
 	}{
-		{"positive integer", "42", int64(42)},
-		{"negative integer", "-42", int64(-42)},
-		{"zero", "0", int64(0)},
-		{"large integer", "999999999", int64(999999999)},
-		{"float", "3.14", 3.14},
-		{"negative float", "-3.14", -3.14},
-		{"decimal less than one", "0.5", 0.5},
-		{"decimal without leading zero", ".5", 0.5},
-		{"simple string", "hello", "hello"},
-		{"double quoted", `"quoted"`, "quoted"},
-		{"single quoted", `'quoted'`, "quoted"},
-		{"empty string", "", ""},
-		{"string with spaces", "hello world", "hello world"},
-		{"string with numbers", "version123", "version123"},
-		{"url", "http://example.com", "http://example.com"},
-		{"boolean-like string", "true", "true"},
-		{"scientific notation lookalike", "1e5", "1e5"},
+		{name: "positive integer", input: "42", expected: int64(42)},
+		{name: "negative integer", input: "-42", expected: int64(-42)},
+		{name: "zero", input: "0", expected: int64(0)},
+		{name: "large integer", input: "999999999", expected: int64(999999999)},
+		{name: "float", input: "3.14", expected: 3.14},
+		{name: "negative float", input: "-3.14", expected: -3.14},
+		{name: "decimal less than one", input: "0.5", expected: 0.5},
+		{name: "decimal without leading zero", input: ".5", expected: 0.5},
+		{name: "simple string", input: "hello", expected: "hello"},
+		{name: "double quoted", input: `"quoted"`, expected: "quoted"},
+		{name: "single quoted", input: `'quoted'`, expected: "quoted"},
+		{name: "empty string", input: "", expected: ""},
+		{name: "string with spaces", input: "hello world", expected: "hello world"},
+		{name: "string with numbers", input: "version123", expected: "version123"},
+		{name: "url", input: "http://example.com", expected: "http://example.com"},
+		{name: "boolean-like string", input: "true", expected: "true"},
+		{name: "scientific notation lookalike", input: "1e5", expected: "1e5"},
 	}
 
 	for _, tt := range tests {
@@ -291,8 +291,8 @@ func TestEtcdctlParser_ParseValueLines(t *testing.T) {
 	parser := &EtcdctlParser{}
 	tests := []struct {
 		name     string
-		lines    []string
 		expected any
+		lines    []string
 	}{
 		{
 			name:     "empty lines",
@@ -358,7 +358,7 @@ myapp
 	tmpfile.Close()
 
 	parser := &EtcdctlParser{}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = parser.Parse(tmpfile.Name())
