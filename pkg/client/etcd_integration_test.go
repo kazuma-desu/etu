@@ -390,13 +390,13 @@ func TestFormatValue(t *testing.T) {
 // Benchmark for formatValue function
 func BenchmarkFormatValue(b *testing.B) {
 	testCases := []struct {
-		name  string
 		value any
+		name  string
 	}{
-		{"string", "hello world"},
-		{"int", int64(42)},
-		{"float", 3.14159},
-		{"map", map[string]any{"key1": "value1", "key2": "value2"}},
+		{name: "string", value: "hello world"},
+		{name: "int", value: int64(42)},
+		{name: "float", value: 3.14159},
+		{name: "map", value: map[string]any{"key1": "value1", "key2": "value2"}},
 	}
 
 	for _, tc := range testCases {

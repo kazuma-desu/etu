@@ -25,15 +25,15 @@ var (
 
 // ValidationIssue represents a single validation issue
 type ValidationIssue struct {
-	Level   string // "error" or "warning"
 	Key     string
 	Message string
+	Level   string // "error" or "warning"
 }
 
 // ValidationResult contains the results of validation
 type ValidationResult struct {
-	Valid  bool
 	Issues []ValidationIssue
+	Valid  bool
 }
 
 // HasErrors returns true if there are any error-level issues
@@ -220,8 +220,8 @@ func (v *Validator) validateURL(key, urlStr string, result *ValidationResult) {
 }
 
 // addError adds an error-level issue
-func (r *ValidationResult) addError(key, message string) {
-	r.Issues = append(r.Issues, ValidationIssue{
+func (v *ValidationResult) addError(key, message string) {
+	v.Issues = append(v.Issues, ValidationIssue{
 		Level:   "error",
 		Key:     key,
 		Message: message,
@@ -229,8 +229,8 @@ func (r *ValidationResult) addError(key, message string) {
 }
 
 // addWarning adds a warning-level issue
-func (r *ValidationResult) addWarning(key, message string) {
-	r.Issues = append(r.Issues, ValidationIssue{
+func (v *ValidationResult) addWarning(key, message string) {
+	v.Issues = append(v.Issues, ValidationIssue{
 		Level:   "warning",
 		Key:     key,
 		Message: message,

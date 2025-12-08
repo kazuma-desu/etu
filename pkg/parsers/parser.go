@@ -48,7 +48,7 @@ func (r *Registry) GetParser(format models.FormatType) (Parser, error) {
 }
 
 // DetectFormat attempts to detect the file format based on file extension and content
-func (r *Registry) DetectFormat(path string) (models.FormatType, error) {
+func (r *Registry) DetectFormat(_ string) (models.FormatType, error) {
 	// For now, we only support etcdctl format
 	// This can be extended with more sophisticated detection logic
 	return models.FormatEtcdctl, nil

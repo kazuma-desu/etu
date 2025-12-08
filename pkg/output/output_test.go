@@ -210,7 +210,7 @@ func TestPrintDryRun(t *testing.T) {
 	assert.Contains(t, output, "no changes made")
 }
 
-func TestPrintApplyProgress(t *testing.T) {
+func TestPrintApplyProgress(_ *testing.T) {
 	// PrintApplyProgress uses log.Info which doesn't write to stdout
 	// Just verify it doesn't panic
 	PrintApplyProgress(1, 10, "/test/key")

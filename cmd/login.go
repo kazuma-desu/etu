@@ -65,8 +65,8 @@ func init() {
 	loginCmd.Flags().BoolVar(&loginNoTest, "no-test", false, "Skip connection test")
 }
 
-func runLogin(cmd *cobra.Command, args []string) {
-	contextName := args[0]
+func runLogin(_ *cobra.Command, args []string) {
+	ctxName := args[0]
 
 	// Get configuration interactively or from flags
 	endpoints := loginEndpoints
@@ -136,7 +136,7 @@ func runLogin(cmd *cobra.Command, args []string) {
 		Password:  password,
 	}
 
-	if err := config.SetContext(contextName, ctxConfig, true); err != nil {
+	if err := config.SetContext(ctxName, ctxConfig, true); err != nil {
 		log.Fatal("Failed to save configuration", "error", err)
 	}
 
@@ -146,7 +146,7 @@ func runLogin(cmd *cobra.Command, args []string) {
 		output.Success("Connected successfully")
 	}
 	output.Success(fmt.Sprintf("Configuration saved to %s", configPath))
-	output.Success(fmt.Sprintf("Context '%s' is now active", contextName))
+	output.Success(fmt.Sprintf("Context '%s' is now active", ctxName))
 
 	// Show security warning if password is stored
 	if password != "" {

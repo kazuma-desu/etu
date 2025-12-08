@@ -110,8 +110,8 @@ func TestValidator_ValidateKey(t *testing.T) {
 	tests := []struct {
 		name        string
 		key         string
-		expectError bool
 		errorMsg    string
+		expectError bool
 	}{
 		{
 			name:        "valid simple key",
@@ -203,11 +203,11 @@ func TestValidator_ValidateKey(t *testing.T) {
 
 func TestValidator_ValidateValue(t *testing.T) {
 	tests := []struct {
-		name         string
 		pair         *models.ConfigPair
+		name         string
+		messageMatch string
 		expectError  bool
 		expectWarn   bool
-		messageMatch string
 	}{
 		{
 			name:        "valid string value",
@@ -316,8 +316,8 @@ func TestValidator_ValidateValue(t *testing.T) {
 func TestValidator_Validate(t *testing.T) {
 	tests := []struct {
 		name        string
-		strict      bool
 		pairs       []*models.ConfigPair
+		strict      bool
 		expectValid bool
 		expectError bool
 		expectWarn  bool
@@ -452,8 +452,8 @@ func TestValidator_ValidateURL(t *testing.T) {
 		name         string
 		key          string
 		url          string
-		expectWarn   bool
 		messageMatch string
+		expectWarn   bool
 	}{
 		{
 			name:       "valid https URL",

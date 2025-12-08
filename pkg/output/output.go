@@ -26,11 +26,6 @@ var (
 	colorHighlight = lipgloss.Color("#06B6D4") // Cyan
 
 	// Styles
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(colorPrimary).
-			MarginBottom(1)
-
 	keyStyle = lipgloss.NewStyle().
 			Foreground(colorHighlight).
 			Bold(true)
@@ -54,17 +49,13 @@ var (
 			Border(lipgloss.RoundedBorder()).
 			Padding(0, 1)
 
-	errorPanelStyle = panelStyle.Copy().
-			BorderForeground(colorError)
+	errorPanelStyle = panelStyle.BorderForeground(colorError)
 
-	warningPanelStyle = panelStyle.Copy().
-				BorderForeground(colorWarning)
+	warningPanelStyle = panelStyle.BorderForeground(colorWarning)
 
-	successPanelStyle = panelStyle.Copy().
-				BorderForeground(colorSuccess)
+	successPanelStyle = panelStyle.BorderForeground(colorSuccess)
 
-	infoPanelStyle = panelStyle.Copy().
-			BorderForeground(colorInfo)
+	infoPanelStyle = panelStyle.BorderForeground(colorInfo)
 
 	// Tree styles
 	treeRootStyle = lipgloss.NewStyle().

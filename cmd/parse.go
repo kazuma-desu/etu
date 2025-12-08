@@ -54,11 +54,13 @@ func init() {
 	parseCmd.Flags().BoolVar(&treeView, "tree", false,
 		"display as tree view")
 
-	parseCmd.MarkFlagRequired("file")
+	if err := parseCmd.MarkFlagRequired("file"); err != nil {
+		panic(fmt.Sprintf("failed to mark flag as required: %v", err))
+	}
 	parseCmd.MarkFlagsMutuallyExclusive("json", "tree")
 }
 
-func runParse(cmd *cobra.Command, args []string) error {
+func runParse(_ *cobra.Command, _ []string) error {
 	// Load config for defaults
 	appCfg, _ := config.LoadConfig()
 
