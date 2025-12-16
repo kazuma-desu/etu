@@ -37,7 +37,7 @@ func init() {
 	rootCmd.AddCommand(editCmd)
 }
 
-func runEdit(cmd *cobra.Command, args []string) error {
+func runEdit(_ *cobra.Command, args []string) error {
 	ctx := context.Background()
 	key := args[0]
 
@@ -69,7 +69,7 @@ func runEdit(cmd *cobra.Command, args []string) error {
 	if editor == "" {
 		// Fallback to common editors
 		for _, fallback := range []string{"vi", "vim", "nano", "emacs"} {
-			if _, err := exec.LookPath(fallback); err == nil {
+			if _, lookupErr := exec.LookPath(fallback); lookupErr == nil {
 				editor = fallback
 				break
 			}
@@ -88,9 +88,9 @@ func runEdit(cmd *cobra.Command, args []string) error {
 	defer os.Remove(tmpPath)
 
 	// Write current value to temp file
-	if _, err := tmpFile.WriteString(value); err != nil {
+	if _, writeErr := tmpFile.WriteString(value); writeErr != nil {
 		tmpFile.Close()
-		return fmt.Errorf("failed to write to temporary file: %w", err)
+		return fmt.Errorf("failed to write to temporary file: %w", writeErr)
 	}
 	tmpFile.Close()
 
@@ -108,8 +108,8 @@ func runEdit(cmd *cobra.Command, args []string) error {
 	editorCmd.Stdout = os.Stdout
 	editorCmd.Stderr = os.Stderr
 
-	if err := editorCmd.Run(); err != nil {
-		return fmt.Errorf("editor exited with error: %w", err)
+	if runErr := editorCmd.Run(); runErr != nil {
+		return fmt.Errorf("editor exited with error: %w", runErr)
 	}
 
 	// Check if file was modified

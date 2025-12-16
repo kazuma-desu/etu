@@ -81,8 +81,8 @@ func TestEditCommand_Integration(t *testing.T) {
 		// Put initial value
 		testKey := "/config/test/edit"
 		initialValue := "initial value"
-		err := etcdClient.Put(ctx, testKey, initialValue)
-		require.NoError(t, err)
+		putErr := etcdClient.Put(ctx, testKey, initialValue)
+		require.NoError(t, putErr)
 
 		// Create a fake editor script
 		fakeEditorPath := filepath.Join(tempDir, "fake-editor.sh")
@@ -102,8 +102,8 @@ echo "modified value" > "$1"
 		require.NoError(t, err)
 
 		// Verify value was updated
-		newValue, err := etcdClient.Get(ctx, testKey)
-		require.NoError(t, err)
+		newValue, getErr := etcdClient.Get(ctx, testKey)
+		require.NoError(t, getErr)
 		require.Equal(t, "modified value\n", newValue)
 	})
 

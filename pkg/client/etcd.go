@@ -151,19 +151,19 @@ func (c *Client) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
 
 // GetOptions contains options for Get operations
 type GetOptions struct {
-	Prefix       bool   // Get keys with matching prefix
-	FromKey      bool   // Get keys >= given key
-	Limit        int64  // Maximum number of results
-	Revision     int64  // Get at specific revision
 	SortOrder    string // ASCEND or DESCEND
 	SortTarget   string // CREATE, KEY, MODIFY, VALUE, or VERSION
-	KeysOnly     bool   // Return only keys, not values
-	CountOnly    bool   // Return only count
 	RangeEnd     string // End of key range
+	Limit        int64  // Maximum number of results
+	Revision     int64  // Get at specific revision
 	MinModRev    int64  // Minimum modify revision
 	MaxModRev    int64  // Maximum modify revision
 	MinCreateRev int64  // Minimum create revision
 	MaxCreateRev int64  // Maximum create revision
+	Prefix       bool   // Get keys with matching prefix
+	FromKey      bool   // Get keys >= given key
+	KeysOnly     bool   // Return only keys, not values
+	CountOnly    bool   // Return only count
 }
 
 // KeyValue represents a key-value pair with metadata
@@ -306,7 +306,7 @@ func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOption
 			CreateRevision: kv.CreateRevision,
 			ModRevision:    kv.ModRevision,
 			Version:        kv.Version,
-			Lease:          int64(kv.Lease),
+			Lease:          kv.Lease,
 		}
 	}
 
