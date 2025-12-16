@@ -149,18 +149,168 @@ func (c *Client) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
 	return nil
 }
 
-// Get retrieves a value from etcd
+// GetOptions contains options for Get operations
+type GetOptions struct {
+	SortOrder    string // ASCEND or DESCEND
+	SortTarget   string // CREATE, KEY, MODIFY, VALUE, or VERSION
+	RangeEnd     string // End of key range
+	Limit        int64  // Maximum number of results
+	Revision     int64  // Get at specific revision
+	MinModRev    int64  // Minimum modify revision
+	MaxModRev    int64  // Maximum modify revision
+	MinCreateRev int64  // Minimum create revision
+	MaxCreateRev int64  // Maximum create revision
+	Prefix       bool   // Get keys with matching prefix
+	FromKey      bool   // Get keys >= given key
+	KeysOnly     bool   // Return only keys, not values
+	CountOnly    bool   // Return only count
+}
+
+// KeyValue represents a key-value pair with metadata
+type KeyValue struct {
+	Key            string
+	Value          string
+	CreateRevision int64
+	ModRevision    int64
+	Version        int64
+	Lease          int64
+}
+
+// GetResponse contains the response from a Get operation
+type GetResponse struct {
+	Kvs   []*KeyValue
+	Count int64
+	More  bool
+}
+
+// Get retrieves a value from etcd (simple version for backward compatibility)
 func (c *Client) Get(ctx context.Context, key string) (string, error) {
-	resp, err := c.client.Get(ctx, key)
+	opts := &GetOptions{}
+	resp, err := c.GetWithOptions(ctx, key, opts)
 	if err != nil {
-		return "", fmt.Errorf("failed to get key %s: %w", key, err)
+		return "", err
 	}
 
 	if len(resp.Kvs) == 0 {
 		return "", fmt.Errorf("key not found: %s", key)
 	}
 
-	return string(resp.Kvs[0].Value), nil
+	return resp.Kvs[0].Value, nil
+}
+
+// GetWithOptions retrieves keys from etcd with various options
+func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error) {
+	// Build options array
+	var clientOpts []clientv3.OpOption
+
+	// Handle prefix mode
+	if opts.Prefix {
+		clientOpts = append(clientOpts, clientv3.WithPrefix())
+	}
+
+	// Handle from-key mode
+	if opts.FromKey {
+		clientOpts = append(clientOpts, clientv3.WithFromKey())
+	}
+
+	// Handle range
+	if opts.RangeEnd != "" {
+		clientOpts = append(clientOpts, clientv3.WithRange(opts.RangeEnd))
+	}
+
+	// Handle limit
+	if opts.Limit > 0 {
+		clientOpts = append(clientOpts, clientv3.WithLimit(opts.Limit))
+	}
+
+	// Handle revision
+	if opts.Revision > 0 {
+		clientOpts = append(clientOpts, clientv3.WithRev(opts.Revision))
+	}
+
+	// Handle sort order
+	if opts.SortOrder != "" || opts.SortTarget != "" {
+		var order clientv3.SortOrder
+		var target clientv3.SortTarget
+
+		// Parse order
+		switch opts.SortOrder {
+		case "ASCEND", "":
+			order = clientv3.SortAscend
+		case "DESCEND":
+			order = clientv3.SortDescend
+		default:
+			return nil, fmt.Errorf("invalid sort order: %s (use ASCEND or DESCEND)", opts.SortOrder)
+		}
+
+		// Parse target
+		switch opts.SortTarget {
+		case "KEY", "":
+			target = clientv3.SortByKey
+		case "VERSION":
+			target = clientv3.SortByVersion
+		case "CREATE":
+			target = clientv3.SortByCreateRevision
+		case "MODIFY":
+			target = clientv3.SortByModRevision
+		case "VALUE":
+			target = clientv3.SortByValue
+		default:
+			return nil, fmt.Errorf("invalid sort target: %s", opts.SortTarget)
+		}
+
+		clientOpts = append(clientOpts, clientv3.WithSort(target, order))
+	}
+
+	// Handle keys-only
+	if opts.KeysOnly {
+		clientOpts = append(clientOpts, clientv3.WithKeysOnly())
+	}
+
+	// Handle count-only
+	if opts.CountOnly {
+		clientOpts = append(clientOpts, clientv3.WithCountOnly())
+	}
+
+	// Handle revision filters
+	if opts.MinModRev > 0 {
+		clientOpts = append(clientOpts, clientv3.WithMinModRev(opts.MinModRev))
+	}
+	if opts.MaxModRev > 0 {
+		clientOpts = append(clientOpts, clientv3.WithMaxModRev(opts.MaxModRev))
+	}
+	if opts.MinCreateRev > 0 {
+		clientOpts = append(clientOpts, clientv3.WithMinCreateRev(opts.MinCreateRev))
+	}
+	if opts.MaxCreateRev > 0 {
+		clientOpts = append(clientOpts, clientv3.WithMaxCreateRev(opts.MaxCreateRev))
+	}
+
+	// Execute get
+	resp, err := c.client.Get(ctx, key, clientOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get key %s: %w", key, err)
+	}
+
+	// Convert response
+	result := &GetResponse{
+		Count: resp.Count,
+		More:  resp.More,
+		Kvs:   make([]*KeyValue, len(resp.Kvs)),
+	}
+
+	for i, kv := range resp.Kvs {
+		result.Kvs[i] = &KeyValue{
+			Key:            string(kv.Key),
+			Value:          string(kv.Value),
+			CreateRevision: kv.CreateRevision,
+			ModRevision:    kv.ModRevision,
+			Version:        kv.Version,
+			Lease:          kv.Lease,
+		}
+	}
+
+	return result, nil
 }
 
 // Close closes the etcd client connection
