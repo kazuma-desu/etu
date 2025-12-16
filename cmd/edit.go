@@ -9,8 +9,8 @@ import (
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/logger"
 
-	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +42,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 	key := args[0]
 
 	// Get etcd config with context
-	log.Info("Connecting to etcd")
+	logger.Log.Info("Connecting to etcd")
 	cfg, err := config.GetEtcdConfigWithContext(contextName)
 	if err != nil {
 		return fmt.Errorf("failed to get etcd config: %w", err)
@@ -55,7 +55,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 	defer etcdClient.Close()
 
 	// Fetch current value
-	log.Info("Fetching current value", "key", key)
+	logger.Log.Infow("Fetching current value", "key", key)
 	value, err := etcdClient.Get(ctx, key)
 	if err != nil {
 		return fmt.Errorf("failed to get key %q: %w", key, err)
@@ -102,7 +102,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 	initialModTime := initialStat.ModTime()
 
 	// Open editor
-	log.Info("Opening editor", "editor", editor, "file", filepath.Base(tmpPath))
+	logger.Log.Infow("Opening editor", "editor", editor, "file", filepath.Base(tmpPath))
 	editorCmd := exec.Command(editor, tmpPath)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
@@ -120,7 +120,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 	finalModTime := finalStat.ModTime()
 
 	if finalModTime.Equal(initialModTime) {
-		log.Info("No changes detected, skipping update")
+		logger.Log.Info("No changes detected, skipping update")
 		fmt.Println("No changes made.")
 		return nil
 	}
@@ -133,12 +133,12 @@ func runEdit(_ *cobra.Command, args []string) error {
 	newValue := string(modifiedContent)
 
 	// Write back to etcd
-	log.Info("Updating key in etcd", "key", key)
+	logger.Log.Infow("Updating key in etcd", "key", key)
 	if err := etcdClient.Put(ctx, key, newValue); err != nil {
 		return fmt.Errorf("failed to update key %q: %w", key, err)
 	}
 
-	log.Info("Successfully updated key", "key", key)
+	logger.Log.Infow("Successfully updated key", "key", key)
 	fmt.Printf("Successfully updated %s\n", key)
 
 	return nil

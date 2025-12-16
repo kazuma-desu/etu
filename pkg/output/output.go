@@ -7,12 +7,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kazuma-desu/etu/pkg/models"
-	"github.com/kazuma-desu/etu/pkg/validator"
-
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/tree"
-	"github.com/charmbracelet/log"
+
+	"github.com/kazuma-desu/etu/pkg/logger"
+	"github.com/kazuma-desu/etu/pkg/models"
+	"github.com/kazuma-desu/etu/pkg/validator"
 )
 
 var (
@@ -83,7 +83,7 @@ func PrintConfigPairs(pairs []*models.ConfigPair, jsonOutput bool) error {
 		return printJSON(pairs)
 	}
 
-	log.Info(fmt.Sprintf("Found %d configuration items", len(pairs)))
+	logger.Log.Info(fmt.Sprintf("Found %d configuration items", len(pairs)))
 	fmt.Println()
 
 	for _, pair := range pairs {
@@ -184,7 +184,7 @@ func PrintDryRun(pairs []*models.ConfigPair) {
 func PrintApplyProgress(current, total int, key string) {
 	progress := fmt.Sprintf("[%d/%d]", current, total)
 	k := keyStyle.Render(key)
-	log.Info(fmt.Sprintf("%s Applying %s", progress, k))
+	logger.Log.Info(fmt.Sprintf("%s Applying %s", progress, k))
 }
 
 // PrintApplySuccess prints success message after apply
@@ -269,7 +269,7 @@ func PrintSecurityWarning() {
 
 // PrintTree renders etcd configuration as a tree structure
 func PrintTree(pairs []*models.ConfigPair) error {
-	log.Info(fmt.Sprintf("Found %d configuration items", len(pairs)))
+	logger.Log.Info(fmt.Sprintf("Found %d configuration items", len(pairs)))
 	fmt.Println()
 
 	t := buildEtcdTree(pairs)

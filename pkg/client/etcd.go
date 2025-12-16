@@ -3,100 +3,30 @@ package client
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/kazuma-desu/etu/pkg/models"
 
-	"github.com/charmbracelet/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc/grpclog"
 )
 
 func init() {
-	// Redirect gRPC logs through charmbracelet/log at package init
-	// This only needs to be done once globally
-	grpclog.SetLoggerV2(&grpcLogger{})
+	grpclog.SetLoggerV2(grpclog.NewLoggerV2(io.Discard, io.Discard, io.Discard))
 }
 
-// Client wraps the etcd client v3 with convenience methods
 type Client struct {
 	client *clientv3.Client
 	config *Config
 }
 
-// Config holds etcd client configuration
 type Config struct {
 	Username    string
 	Password    string
 	Endpoints   []string
 	DialTimeout time.Duration
 }
-
-// grpcLogger wraps charmbracelet/log to implement grpclog.LoggerV2
-type grpcLogger struct{}
-
-func (g *grpcLogger) Info(args ...any) {
-	if len(args) > 0 {
-		log.Debug(fmt.Sprint(args...))
-	}
-}
-
-func (g *grpcLogger) Infoln(args ...any) {
-	if len(args) > 0 {
-		log.Debug(fmt.Sprint(args...))
-	}
-}
-
-func (g *grpcLogger) Infof(format string, args ...any) {
-	log.Debugf(format, args...)
-}
-
-func (g *grpcLogger) Warning(_ ...any) {
-	// Suppress gRPC warnings - they're too verbose for user-facing output
-	// Users will see our clean error messages instead
-}
-
-func (g *grpcLogger) Warningln(_ ...any) {
-	// Suppress gRPC warnings - they're too verbose for user-facing output
-}
-
-func (g *grpcLogger) Warningf(_ string, _ ...any) {
-	// Suppress gRPC warnings - they're too verbose for user-facing output
-}
-
-func (g *grpcLogger) Error(args ...any) {
-	if len(args) > 0 {
-		log.Error(fmt.Sprint(args...))
-	}
-}
-
-func (g *grpcLogger) Errorln(args ...any) {
-	if len(args) > 0 {
-		log.Error(fmt.Sprint(args...))
-	}
-}
-
-func (g *grpcLogger) Errorf(format string, args ...any) {
-	log.Errorf(format, args...)
-}
-
-func (g *grpcLogger) Fatal(args ...any) {
-	if len(args) > 0 {
-		log.Fatal(fmt.Sprint(args...))
-	}
-}
-
-func (g *grpcLogger) Fatalln(args ...any) {
-	if len(args) > 0 {
-		log.Fatal(fmt.Sprint(args...))
-	}
-}
-
-func (g *grpcLogger) Fatalf(format string, args ...any) {
-	log.Fatalf(format, args...)
-}
-
-func (g *grpcLogger) V(l int) bool { return l <= 0 }
 
 // NewClient creates a new etcd client
 func NewClient(cfg *Config) (*Client, error) {
