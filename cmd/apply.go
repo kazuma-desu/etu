@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
 	"github.com/kazuma-desu/etu/pkg/parsers"
 	"github.com/kazuma-desu/etu/pkg/validator"
-
-	"github.com/charmbracelet/log"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -95,7 +95,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to detect format: %w", err)
 		}
-		log.Debug("Auto-detected format", "format", format)
+		logger.Log.Debugw("Auto-detected format", "format", format)
 	}
 
 	parser, err := registry.GetParser(format)
@@ -103,28 +103,28 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	log.Info("Parsing configuration", "file", applyOpts.FilePath, "format", format)
+	logger.Log.Infow("Parsing configuration", "file", applyOpts.FilePath, "format", format)
 	pairs, err := parser.Parse(applyOpts.FilePath)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
+	logger.Log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
 
 	// Validate unless --no-validate is set
 	if !noValidate {
-		log.Info("Validating configuration")
+		logger.Log.Info("Validating configuration")
 		v := validator.NewValidator(strict)
 		result := v.Validate(pairs)
 
 		output.PrintValidationResult(result, strict)
 
 		if !result.Valid {
-			log.Error("Validation failed - not applying to etcd")
+			logger.Log.Error("Validation failed - not applying to etcd")
 			os.Exit(1)
 		}
 
-		log.Info("Validation passed")
+		logger.Log.Info("Validation passed")
 		fmt.Println()
 	}
 
@@ -135,7 +135,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Apply to etcd
-	log.Info("Connecting to etcd")
+	logger.Log.Info("Connecting to etcd")
 	cfg, err := config.GetEtcdConfigWithContext(contextName)
 	if err != nil {
 		return fmt.Errorf("failed to get etcd config: %w", err)
@@ -147,7 +147,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	}
 	defer etcdClient.Close()
 
-	log.Info(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
+	logger.Log.Info(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
 	for i, pair := range pairs {
 		output.PrintApplyProgress(i+1, len(pairs), pair.Key)
 		if err := etcdClient.PutAll(ctx, []*models.ConfigPair{pair}); err != nil {

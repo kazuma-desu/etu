@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/logger"
 
-	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
@@ -42,36 +42,17 @@ func Execute() {
 	}
 }
 
-// configureLogging sets up the logger with the specified level
-// Priority: flag > config file > default (warn)
 func configureLogging() {
-	effectiveLogLevel := "warn" // Default
+	effectiveLogLevel := "warn"
 
-	// Try to load from config file
 	cfg, err := config.LoadConfig()
 	if err == nil && cfg.LogLevel != "" {
 		effectiveLogLevel = cfg.LogLevel
 	}
 
-	// Flag overrides config file (if flag was explicitly set)
 	if logLevel != "" {
 		effectiveLogLevel = logLevel
 	}
 
-	var level log.Level
-	switch effectiveLogLevel {
-	case "debug":
-		level = log.DebugLevel
-	case "info":
-		level = log.InfoLevel
-	case "warn":
-		level = log.WarnLevel
-	case "error":
-		level = log.ErrorLevel
-	default:
-		level = log.WarnLevel
-	}
-
-	log.SetLevel(level)
-	log.SetReportTimestamp(false)
+	logger.SetLevel(effectiveLogLevel)
 }

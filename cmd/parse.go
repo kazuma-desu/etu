@@ -3,13 +3,13 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
 	"github.com/kazuma-desu/etu/pkg/parsers"
-
-	"github.com/charmbracelet/log"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -82,7 +82,7 @@ func runParse(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to detect format: %w", err)
 		}
-		log.Debug("Auto-detected format", "format", format)
+		logger.Log.Debugw("Auto-detected format", "format", format)
 	}
 
 	parser, err := registry.GetParser(format)
@@ -91,7 +91,7 @@ func runParse(_ *cobra.Command, _ []string) error {
 	}
 
 	if !parseOpts.JSONOutput {
-		log.Info("Parsing configuration", "file", parseOpts.FilePath, "format", format)
+		logger.Log.Infow("Parsing configuration", "file", parseOpts.FilePath, "format", format)
 	}
 
 	pairs, err := parser.Parse(parseOpts.FilePath)

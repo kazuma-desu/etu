@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/output"
-
-	"github.com/charmbracelet/log"
-	"github.com/spf13/cobra"
 )
 
 var loginCmd = &cobra.Command{
@@ -80,11 +80,11 @@ func runLogin(_ *cobra.Command, args []string) {
 		output.Prompt("Enter etcd endpoints (comma-separated): ")
 		endpointsStr, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal("Failed to read input", "error", err)
+			logger.Log.Fatalw("Failed to read input", "error", err)
 		}
 		endpointsStr = strings.TrimSpace(endpointsStr)
 		if endpointsStr == "" {
-			log.Fatal("Endpoints are required")
+			logger.Log.Fatal("Endpoints are required")
 		}
 		endpoints = parseEndpointsList(endpointsStr)
 	}
@@ -94,7 +94,7 @@ func runLogin(_ *cobra.Command, args []string) {
 		output.Prompt("Enter username (optional, press enter to skip): ")
 		usernameInput, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal("Failed to read input", "error", err)
+			logger.Log.Fatalw("Failed to read input", "error", err)
 		}
 		username = strings.TrimSpace(usernameInput)
 	}
@@ -104,7 +104,7 @@ func runLogin(_ *cobra.Command, args []string) {
 		output.Prompt("Enter password (optional, press enter to skip): ")
 		passwordInput, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal("Failed to read input", "error", err)
+			logger.Log.Fatalw("Failed to read input", "error", err)
 		}
 		password = strings.TrimSpace(passwordInput)
 	}
@@ -119,7 +119,7 @@ func runLogin(_ *cobra.Command, args []string) {
 			output.Prompt("Save configuration anyway? (y/N): ")
 			response, err := reader.ReadString('\n')
 			if err != nil {
-				log.Fatal("Failed to read input", "error", err)
+				logger.Log.Fatalw("Failed to read input", "error", err)
 			}
 			response = strings.ToLower(strings.TrimSpace(response))
 			if response != "y" && response != "yes" {
@@ -137,7 +137,7 @@ func runLogin(_ *cobra.Command, args []string) {
 	}
 
 	if err := config.SetContext(ctxName, ctxConfig, true); err != nil {
-		log.Fatal("Failed to save configuration", "error", err)
+		logger.Log.Fatalw("Failed to save configuration", "error", err)
 	}
 
 	configPath, _ := config.GetConfigPath()

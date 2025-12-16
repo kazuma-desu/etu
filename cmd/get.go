@@ -8,12 +8,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/spf13/cobra"
+
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
-
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
-	"github.com/spf13/cobra"
+	"github.com/kazuma-desu/etu/pkg/logger"
 )
 
 var (
@@ -132,7 +132,7 @@ func runGet(_ *cobra.Command, args []string) error {
 	}
 
 	// Connect to etcd
-	log.Debug("Connecting to etcd")
+	logger.Log.Debug("Connecting to etcd")
 	cfg, err := config.GetEtcdConfigWithContext(contextName)
 	if err != nil {
 		return fmt.Errorf("failed to get etcd config: %w", err)
@@ -162,7 +162,7 @@ func runGet(_ *cobra.Command, args []string) error {
 	}
 
 	// Execute get
-	log.Debug("Fetching keys", "key", key, "options", opts)
+	logger.Log.Debugw("Fetching keys", "key", key, "options", opts)
 	resp, err := etcdClient.GetWithOptions(ctx, key, opts)
 	if err != nil {
 		return err
@@ -178,7 +178,7 @@ func runGet(_ *cobra.Command, args []string) error {
 	if len(resp.Kvs) == 0 {
 		if getOpts.prefix || getOpts.fromKey || getOpts.rangeEnd != "" {
 			// For range queries, empty result is not an error
-			log.Debug("No keys found")
+			logger.Log.Debug("No keys found")
 			return nil
 		}
 		return fmt.Errorf("key not found: %s", key)

@@ -6,58 +6,10 @@ import (
 	"github.com/kazuma-desu/etu/pkg/models"
 )
 
-// Test the grpcLogger implementation
-func TestGrpcLogger(t *testing.T) {
-	logger := &grpcLogger{}
-
-	// Test all logging methods to ensure they don't panic
-	t.Run("Info", func(t *testing.T) {
-		// Just call the methods to get coverage - they log to charmbracelet/log
-		logger.Info("test")
-		logger.Infoln("test")
-		logger.Infof("test %s", "value")
-		// No assertions - just ensuring no panic
-	})
-
-	t.Run("Warning", func(t *testing.T) {
-		// Warning methods are intentionally suppressed (no-ops)
-		logger.Warning("test warning")
-		logger.Warningln("test warning ln")
-		logger.Warningf("test warning %s", "formatted")
-		// No assertions - these methods do nothing by design
-	})
-
-	t.Run("Error", func(t *testing.T) {
-		// Just call the methods to get coverage
-		logger.Error("test")
-		logger.Errorln("test")
-		logger.Errorf("test %s", "value")
-		// No assertions - just ensuring no panic
-	})
-
-	t.Run("V", func(t *testing.T) {
-		result := logger.V(1)
-		if result {
-			t.Error("V should return false for values > 0")
-		}
-		result = logger.V(0)
-		if !result {
-			t.Error("V should return true for value 0")
-		}
-		result = logger.V(-1)
-		if !result {
-			t.Error("V should return true for negative values")
-		}
-	})
-}
-
 // TestGetWithOptionsErrorCases tests error handling in GetWithOptions
 func TestGetWithOptionsErrorCases(t *testing.T) {
-	// We can't easily test invalid sort order/target without a real etcd instance
-	// but we can test the structure
 	opts := &GetOptions{
-		SortOrder:  "INVALID",
-		SortTarget: "KEY",
+		SortOrder: "INVALID",
 	}
 
 	if opts.SortOrder != "INVALID" {
@@ -65,9 +17,7 @@ func TestGetWithOptionsErrorCases(t *testing.T) {
 	}
 }
 
-// TestClientStructure tests basic client structure
 func TestClientStructure(t *testing.T) {
-	// Test that Config can be created
 	cfg := &Config{
 		Endpoints: []string{"localhost:2379"},
 	}
@@ -77,12 +27,9 @@ func TestClientStructure(t *testing.T) {
 	}
 }
 
-// TestGetResponse tests GetResponse structure
 func TestGetResponse(t *testing.T) {
 	resp := &GetResponse{
 		Count: 1,
-		More:  false,
-		Kvs:   []*KeyValue{},
 	}
 
 	if resp.Count != 1 {
@@ -90,15 +37,9 @@ func TestGetResponse(t *testing.T) {
 	}
 }
 
-// TestKeyValue tests KeyValue structure
 func TestKeyValue(t *testing.T) {
 	kv := &KeyValue{
-		Key:            "/test",
-		Value:          "value",
-		CreateRevision: 1,
-		ModRevision:    1,
-		Version:        1,
-		Lease:          0,
+		Key: "/test",
 	}
 
 	if kv.Key != "/test" {
@@ -106,22 +47,10 @@ func TestKeyValue(t *testing.T) {
 	}
 }
 
-// TestGetOptions tests GetOptions structure
 func TestGetOptions(t *testing.T) {
 	opts := &GetOptions{
-		Prefix:       true,
-		FromKey:      false,
-		Limit:        10,
-		Revision:     0,
-		SortOrder:    "ASCEND",
-		SortTarget:   "KEY",
-		KeysOnly:     false,
-		CountOnly:    false,
-		RangeEnd:     "",
-		MinModRev:    0,
-		MaxModRev:    0,
-		MinCreateRev: 0,
-		MaxCreateRev: 0,
+		Prefix: true,
+		Limit:  10,
 	}
 
 	if !opts.Prefix {

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
 	"github.com/kazuma-desu/etu/pkg/parsers"
 	"github.com/kazuma-desu/etu/pkg/validator"
-
-	"github.com/charmbracelet/log"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -83,7 +83,7 @@ func runValidate(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to detect format: %w", err)
 		}
-		log.Debug("Auto-detected format", "format", format)
+		logger.Log.Debugw("Auto-detected format", "format", format)
 	}
 
 	parser, err := registry.GetParser(format)
@@ -91,17 +91,17 @@ func runValidate(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	log.Info("Parsing configuration", "file", validateOpts.FilePath, "format", format)
+	logger.Log.Infow("Parsing configuration", "file", validateOpts.FilePath, "format", format)
 	pairs, err := parser.Parse(validateOpts.FilePath)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
+	logger.Log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
 	fmt.Println()
 
 	// Validate
-	log.Info("Validating configuration")
+	logger.Log.Info("Validating configuration")
 	v := validator.NewValidator(strict)
 	result := v.Validate(pairs)
 

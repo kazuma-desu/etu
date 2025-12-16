@@ -5,12 +5,12 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/kazuma-desu/etu/pkg/config"
-	"github.com/kazuma-desu/etu/pkg/output"
-
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
+
+	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/logger"
+	"github.com/kazuma-desu/etu/pkg/output"
 )
 
 var configCmd = &cobra.Command{
@@ -115,7 +115,7 @@ func init() {
 func runGetContexts(_ *cobra.Command, _ []string) {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Failed to load configuration", "error", err)
+		logger.Log.Fatalw("Failed to load configuration", "error", err)
 	}
 
 	if len(cfg.Contexts) == 0 {
@@ -165,7 +165,7 @@ func runGetContexts(_ *cobra.Command, _ []string) {
 func runCurrentContext(_ *cobra.Command, _ []string) {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Failed to load configuration", "error", err)
+		logger.Log.Fatalw("Failed to load configuration", "error", err)
 	}
 
 	if cfg.CurrentContext == "" {
@@ -180,7 +180,7 @@ func runUseContext(_ *cobra.Command, args []string) {
 	ctxName := args[0]
 
 	if err := config.UseContext(ctxName); err != nil {
-		log.Fatal("Failed to switch context", "error", err)
+		logger.Log.Fatalw("Failed to switch context", "error", err)
 	}
 
 	output.Success(fmt.Sprintf("Switched to context '%s'", ctxName))
@@ -190,7 +190,7 @@ func runDeleteContext(_ *cobra.Command, args []string) {
 	ctxName := args[0]
 
 	if err := config.DeleteContext(ctxName); err != nil {
-		log.Fatal("Failed to delete context", "error", err)
+		logger.Log.Fatalw("Failed to delete context", "error", err)
 	}
 
 	output.Success(fmt.Sprintf("Context '%s' deleted", ctxName))
@@ -202,7 +202,7 @@ func runSetConfig(_ *cobra.Command, args []string) {
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Failed to load configuration", "error", err)
+		logger.Log.Fatalw("Failed to load configuration", "error", err)
 	}
 
 	switch key {
@@ -210,14 +210,14 @@ func runSetConfig(_ *cobra.Command, args []string) {
 		// Validate log level
 		validLevels := []string{"debug", "info", "warn", "error"}
 		if !slices.Contains(validLevels, value) {
-			log.Fatal("Invalid log level", "level", value, "valid", "debug, info, warn, error")
+			logger.Log.Fatalw("Invalid log level", "level", value, "valid", "debug, info, warn, error")
 		}
 		cfg.LogLevel = value
 	case "default-format":
 		// Validate format
 		validFormats := []string{"auto", "etcdctl"}
 		if !slices.Contains(validFormats, value) {
-			log.Fatal("Invalid format", "format", value, "valid", "auto, etcdctl")
+			logger.Log.Fatalw("Invalid format", "format", value, "valid", "auto, etcdctl")
 		}
 		cfg.DefaultFormat = value
 	case "strict":
@@ -228,7 +228,7 @@ func runSetConfig(_ *cobra.Command, args []string) {
 		case "false":
 			cfg.Strict = false
 		default:
-			log.Fatal("Invalid boolean value", "value", value, "valid", "true, false")
+			logger.Log.Fatalw("Invalid boolean value", "value", value, "valid", "true, false")
 		}
 	case "no-validate":
 		// Parse boolean
@@ -238,14 +238,14 @@ func runSetConfig(_ *cobra.Command, args []string) {
 		case "false":
 			cfg.NoValidate = false
 		default:
-			log.Fatal("Invalid boolean value", "value", value, "valid", "true, false")
+			logger.Log.Fatalw("Invalid boolean value", "value", value, "valid", "true, false")
 		}
 	default:
-		log.Fatal("Unknown configuration key", "key", key)
+		logger.Log.Fatalw("Unknown configuration key", "key", key)
 	}
 
 	if err := config.SaveConfig(cfg); err != nil {
-		log.Fatal("Failed to save configuration", "error", err)
+		logger.Log.Fatalw("Failed to save configuration", "error", err)
 	}
 
 	output.Success(fmt.Sprintf("Configuration updated: %s = %s", key, value))
@@ -254,7 +254,7 @@ func runSetConfig(_ *cobra.Command, args []string) {
 func runViewConfig(_ *cobra.Command, _ []string) {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Failed to load configuration", "error", err)
+		logger.Log.Fatalw("Failed to load configuration", "error", err)
 	}
 
 	configPath, _ := config.GetConfigPath()
