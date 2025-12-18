@@ -374,8 +374,8 @@ func printContextsSimple(contexts map[string]*config.ContextConfig, currentConte
 func printContextsJSON(contexts map[string]*config.ContextConfig, currentContext string) error {
 	type contextOutput struct {
 		Name      string   `json:"name"`
-		Endpoints []string `json:"endpoints"`
 		Username  string   `json:"username,omitempty"`
+		Endpoints []string `json:"endpoints"`
 		Current   bool     `json:"current"`
 	}
 
@@ -468,8 +468,8 @@ func printConfigViewSimple(cfg *config.Config) error {
 func printConfigViewJSON(cfg *config.Config) error {
 	// Create a sanitized version without passwords
 	type sanitizedContext struct {
-		Endpoints []string `json:"endpoints"`
 		Username  string   `json:"username,omitempty"`
+		Endpoints []string `json:"endpoints"`
 	}
 
 	output := map[string]any{
