@@ -11,17 +11,17 @@ install:
 # Run tests
 test:
 	@echo "Running tests..."
-	@go test ./pkg/... -race
+	@go test ./pkg/... -race -tags=integration
 
 # Run tests with verbose output
 test-verbose:
 	@echo "Running tests (verbose)..."
-	@go test ./pkg/... -v -race
+	@go test ./pkg/... -v -race -tags=integration
 
 # Run tests with coverage
 test-coverage:
 	@echo "Running tests with coverage..."
-	@go test ./pkg/... -cover -coverprofile=coverage.out
+	@go test ./pkg/... -cover -coverprofile=coverage.out -tags=integration
 	@go tool cover -func=coverage.out
 	@echo ""
 	@echo "To view HTML coverage report, run: go tool cover -html=coverage.out"

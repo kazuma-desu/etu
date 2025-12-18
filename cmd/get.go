@@ -2,25 +2,25 @@ package cmd
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-	"text/tabwriter"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
+	"github.com/kazuma-desu/etu/pkg/models"
+	"github.com/kazuma-desu/etu/pkg/output"
 )
 
 var (
 	getOpts struct {
 		sortOrder    string
 		sortTarget   string
-		outputFormat string
 		consistency  string
 		rangeEnd     string
 		limit        int64
@@ -67,7 +67,7 @@ etcdctl get command and provides additional features.`,
   etu get /config/app/host --rev 100
 
   # Get with metadata in table format
-  etu get /config/app/ --prefix --show-metadata -w table
+  etu get /config/app/ --prefix --show-metadata -o table
 
   # Get only values (for scripting)
   etu get /config/app/host --print-value-only
@@ -79,7 +79,7 @@ etcdctl get command and provides additional features.`,
   etu get /config/ --prefix --min-mod-revision 50 --max-mod-revision 100
 
   # JSON output
-  etu get /config/app/ --prefix -w json`,
+  etu get /config/app/ --prefix -o json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: runGet,
 	}
@@ -106,8 +106,6 @@ func init() {
 		"get only the count")
 	getCmd.Flags().BoolVar(&getOpts.printValue, "print-value-only", false,
 		"only write values when using the simple output format")
-	getCmd.Flags().StringVarP(&getOpts.outputFormat, "write-out", "w", "simple",
-		"set the output format (simple, json, table, fields)")
 	getCmd.Flags().StringVar(&getOpts.consistency, "consistency", "l",
 		"linearizable(l) or serializable(s)")
 	getCmd.Flags().Int64Var(&getOpts.minModRev, "min-mod-revision", 0,
@@ -185,7 +183,7 @@ func runGet(_ *cobra.Command, args []string) error {
 	}
 
 	// Output results based on format
-	switch getOpts.outputFormat {
+	switch outputFormat {
 	case "simple":
 		printSimple(resp)
 		return nil
@@ -193,11 +191,13 @@ func runGet(_ *cobra.Command, args []string) error {
 		return printJSON(resp)
 	case "table":
 		return printTable(resp)
+	case "tree":
+		return printTree(resp)
 	case "fields":
 		printFields(resp)
 		return nil
 	default:
-		return fmt.Errorf("invalid output format: %s (use simple, json, table, or fields)", getOpts.outputFormat)
+		return fmt.Errorf("invalid output format: %s (use simple, json, table, tree, or fields)", outputFormat)
 	}
 }
 
@@ -229,6 +229,23 @@ func printSimple(resp *client.GetResponse) {
 }
 
 func printJSON(resp *client.GetResponse) error {
+	// Convert KeyValues to etcdctl-compatible format (base64-encoded keys/values)
+	kvs := make([]map[string]any, len(resp.Kvs))
+	for i, kv := range resp.Kvs {
+		kvItem := map[string]any{
+			"key":             base64.StdEncoding.EncodeToString([]byte(kv.Key)),
+			"create_revision": kv.CreateRevision,
+			"mod_revision":    kv.ModRevision,
+			"version":         kv.Version,
+			"value":           base64.StdEncoding.EncodeToString([]byte(kv.Value)),
+		}
+		// Only include lease if it's set (etcdctl does this)
+		if kv.Lease > 0 {
+			kvItem["lease"] = kv.Lease
+		}
+		kvs[i] = kvItem
+	}
+
 	output := map[string]any{
 		"header": map[string]any{
 			"cluster_id": 0, // We don't have cluster ID in our response
@@ -236,49 +253,59 @@ func printJSON(resp *client.GetResponse) error {
 			"revision":   0,
 			"raft_term":  0,
 		},
-		"kvs":   resp.Kvs,
+		"kvs":   kvs,
 		"count": resp.Count,
-		"more":  resp.More,
 	}
 
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(output)
+	// Output compact raw JSON (single line, no formatting) like etcdctl
+	jsonBytes, err := json.Marshal(output)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(jsonBytes))
+	return nil
 }
 
 func printTable(resp *client.GetResponse) error {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	defer w.Flush()
-
-	// Create styled header
-	headerStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("12"))
+	var headers []string
+	var rows [][]string
 
 	switch {
 	case getOpts.keysOnly:
-		fmt.Fprintln(w, headerStyle.Render("KEY"))
-		fmt.Fprintln(w, strings.Repeat("-", 40))
-		for _, kv := range resp.Kvs {
-			fmt.Fprintf(w, "%s\n", kv.Key)
+		headers = []string{"KEY"}
+		rows = make([][]string, len(resp.Kvs))
+		for i, kv := range resp.Kvs {
+			rows[i] = []string{kv.Key}
 		}
 	case getOpts.showMetadata:
-		fmt.Fprintln(w, headerStyle.Render("KEY\tVALUE\tCREATE_REV\tMOD_REV\tVERSION\tLEASE"))
-		fmt.Fprintln(w, strings.Repeat("-", 100))
-		for _, kv := range resp.Kvs {
+		headers = []string{"KEY", "VALUE", "CREATE_REV", "MOD_REV", "VERSION", "LEASE"}
+		rows = make([][]string, len(resp.Kvs))
+		for i, kv := range resp.Kvs {
 			value := truncateValue(kv.Value, 30)
-			fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%d\t%d\n",
-				kv.Key, value, kv.CreateRevision, kv.ModRevision, kv.Version, kv.Lease)
+			rows[i] = []string{
+				kv.Key,
+				value,
+				fmt.Sprintf("%d", kv.CreateRevision),
+				fmt.Sprintf("%d", kv.ModRevision),
+				fmt.Sprintf("%d", kv.Version),
+				fmt.Sprintf("%d", kv.Lease),
+			}
 		}
 	default:
-		fmt.Fprintln(w, headerStyle.Render("KEY\tVALUE"))
-		fmt.Fprintln(w, strings.Repeat("-", 60))
-		for _, kv := range resp.Kvs {
+		headers = []string{"KEY", "VALUE"}
+		rows = make([][]string, len(resp.Kvs))
+		for i, kv := range resp.Kvs {
 			value := truncateValue(kv.Value, 50)
-			fmt.Fprintf(w, "%s\t%s\n", kv.Key, value)
+			rows[i] = []string{kv.Key, value}
 		}
 	}
 
+	table := output.RenderTable(output.TableConfig{
+		Headers: headers,
+		Rows:    rows,
+	})
+
+	fmt.Println(table)
 	return nil
 }
 
@@ -298,6 +325,25 @@ func printFields(resp *client.GetResponse) {
 			fmt.Printf("Lease:          %d\n", kv.Lease)
 		}
 	}
+}
+
+func printTree(resp *client.GetResponse) error {
+	// Tree format only makes sense with multiple keys
+	if !getOpts.prefix && !getOpts.fromKey {
+		fmt.Fprintf(os.Stderr, "Warning: 'tree' format requires --prefix or --from-key, using 'table' instead\n")
+		return printTable(resp)
+	}
+
+	// Convert GetResponse to ConfigPairs for tree rendering
+	pairs := make([]*models.ConfigPair, len(resp.Kvs))
+	for i, kv := range resp.Kvs {
+		pairs[i] = &models.ConfigPair{
+			Key:   kv.Key,
+			Value: kv.Value,
+		}
+	}
+
+	return output.PrintTree(pairs)
 }
 
 func truncateValue(value string, maxLen int) string {

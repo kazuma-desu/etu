@@ -33,11 +33,14 @@ ensures your configuration is validated before being applied.`,
   # Preview changes without applying (dry run)
   etu apply -f config.txt --dry-run
 
-  # Apply with strict validation (warnings treated as errors)
-  etu apply -f config.txt --strict
+  # JSON output for CI/CD pipelines
+  etu apply -f config.txt -o json
 
-  # Skip validation (not recommended)
-  etu apply -f config.txt --no-validate`,
+  # Table format showing applied keys
+  etu apply -f config.txt -o table
+
+  # Apply with strict validation (warnings treated as errors)
+  etu apply -f config.txt --strict`,
 		RunE: runApply,
 	}
 )
@@ -103,39 +106,65 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	logger.Log.Infow("Parsing configuration", "file", applyOpts.FilePath, "format", format)
+	// Only show info messages for human-readable formats
+	if outputFormat != "json" {
+		logger.Log.Infow("Parsing configuration", "file", applyOpts.FilePath, "format", format)
+	}
+
 	pairs, err := parser.Parse(applyOpts.FilePath)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	logger.Log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
+	if outputFormat != "json" {
+		logger.Log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
+	}
 
 	// Validate unless --no-validate is set
 	if !noValidate {
-		logger.Log.Info("Validating configuration")
+		if outputFormat != "json" {
+			logger.Log.Info("Validating configuration")
+		}
+
 		v := validator.NewValidator(strict)
 		result := v.Validate(pairs)
 
-		output.PrintValidationResult(result, strict)
+		// Only print validation results for non-JSON formats
+		// (JSON format will include validation status in final output)
+		if outputFormat != "json" {
+			output.PrintValidationResult(result, strict)
+		}
 
 		if !result.Valid {
-			logger.Log.Error("Validation failed - not applying to etcd")
+			if outputFormat != "json" {
+				logger.Log.Error("Validation failed - not applying to etcd")
+			}
 			os.Exit(1)
 		}
 
-		logger.Log.Info("Validation passed")
-		fmt.Println()
+		if outputFormat != "json" {
+			logger.Log.Info("Validation passed")
+			fmt.Println()
+		}
 	}
 
-	// Dry run or apply
+	// Normalize format (tree not supported for apply)
+	supportedFormats := []string{"simple", "json", "table"}
+	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
+	if err != nil {
+		return err
+	}
+
+	// Dry run - just show what would be applied
 	if applyOpts.DryRun {
-		output.PrintDryRun(pairs)
-		return nil
+		return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, true)
 	}
 
 	// Apply to etcd
-	logger.Log.Info("Connecting to etcd")
+	if outputFormat != "json" {
+		logger.Log.Info("Connecting to etcd")
+	}
+
 	cfg, err := config.GetEtcdConfigWithContext(contextName)
 	if err != nil {
 		return fmt.Errorf("failed to get etcd config: %w", err)
@@ -147,15 +176,21 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	}
 	defer etcdClient.Close()
 
-	logger.Log.Info(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
+	if outputFormat != "json" {
+		logger.Log.Info(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
+	}
+
+	// Apply each item
 	for i, pair := range pairs {
-		output.PrintApplyProgress(i+1, len(pairs), pair.Key)
+		// Only show progress for simple format
+		if normalizedFormat == "simple" {
+			output.PrintApplyProgress(i+1, len(pairs), pair.Key)
+		}
 		if err := etcdClient.PutAll(ctx, []*models.ConfigPair{pair}); err != nil {
 			return fmt.Errorf("failed to apply configuration: %w", err)
 		}
 	}
 
-	output.PrintApplySuccess(len(pairs))
-
-	return nil
+	// Print results in requested format
+	return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, false)
 }

@@ -10,72 +10,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/tree"
 
+	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/validator"
 )
 
-var (
-	// Color palette - Modern, balanced colors
-	colorPrimary   = lipgloss.Color("#7C3AED") // Purple
-	colorSuccess   = lipgloss.Color("#10B981") // Green
-	colorWarning   = lipgloss.Color("#F59E0B") // Amber
-	colorError     = lipgloss.Color("#EF4444") // Red
-	colorInfo      = lipgloss.Color("#3B82F6") // Blue
-	colorMuted     = lipgloss.Color("#6B7280") // Gray
-	colorHighlight = lipgloss.Color("#06B6D4") // Cyan
-
-	// Styles
-	keyStyle = lipgloss.NewStyle().
-			Foreground(colorHighlight).
-			Bold(true)
-
-	valueStyle = lipgloss.NewStyle().
-			Foreground(colorMuted)
-
-	errorStyle = lipgloss.NewStyle().
-			Foreground(colorError).
-			Bold(true)
-
-	warningStyle = lipgloss.NewStyle().
-			Foreground(colorWarning).
-			Bold(true)
-
-	successStyle = lipgloss.NewStyle().
-			Foreground(colorSuccess).
-			Bold(true)
-
-	panelStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			Padding(0, 1)
-
-	errorPanelStyle = panelStyle.BorderForeground(colorError)
-
-	warningPanelStyle = panelStyle.BorderForeground(colorWarning)
-
-	successPanelStyle = panelStyle.BorderForeground(colorSuccess)
-
-	infoPanelStyle = panelStyle.BorderForeground(colorInfo)
-
-	// Tree styles
-	treeRootStyle = lipgloss.NewStyle().
-			Foreground(colorPrimary).
-			Bold(true)
-
-	treeFolderStyle = lipgloss.NewStyle().
-			Foreground(colorPrimary).
-			Bold(true)
-
-	treeKeyStyle = lipgloss.NewStyle().
-			Foreground(colorHighlight).
-			Bold(true)
-
-	treeValueStyle = lipgloss.NewStyle().
-			Foreground(colorMuted)
-
-	treeEnumeratorStyle = lipgloss.NewStyle().
-				Foreground(colorMuted)
-)
+// All styles are now defined in styles.go
 
 // PrintConfigPairs prints configuration pairs in a human-readable format
 func PrintConfigPairs(pairs []*models.ConfigPair, jsonOutput bool) error {
@@ -92,6 +33,50 @@ func PrintConfigPairs(pairs []*models.ConfigPair, jsonOutput bool) error {
 		fmt.Printf("%s\n%s\n\n", key, valueStyle.Render(value))
 	}
 
+	return nil
+}
+
+// PrintConfigPairsWithFormat prints configuration pairs in the specified format
+func PrintConfigPairsWithFormat(pairs []*models.ConfigPair, format string) error {
+	switch format {
+	case "simple":
+		return PrintConfigPairs(pairs, false)
+	case "json":
+		return printJSON(pairs)
+	case "table":
+		return printConfigPairsTable(pairs)
+	case "tree":
+		return PrintTree(pairs)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// printConfigPairsTable prints config pairs as a table
+func printConfigPairsTable(pairs []*models.ConfigPair) error {
+	if len(pairs) == 0 {
+		Info("No configuration items found")
+		return nil
+	}
+
+	headers := []string{"KEY", "VALUE"}
+	rows := make([][]string, len(pairs))
+
+	for i, pair := range pairs {
+		value := formatValue(pair.Value)
+		// Truncate long values for table display
+		if len(value) > 60 {
+			value = value[:57] + "..."
+		}
+		rows[i] = []string{pair.Key, value}
+	}
+
+	table := RenderTable(TableConfig{
+		Headers: headers,
+		Rows:    rows,
+	})
+
+	fmt.Println(table)
 	return nil
 }
 
@@ -159,6 +144,86 @@ func PrintValidationResult(result *validator.ValidationResult, strict bool) {
 	}
 }
 
+// PrintValidationWithFormat prints validation results in the specified format
+func PrintValidationWithFormat(result *validator.ValidationResult, strict bool, format string) error {
+	switch format {
+	case "simple":
+		PrintValidationResult(result, strict)
+		return nil
+	case "json":
+		return printValidationJSON(result, strict)
+	case "table":
+		return printValidationTable(result, strict)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// printValidationJSON prints validation results as JSON
+func printValidationJSON(result *validator.ValidationResult, strict bool) error {
+	output := map[string]interface{}{
+		"valid":  result.Valid,
+		"strict": strict,
+		"issues": result.Issues,
+	}
+
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(output)
+}
+
+// printValidationTable prints validation results as a table
+func printValidationTable(result *validator.ValidationResult, strict bool) error {
+	if len(result.Issues) == 0 {
+		Info("✓ Validation passed - no issues found")
+		return nil
+	}
+
+	headers := []string{"LEVEL", "KEY", "MESSAGE"}
+	rows := make([][]string, len(result.Issues))
+
+	for i, issue := range result.Issues {
+		level := issue.Level
+		if level == "error" {
+			level = "✗ ERROR"
+		} else {
+			level = "⚠ WARNING"
+		}
+		rows[i] = []string{level, issue.Key, issue.Message}
+	}
+
+	table := RenderTable(TableConfig{
+		Headers: headers,
+		Rows:    rows,
+	})
+
+	fmt.Println(table)
+	fmt.Println()
+
+	// Print verdict
+	if result.Valid {
+		Success("✓ Validation passed")
+	} else {
+		if strict && hasOnlyWarnings(result) {
+			Error("✗ Validation failed (strict mode: warnings treated as errors)")
+		} else {
+			Error("✗ Validation failed")
+		}
+	}
+
+	return nil
+}
+
+// hasOnlyWarnings checks if all issues are warnings
+func hasOnlyWarnings(result *validator.ValidationResult) bool {
+	for _, issue := range result.Issues {
+		if issue.Level == "error" {
+			return false
+		}
+	}
+	return true
+}
+
 // PrintDryRun prints what would be applied in a dry run
 func PrintDryRun(pairs []*models.ConfigPair) {
 	title := warningStyle.Render(fmt.Sprintf("DRY RUN - Would apply %d configuration items", len(pairs)))
@@ -192,6 +257,269 @@ func PrintApplySuccess(count int) {
 	msg := successStyle.Render(fmt.Sprintf("✓ Successfully applied %d items to etcd", count))
 	fmt.Println()
 	fmt.Println(successPanelStyle.Render(msg))
+}
+
+// PrintApplyResultsWithFormat prints apply results in the specified format
+func PrintApplyResultsWithFormat(pairs []*models.ConfigPair, format string, dryRun bool) error {
+	switch format {
+	case "simple":
+		if dryRun {
+			PrintDryRun(pairs)
+			return nil
+		}
+		PrintApplySuccess(len(pairs))
+		return nil
+	case "json":
+		return printApplyJSON(pairs, dryRun)
+	case "table":
+		return printApplyTable(pairs, dryRun)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+func printApplyJSON(pairs []*models.ConfigPair, dryRun bool) error {
+	result := map[string]any{
+		"applied": len(pairs),
+		"dry_run": dryRun,
+		"items":   make([]map[string]string, len(pairs)),
+	}
+
+	for i, pair := range pairs {
+		result["items"].([]map[string]string)[i] = map[string]string{
+			"key":   pair.Key,
+			"value": formatValue(pair.Value),
+		}
+	}
+
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(result)
+}
+
+func printApplyTable(pairs []*models.ConfigPair, dryRun bool) error {
+	if len(pairs) == 0 {
+		Info("No items to apply")
+		return nil
+	}
+
+	// Show dry-run or applied header
+	action := "APPLIED"
+	if dryRun {
+		action = "DRY-RUN"
+	}
+
+	headers := []string{"#", "KEY", "VALUE"}
+	rows := make([][]string, len(pairs))
+
+	for i, pair := range pairs {
+		value := formatValue(pair.Value)
+		if len(value) > 50 {
+			value = value[:47] + "..."
+		}
+		rows[i] = []string{
+			fmt.Sprintf("%d", i+1),
+			pair.Key,
+			value,
+		}
+	}
+
+	table := RenderTable(TableConfig{
+		Headers: headers,
+		Rows:    rows,
+	})
+
+	fmt.Printf("\n%s - %d items:\n", action, len(pairs))
+	fmt.Println(table)
+
+	return nil
+}
+
+// PrintContextsWithFormat prints contexts in the specified format
+func PrintContextsWithFormat(contexts map[string]*config.ContextConfig, currentContext string, format string) error {
+	switch format {
+	case "simple":
+		return printContextsSimple(contexts, currentContext)
+	case "json":
+		return printContextsJSON(contexts, currentContext)
+	case "table":
+		return printContextsTable(contexts, currentContext)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+func printContextsSimple(contexts map[string]*config.ContextConfig, currentContext string) error {
+	if len(contexts) == 0 {
+		Info("No contexts found")
+		return nil
+	}
+
+	var contextNames []string
+	for name := range contexts {
+		contextNames = append(contextNames, name)
+	}
+	sort.Strings(contextNames)
+
+	for _, name := range contextNames {
+		if name == currentContext {
+			fmt.Printf("* %s\n", name)
+		} else {
+			fmt.Printf("  %s\n", name)
+		}
+	}
+	return nil
+}
+
+func printContextsJSON(contexts map[string]*config.ContextConfig, currentContext string) error {
+	type contextOutput struct {
+		Name      string   `json:"name"`
+		Username  string   `json:"username,omitempty"`
+		Endpoints []string `json:"endpoints"`
+		Current   bool     `json:"current"`
+	}
+
+	output := make([]contextOutput, 0, len(contexts))
+	for name, ctx := range contexts {
+		output = append(output, contextOutput{
+			Name:      name,
+			Current:   name == currentContext,
+			Endpoints: ctx.Endpoints,
+			Username:  ctx.Username,
+		})
+	}
+
+	// Sort by name for consistent output
+	sort.Slice(output, func(i, j int) bool {
+		return output[i].Name < output[j].Name
+	})
+
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(output)
+}
+
+func printContextsTable(contexts map[string]*config.ContextConfig, currentContext string) error {
+	if len(contexts) == 0 {
+		Info("No contexts found")
+		return nil
+	}
+
+	var contextNames []string
+	for name := range contexts {
+		contextNames = append(contextNames, name)
+	}
+	sort.Strings(contextNames)
+
+	headers := []string{"CURRENT", "NAME", "ENDPOINTS", "USER"}
+	rows := make([][]string, len(contextNames))
+
+	for i, name := range contextNames {
+		ctx := contexts[name]
+		current := ""
+		if name == currentContext {
+			current = "*"
+		}
+
+		endpoints := ""
+		if len(ctx.Endpoints) > 0 {
+			endpoints = ctx.Endpoints[0]
+			if len(ctx.Endpoints) > 1 {
+				endpoints += fmt.Sprintf(" (+%d)", len(ctx.Endpoints)-1)
+			}
+		}
+
+		rows[i] = []string{current, name, endpoints, ctx.Username}
+	}
+
+	table := RenderTable(TableConfig{
+		Headers: headers,
+		Rows:    rows,
+	})
+
+	fmt.Println(table)
+	return nil
+}
+
+// PrintConfigViewWithFormat prints config view in the specified format
+func PrintConfigViewWithFormat(cfg *config.Config, format string) error {
+	switch format {
+	case "simple":
+		return printConfigViewSimple(cfg)
+	case "json":
+		return printConfigViewJSON(cfg)
+	case "table":
+		return printConfigViewTable(cfg)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+func printConfigViewSimple(cfg *config.Config) error {
+	fmt.Printf("current-context: %s\n", cfg.CurrentContext)
+	fmt.Printf("log-level: %s\n", cfg.LogLevel)
+	fmt.Printf("default-format: %s\n", cfg.DefaultFormat)
+	fmt.Printf("strict: %v\n", cfg.Strict)
+	fmt.Printf("no-validate: %v\n", cfg.NoValidate)
+	fmt.Printf("contexts: %d\n", len(cfg.Contexts))
+	return nil
+}
+
+func printConfigViewJSON(cfg *config.Config) error {
+	// Create a sanitized version without passwords
+	type sanitizedContext struct {
+		Username  string   `json:"username,omitempty"`
+		Endpoints []string `json:"endpoints"`
+	}
+
+	output := map[string]any{
+		"current_context": cfg.CurrentContext,
+		"log_level":       cfg.LogLevel,
+		"default_format":  cfg.DefaultFormat,
+		"strict":          cfg.Strict,
+		"no_validate":     cfg.NoValidate,
+		"contexts":        make(map[string]sanitizedContext),
+	}
+
+	for name, ctx := range cfg.Contexts {
+		output["contexts"].(map[string]sanitizedContext)[name] = sanitizedContext{
+			Endpoints: ctx.Endpoints,
+			Username:  ctx.Username,
+		}
+	}
+
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(output)
+}
+
+func printConfigViewTable(cfg *config.Config) error {
+	// Settings table
+	fmt.Println("Settings:")
+	settingsHeaders := []string{"SETTING", "VALUE"}
+	settingsRows := [][]string{
+		{"current-context", cfg.CurrentContext},
+		{"log-level", cfg.LogLevel},
+		{"default-format", cfg.DefaultFormat},
+		{"strict", fmt.Sprintf("%v", cfg.Strict)},
+		{"no-validate", fmt.Sprintf("%v", cfg.NoValidate)},
+	}
+
+	settingsTable := RenderTable(TableConfig{
+		Headers: settingsHeaders,
+		Rows:    settingsRows,
+	})
+	fmt.Println(settingsTable)
+	fmt.Println()
+
+	// Contexts table
+	if len(cfg.Contexts) > 0 {
+		fmt.Printf("Contexts (%d):\n", len(cfg.Contexts))
+		return printContextsTable(cfg.Contexts, cfg.CurrentContext)
+	}
+
+	Info("No contexts configured")
+	return nil
 }
 
 // PrintError prints an error message

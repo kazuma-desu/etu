@@ -35,8 +35,11 @@ This is useful for CI/CD pipelines or pre-deployment checks.`,
   # Strict mode (treat warnings as errors)
   etu validate -f config.txt --strict
 
-  # Specify format explicitly
-  etu validate -f config.txt --format etcdctl`,
+  # JSON output for CI/CD pipelines
+  etu validate -f config.txt -o json
+
+  # Table format for summary view
+  etu validate -f config.txt -o table`,
 		RunE: runValidate,
 	}
 )
@@ -97,15 +100,28 @@ func runValidate(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	logger.Log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
-	fmt.Println()
+	// Only show info messages for human-readable formats
+	if outputFormat != "json" {
+		logger.Log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
+		fmt.Println()
+		logger.Log.Info("Validating configuration")
+	}
 
 	// Validate
-	logger.Log.Info("Validating configuration")
 	v := validator.NewValidator(strict)
 	result := v.Validate(pairs)
 
-	output.PrintValidationResult(result, strict)
+	// Normalize format (tree not supported for validate)
+	supportedFormats := []string{"simple", "json", "table"}
+	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
+	if err != nil {
+		return err
+	}
+
+	// Display validation results
+	if err := output.PrintValidationWithFormat(result, strict, normalizedFormat); err != nil {
+		return err
+	}
 
 	if !result.Valid {
 		os.Exit(1)

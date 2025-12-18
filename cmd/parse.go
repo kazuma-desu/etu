@@ -14,7 +14,6 @@ import (
 
 var (
 	parseOpts models.ParseOptions
-	treeView  bool
 
 	parseCmd = &cobra.Command{
 		Use:   "parse -f FILE",
@@ -23,21 +22,24 @@ var (
 
 The parse command is useful for:
   - Inspecting configuration file contents
-  - Converting between formats (with --json flag)
-  - Visualizing hierarchical structure (with --tree flag)
+  - Converting between formats (with -o json)
+  - Visualizing hierarchical structure (with -o tree)
   - Debugging parser behavior
   - Integrating with other tools via JSON output`,
 		Example: `  # Parse and display configuration
   etu parse -f config.txt
 
   # Display as a tree view
-  etu parse -f config.txt --tree
+  etu parse -f config.txt -o tree
+
+  # Display as a table
+  etu parse -f config.txt -o table
 
   # Output as JSON for scripting
-  etu parse -f config.txt --json
+  etu parse -f config.txt -o json
 
   # Pipe to jq for filtering
-  etu parse -f config.txt --json | jq '.[] | select(.key | contains("database"))'`,
+  etu parse -f config.txt -o json | jq '.[] | select(.key | contains("database"))'`,
 		RunE: runParse,
 	}
 )
@@ -49,15 +51,10 @@ func init() {
 		"path to configuration file (required)")
 	parseCmd.Flags().StringVar((*string)(&parseOpts.Format), "format", "",
 		"file format: auto, etcdctl (overrides config)")
-	parseCmd.Flags().BoolVar(&parseOpts.JSONOutput, "json", false,
-		"output as JSON")
-	parseCmd.Flags().BoolVar(&treeView, "tree", false,
-		"display as tree view")
 
 	if err := parseCmd.MarkFlagRequired("file"); err != nil {
 		panic(fmt.Sprintf("failed to mark flag as required: %v", err))
 	}
-	parseCmd.MarkFlagsMutuallyExclusive("json", "tree")
 }
 
 func runParse(_ *cobra.Command, _ []string) error {
@@ -90,7 +87,8 @@ func runParse(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if !parseOpts.JSONOutput {
+	// Only show info message for human-readable formats
+	if outputFormat != "json" {
 		logger.Log.Infow("Parsing configuration", "file", parseOpts.FilePath, "format", format)
 	}
 
@@ -99,10 +97,13 @@ func runParse(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	// Display based on output format
-	if treeView {
-		return output.PrintTree(pairs)
+	// Normalize format (tree is supported for parse)
+	supportedFormats := []string{"simple", "json", "table", "tree"}
+	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
+	if err != nil {
+		return err
 	}
 
-	return output.PrintConfigPairs(pairs, parseOpts.JSONOutput)
+	// Display using the new format function
+	return output.PrintConfigPairsWithFormat(pairs, normalizedFormat)
 }
