@@ -57,7 +57,7 @@ jobs:
         with:
           version: v2.6
           args: --out-format=checkstyle:golangci-lint-report.xml --timeout=5m
-          continue-on-error: true
+        continue-on-error: true
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
