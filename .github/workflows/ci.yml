@@ -56,11 +56,8 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.6
-          args: --out-format checkstyle:golangci-lint-report.xml --timeout=5m
-          skip-cache: false
-          skip-pkg-cache: false
-          skip-build-cache: false
-        continue-on-error: true
+          args: --out-format=checkstyle:golangci-lint-report.xml --timeout=5m
+          continue-on-error: true
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
