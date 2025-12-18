@@ -78,6 +78,11 @@ integration-test
 		err := os.WriteFile(configFile, []byte(content), 0644)
 		require.NoError(t, err)
 
+		// Isolate config to prevent loading user's config
+		oldHome := os.Getenv("HOME")
+		os.Setenv("HOME", tempDir)
+		defer os.Setenv("HOME", oldHome)
+
 		// Use environment variable for etcd endpoint
 		oldEndpoints := os.Getenv("ETCD_ENDPOINTS")
 		os.Setenv("ETCD_ENDPOINTS", endpoint)
@@ -179,6 +184,11 @@ value
 		err := os.WriteFile(configFile, []byte(content), 0644)
 		require.NoError(t, err)
 
+		// Isolate config to prevent loading user's config
+		oldHome := os.Getenv("HOME")
+		os.Setenv("HOME", tempDir)
+		defer os.Setenv("HOME", oldHome)
+
 		oldEndpoints := os.Getenv("ETCD_ENDPOINTS")
 		os.Setenv("ETCD_ENDPOINTS", endpoint)
 		defer os.Setenv("ETCD_ENDPOINTS", oldEndpoints)
@@ -217,6 +227,11 @@ value
 `
 		err := os.WriteFile(configFile, []byte(content), 0644)
 		require.NoError(t, err)
+
+		// Isolate config to prevent loading user's config
+		oldHome := os.Getenv("HOME")
+		os.Setenv("HOME", tempDir)
+		defer os.Setenv("HOME", oldHome)
 
 		oldEndpoints := os.Getenv("ETCD_ENDPOINTS")
 		os.Setenv("ETCD_ENDPOINTS", endpoint)

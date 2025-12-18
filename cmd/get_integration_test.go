@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"os"
@@ -260,8 +261,11 @@ func TestGetCommand_Integration(t *testing.T) {
 		require.Len(t, kvs, 1)
 
 		kv := kvs[0].(map[string]any)
-		require.Equal(t, "/config/app/host", kv["Key"])
-		require.Equal(t, "localhost", kv["Value"])
+		// Keys and values are base64 encoded in JSON output
+		keyBytes, _ := base64.StdEncoding.DecodeString(kv["key"].(string))
+		valueBytes, _ := base64.StdEncoding.DecodeString(kv["value"].(string))
+		require.Equal(t, "/config/app/host", string(keyBytes))
+		require.Equal(t, "localhost", string(valueBytes))
 	})
 
 	t.Run("Get with range", func(t *testing.T) {
