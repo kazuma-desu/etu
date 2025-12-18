@@ -240,7 +240,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		os.Stdout = w
 
 		resetGetFlags()
-		getOpts.outputFormat = "json"
+		outputFormat = "json"
 
 		err := runGet(getCmd, []string{"/config/app/host"})
 		require.NoError(t, err)
@@ -519,7 +519,7 @@ func resetGetFlags() {
 	getOpts.keysOnly = false
 	getOpts.countOnly = false
 	getOpts.printValue = false
-	getOpts.outputFormat = "simple"
+	outputFormat = "simple"
 	getOpts.consistency = "l"
 	getOpts.minModRev = 0
 	getOpts.maxModRev = 0

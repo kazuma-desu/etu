@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	logLevel    string
-	contextName string
+	logLevel     string
+	contextName  string
+	outputFormat string
 
 	rootCmd = &cobra.Command{
 		Use:   "etu",
@@ -32,6 +33,8 @@ func init() {
 		"log level (debug, info, warn, error) - overrides config file")
 	rootCmd.PersistentFlags().StringVar(&contextName, "context", "",
 		"context to use for etcd connection (overrides current context)")
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "simple",
+		"output format (simple, json, table, tree)")
 }
 
 // Execute runs the root command

@@ -3,9 +3,7 @@ package cmd
 import (
 	"fmt"
 	"slices"
-	"sort"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/config"
@@ -31,7 +29,15 @@ var getContextsCmd = &cobra.Command{
 	Use:   "get-contexts",
 	Short: "List all available contexts",
 	Long:  `List all saved contexts with their connection details.`,
-	Run:   runGetContexts,
+	Example: `  # List all contexts
+  etu config get-contexts
+
+  # List contexts in JSON format
+  etu config get-contexts -o json
+
+  # List contexts in table format
+  etu config get-contexts -o table`,
+	Run: runGetContexts,
 }
 
 var currentContextCmd = &cobra.Command{
@@ -72,7 +78,15 @@ var viewConfigCmd = &cobra.Command{
 	Use:   "view",
 	Short: "View the current configuration",
 	Long:  `Display the current configuration file contents with sensitive information redacted.`,
-	Run:   runViewConfig,
+	Example: `  # View current configuration
+  etu config view
+
+  # View configuration in JSON format
+  etu config view -o json
+
+  # View configuration in table format
+  etu config view -o table`,
+	Run: runViewConfig,
 }
 
 var setConfigCmd = &cobra.Command{
@@ -123,42 +137,16 @@ func runGetContexts(_ *cobra.Command, _ []string) {
 		return
 	}
 
-	// Sort context names for consistent output
-	var contextNames []string
-	for name := range cfg.Contexts {
-		contextNames = append(contextNames, name)
+	// Normalize format (tree not supported for config get-contexts)
+	supportedFormats := []string{"simple", "json", "table"}
+	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
+	if err != nil {
+		logger.Log.Fatalw("Invalid output format", "error", err)
 	}
-	sort.Strings(contextNames)
 
-	// Print header
-	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).Render("CONTEXTS"))
-	fmt.Println()
-
-	// Print each context
-	for _, name := range contextNames {
-		ctx := cfg.Contexts[name]
-
-		// Mark current context
-		marker := "  "
-		if name == cfg.CurrentContext {
-			marker = lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Render("* ")
-		}
-
-		styledName := lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Bold(true).Render(name)
-		fmt.Printf("%s%s\n", marker, styledName)
-
-		// Print endpoints
-		for _, endpoint := range ctx.Endpoints {
-			fmt.Printf("    %s\n", lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render(endpoint))
-		}
-
-		// Print username if set
-		if ctx.Username != "" {
-			username := lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render(fmt.Sprintf("User: %s", ctx.Username))
-			fmt.Printf("    %s\n", username)
-		}
-
-		fmt.Println()
+	// Print contexts in requested format
+	if err := output.PrintContextsWithFormat(cfg.Contexts, cfg.CurrentContext, normalizedFormat); err != nil {
+		logger.Log.Fatalw("Failed to print contexts", "error", err)
 	}
 }
 
@@ -257,65 +245,15 @@ func runViewConfig(_ *cobra.Command, _ []string) {
 		logger.Log.Fatalw("Failed to load configuration", "error", err)
 	}
 
-	configPath, _ := config.GetConfigPath()
-
-	// Print header
-	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).Render(fmt.Sprintf("Configuration: %s", configPath)))
-	fmt.Println()
-
-	// Print current context
-	if cfg.CurrentContext != "" {
-		fmt.Printf("%s %s\n\n",
-			lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("Current Context:"),
-			lipgloss.NewStyle().Bold(true).Render(cfg.CurrentContext))
+	// Normalize format (tree not supported for config view)
+	supportedFormats := []string{"simple", "json", "table"}
+	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
+	if err != nil {
+		logger.Log.Fatalw("Invalid output format", "error", err)
 	}
 
-	// Print settings
-	fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("Settings:"))
-
-	logLevelDisplay := cfg.LogLevel
-	if logLevelDisplay == "" {
-		logLevelDisplay = "warn (default)"
+	// Print config in requested format
+	if err := output.PrintConfigViewWithFormat(cfg, normalizedFormat); err != nil {
+		logger.Log.Fatalw("Failed to print configuration", "error", err)
 	}
-	fmt.Printf("  log-level: %s\n", logLevelDisplay)
-
-	formatDisplay := cfg.DefaultFormat
-	if formatDisplay == "" {
-		formatDisplay = "auto (default)"
-	}
-	fmt.Printf("  default-format: %s\n", formatDisplay)
-
-	fmt.Printf("  strict: %v\n", cfg.Strict)
-	fmt.Printf("  no-validate: %v\n", cfg.NoValidate)
-	fmt.Println()
-
-	// Print contexts
-	if len(cfg.Contexts) == 0 {
-		output.Info("No contexts configured")
-		return
-	}
-
-	// Sort context names
-	var contextNames []string
-	for name := range cfg.Contexts {
-		contextNames = append(contextNames, name)
-	}
-	sort.Strings(contextNames)
-
-	fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("Contexts:"))
-	for _, name := range contextNames {
-		ctx := cfg.Contexts[name]
-
-		fmt.Printf("\n  %s\n", lipgloss.NewStyle().Bold(true).Render(name))
-		fmt.Printf("    endpoints: %v\n", ctx.Endpoints)
-
-		if ctx.Username != "" {
-			fmt.Printf("    username: %s\n", ctx.Username)
-		}
-
-		if ctx.Password != "" {
-			fmt.Printf("    password: %s\n", lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render("[REDACTED]"))
-		}
-	}
-	fmt.Println()
 }

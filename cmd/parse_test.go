@@ -28,8 +28,7 @@ myapp
 
 		parseOpts.FilePath = configFile
 		parseOpts.Format = "etcdctl"
-		parseOpts.JSONOutput = false
-		treeView = false
+		outputFormat = "simple"
 
 		err = runParse(parseCmd, []string{})
 		assert.NoError(t, err)
@@ -47,8 +46,7 @@ value
 
 		parseOpts.FilePath = configFile
 		parseOpts.Format = "etcdctl"
-		parseOpts.JSONOutput = true
-		treeView = false
+		outputFormat = "json"
 
 		err = runParse(parseCmd, []string{})
 		assert.NoError(t, err)
@@ -69,8 +67,7 @@ localhost
 
 		parseOpts.FilePath = configFile
 		parseOpts.Format = "etcdctl"
-		parseOpts.JSONOutput = false
-		treeView = true
+		outputFormat = "tree"
 
 		err = runParse(parseCmd, []string{})
 		assert.NoError(t, err)
@@ -88,8 +85,7 @@ value
 
 		parseOpts.FilePath = configFile
 		parseOpts.Format = "" // Auto-detect
-		parseOpts.JSONOutput = false
-		treeView = false
+		outputFormat = "simple"
 
 		err = runParse(parseCmd, []string{})
 		assert.NoError(t, err)
@@ -98,8 +94,7 @@ value
 	t.Run("Parse with nonexistent file", func(t *testing.T) {
 		parseOpts.FilePath = "/nonexistent/file.txt"
 		parseOpts.Format = "etcdctl"
-		parseOpts.JSONOutput = false
-		treeView = false
+		outputFormat = "simple"
 
 		err := runParse(parseCmd, []string{})
 		assert.Error(t, err)
@@ -114,8 +109,7 @@ value
 
 		parseOpts.FilePath = configFile
 		parseOpts.Format = "etcdctl"
-		parseOpts.JSONOutput = false
-		treeView = false
+		outputFormat = "simple"
 
 		err = runParse(parseCmd, []string{})
 		assert.NoError(t, err)
@@ -145,8 +139,7 @@ true
 
 		parseOpts.FilePath = configFile
 		parseOpts.Format = "etcdctl"
-		parseOpts.JSONOutput = true
-		treeView = false
+		outputFormat = "json"
 
 		err = runParse(parseCmd, []string{})
 		assert.NoError(t, err)
