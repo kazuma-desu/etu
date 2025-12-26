@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -124,7 +123,7 @@ func runValidate(cmd *cobra.Command, _ []string) error {
 	}
 
 	if !result.Valid {
-		os.Exit(1)
+		return fmt.Errorf("validation failed")
 	}
 
 	return nil
