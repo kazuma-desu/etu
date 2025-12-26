@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/config"
-	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/output"
 )
 
@@ -37,20 +36,20 @@ var getContextsCmd = &cobra.Command{
 
   # List contexts in table format
   etu config get-contexts -o table`,
-	Run: runGetContexts,
+	RunE: runGetContexts,
 }
 
 var currentContextCmd = &cobra.Command{
 	Use:   "current-context",
-	Short: "Display the current active context",
-	Long:  `Display the name of the currently active context.`,
-	Run:   runCurrentContext,
+	Short: "Display current active context",
+	Long:  `Display name of currently active context.`,
+	RunE:  runCurrentContext,
 }
 
 var useContextCmd = &cobra.Command{
 	Use:   "use-context [context-name]",
 	Short: "Switch to a different context",
-	Long: `Switch the active context to a different saved configuration.
+	Long: `Switch active context to a different saved configuration.
 
 Examples:
   # Switch to production context
@@ -59,25 +58,25 @@ Examples:
   # Switch to development context
   etu config use-context dev`,
 	Args: cobra.ExactArgs(1),
-	Run:  runUseContext,
+	RunE: runUseContext,
 }
 
 var deleteContextCmd = &cobra.Command{
 	Use:   "delete-context [context-name]",
 	Short: "Delete a context",
-	Long: `Delete a saved context from the configuration.
+	Long: `Delete a saved context from configuration.
 
 Examples:
   # Delete a context
   etu config delete-context old-dev`,
 	Args: cobra.ExactArgs(1),
-	Run:  runDeleteContext,
+	RunE: runDeleteContext,
 }
 
 var viewConfigCmd = &cobra.Command{
 	Use:   "view",
-	Short: "View the current configuration",
-	Long:  `Display the current configuration file contents with sensitive information redacted.`,
+	Short: "View current configuration",
+	Long:  `Display current configuration file contents with sensitive information redacted.`,
 	Example: `  # View current configuration
   etu config view
 
@@ -86,13 +85,13 @@ var viewConfigCmd = &cobra.Command{
 
   # View configuration in table format
   etu config view -o table`,
-	Run: runViewConfig,
+	RunE: runViewConfig,
 }
 
 var setConfigCmd = &cobra.Command{
 	Use:   "set <key> <value>",
 	Short: "Set a configuration value",
-	Long: `Set a configuration value in the config file.
+	Long: `Set a configuration value in config file.
 
 Available settings:
   log-level       - Default log level (debug, info, warn, error)
@@ -113,7 +112,7 @@ Examples:
   # Disable validation by default (not recommended)
   etu config set no-validate true`,
 	Args: cobra.MinimumNArgs(2),
-	Run:  runSetConfig,
+	RunE: runSetConfig,
 }
 
 func init() {
@@ -126,71 +125,76 @@ func init() {
 	configCmd.AddCommand(viewConfigCmd)
 }
 
-func runGetContexts(_ *cobra.Command, _ []string) {
+func runGetContexts(_ *cobra.Command, _ []string) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		logger.Log.Fatalw("Failed to load configuration", "error", err)
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	if len(cfg.Contexts) == 0 {
 		output.Info("No contexts found. Use 'etu login <context-name>' to create one.")
-		return
+		return nil
 	}
 
 	// Normalize format (tree not supported for config get-contexts)
 	supportedFormats := []string{"simple", "json", "table"}
 	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
 	if err != nil {
-		logger.Log.Fatalw("Invalid output format", "error", err)
+		return fmt.Errorf("invalid output format: %w", err)
 	}
 
 	// Print contexts in requested format
 	if err := output.PrintContextsWithFormat(cfg.Contexts, cfg.CurrentContext, normalizedFormat); err != nil {
-		logger.Log.Fatalw("Failed to print contexts", "error", err)
+		return fmt.Errorf("failed to print contexts: %w", err)
 	}
+
+	return nil
 }
 
-func runCurrentContext(_ *cobra.Command, _ []string) {
+func runCurrentContext(_ *cobra.Command, _ []string) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		logger.Log.Fatalw("Failed to load configuration", "error", err)
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	if cfg.CurrentContext == "" {
 		output.Info("No current context set. Use 'etu login <context-name>' or 'etu config use-context <context-name>'.")
-		return
+		return nil
 	}
 
 	fmt.Print(cfg.CurrentContext)
+	return nil
 }
 
-func runUseContext(_ *cobra.Command, args []string) {
+func runUseContext(_ *cobra.Command, args []string) error {
 	ctxName := args[0]
 
 	if err := config.UseContext(ctxName); err != nil {
-		logger.Log.Fatalw("Failed to switch context", "error", err)
+		return fmt.Errorf("failed to switch context: %w", err)
 	}
 
 	output.Success(fmt.Sprintf("Switched to context '%s'", ctxName))
+	return nil
 }
 
-func runDeleteContext(_ *cobra.Command, args []string) {
+func runDeleteContext(_ *cobra.Command, args []string) error {
 	ctxName := args[0]
 
 	if err := config.DeleteContext(ctxName); err != nil {
-		logger.Log.Fatalw("Failed to delete context", "error", err)
+		return fmt.Errorf("failed to delete context: %w", err)
 	}
 
 	output.Success(fmt.Sprintf("Context '%s' deleted", ctxName))
+	return nil
 }
 
-func runSetConfig(_ *cobra.Command, args []string) {
+func runSetConfig(_ *cobra.Command, args []string) error {
 	key := args[0]
 	value := args[1]
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		logger.Log.Fatalw("Failed to load configuration", "error", err)
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	switch key {
@@ -198,14 +202,14 @@ func runSetConfig(_ *cobra.Command, args []string) {
 		// Validate log level
 		validLevels := []string{"debug", "info", "warn", "error"}
 		if !slices.Contains(validLevels, value) {
-			logger.Log.Fatalw("Invalid log level", "level", value, "valid", "debug, info, warn, error")
+			return fmt.Errorf("invalid log level %s, valid: debug, info, warn, error", value)
 		}
 		cfg.LogLevel = value
 	case "default-format":
 		// Validate format
 		validFormats := []string{"auto", "etcdctl"}
 		if !slices.Contains(validFormats, value) {
-			logger.Log.Fatalw("Invalid format", "format", value, "valid", "auto, etcdctl")
+			return fmt.Errorf("invalid format %s, valid: auto, etcdctl", value)
 		}
 		cfg.DefaultFormat = value
 	case "strict":
@@ -216,7 +220,7 @@ func runSetConfig(_ *cobra.Command, args []string) {
 		case "false":
 			cfg.Strict = false
 		default:
-			logger.Log.Fatalw("Invalid boolean value", "value", value, "valid", "true, false")
+			return fmt.Errorf("invalid boolean value %s, valid: true, false", value)
 		}
 	case "no-validate":
 		// Parse boolean
@@ -226,34 +230,37 @@ func runSetConfig(_ *cobra.Command, args []string) {
 		case "false":
 			cfg.NoValidate = false
 		default:
-			logger.Log.Fatalw("Invalid boolean value", "value", value, "valid", "true, false")
+			return fmt.Errorf("invalid boolean value %s, valid: true, false", value)
 		}
 	default:
-		logger.Log.Fatalw("Unknown configuration key", "key", key)
+		return fmt.Errorf("unknown configuration key: %s", key)
 	}
 
 	if err := config.SaveConfig(cfg); err != nil {
-		logger.Log.Fatalw("Failed to save configuration", "error", err)
+		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
 	output.Success(fmt.Sprintf("Configuration updated: %s = %s", key, value))
+	return nil
 }
 
-func runViewConfig(_ *cobra.Command, _ []string) {
+func runViewConfig(_ *cobra.Command, _ []string) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		logger.Log.Fatalw("Failed to load configuration", "error", err)
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Normalize format (tree not supported for config view)
 	supportedFormats := []string{"simple", "json", "table"}
 	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
 	if err != nil {
-		logger.Log.Fatalw("Invalid output format", "error", err)
+		return fmt.Errorf("invalid output format: %w", err)
 	}
 
 	// Print config in requested format
 	if err := output.PrintConfigViewWithFormat(cfg, normalizedFormat); err != nil {
-		logger.Log.Fatalw("Failed to print configuration", "error", err)
+		return fmt.Errorf("failed to print configuration: %w", err)
 	}
+
+	return nil
 }

@@ -1,4 +1,4 @@
-.PHONY: build clean test test-coverage test-verbose install run-example help
+.PHONY: build clean test test-integration test-all test-coverage test-verbose install run-example help
 
 # Build the binary
 build:
@@ -8,20 +8,30 @@ build:
 install:
 	go install
 
-# Run tests
+# Run unit tests (no containers needed)
 test:
-	@echo "Running tests..."
-	@go test ./pkg/... -race -tags=integration
+	@echo "Running unit tests..."
+	@go test ./pkg/... -race
+
+# Run integration tests (requires Podman/Docker)
+test-integration:
+	@echo "Running integration tests (requires Podman/Docker)..."
+	@go test ./cmd/... -race -tags=integration
+
+# Run all tests
+test-all:
+	@echo "Running all tests..."
+	@go test ./... -race -tags=integration
 
 # Run tests with verbose output
 test-verbose:
 	@echo "Running tests (verbose)..."
-	@go test ./pkg/... -v -race -tags=integration
+	@go test ./... -v -race -tags=integration
 
 # Run tests with coverage
 test-coverage:
 	@echo "Running tests with coverage..."
-	@go test ./pkg/... -cover -coverprofile=coverage.out -tags=integration
+	@go test ./... -cover -coverprofile=coverage.out -tags=integration
 	@go tool cover -func=coverage.out
 	@echo ""
 	@echo "To view HTML coverage report, run: go tool cover -html=coverage.out"
@@ -45,12 +55,14 @@ build-all:
 # Show help
 help:
 	@echo "Available targets:"
-	@echo "  build          - Build the etu binary"
-	@echo "  install        - Install to \$$GOPATH/bin"
-	@echo "  test           - Run unit tests"
-	@echo "  test-verbose   - Run tests with verbose output"
-	@echo "  test-coverage  - Run tests with coverage report"
-	@echo "  clean          - Remove build artifacts"
-	@echo "  run-example    - Run example parse command"
-	@echo "  build-all      - Build for multiple platforms"
-	@echo "  help           - Show this help message"
+	@echo "  build            - Build the etu binary"
+	@echo "  install          - Install to \$$GOPATH/bin"
+	@echo "  test             - Run unit tests (no containers needed)"
+	@echo "  test-integration - Run integration tests (requires Podman/Docker)"
+	@echo "  test-all         - Run all tests (unit + integration)"
+	@echo "  test-verbose     - Run all tests with verbose output"
+	@echo "  test-coverage    - Run all tests with coverage report"
+	@echo "  clean            - Remove build artifacts"
+	@echo "  run-example      - Run example parse command"
+	@echo "  build-all        - Build for multiple platforms"
+	@echo "  help             - Show this help message"

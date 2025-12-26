@@ -12,7 +12,6 @@ import (
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
-	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/output"
 )
 
@@ -44,7 +43,7 @@ Security Note:
   - Use environment variables (ETCD_PASSWORD)
   - Restrict file permissions (automatically set to 0600)`,
 	Args: cobra.ExactArgs(1),
-	Run:  runLogin,
+	RunE: runLogin,
 }
 
 var (
@@ -65,7 +64,7 @@ func init() {
 	loginCmd.Flags().BoolVar(&loginNoTest, "no-test", false, "Skip connection test")
 }
 
-func runLogin(_ *cobra.Command, args []string) {
+func runLogin(_ *cobra.Command, args []string) error {
 	ctxName := args[0]
 
 	// Get configuration interactively or from flags
@@ -80,11 +79,11 @@ func runLogin(_ *cobra.Command, args []string) {
 		output.Prompt("Enter etcd endpoints (comma-separated): ")
 		endpointsStr, err := reader.ReadString('\n')
 		if err != nil {
-			logger.Log.Fatalw("Failed to read input", "error", err)
+			return fmt.Errorf("failed to read input: %w", err)
 		}
 		endpointsStr = strings.TrimSpace(endpointsStr)
 		if endpointsStr == "" {
-			logger.Log.Fatal("Endpoints are required")
+			return fmt.Errorf("endpoints are required")
 		}
 		endpoints = parseEndpointsList(endpointsStr)
 	}
@@ -94,7 +93,7 @@ func runLogin(_ *cobra.Command, args []string) {
 		output.Prompt("Enter username (optional, press enter to skip): ")
 		usernameInput, err := reader.ReadString('\n')
 		if err != nil {
-			logger.Log.Fatalw("Failed to read input", "error", err)
+			return fmt.Errorf("failed to read input: %w", err)
 		}
 		username = strings.TrimSpace(usernameInput)
 	}
@@ -104,7 +103,7 @@ func runLogin(_ *cobra.Command, args []string) {
 		output.Prompt("Enter password (optional, press enter to skip): ")
 		passwordInput, err := reader.ReadString('\n')
 		if err != nil {
-			logger.Log.Fatalw("Failed to read input", "error", err)
+			return fmt.Errorf("failed to read input: %w", err)
 		}
 		password = strings.TrimSpace(passwordInput)
 	}
@@ -119,12 +118,12 @@ func runLogin(_ *cobra.Command, args []string) {
 			output.Prompt("Save configuration anyway? (y/N): ")
 			response, err := reader.ReadString('\n')
 			if err != nil {
-				logger.Log.Fatalw("Failed to read input", "error", err)
+				return fmt.Errorf("failed to read input: %w", err)
 			}
 			response = strings.ToLower(strings.TrimSpace(response))
 			if response != "y" && response != "yes" {
 				output.Error("Configuration not saved")
-				os.Exit(1)
+				return fmt.Errorf("configuration not saved")
 			}
 		}
 	}
@@ -137,7 +136,7 @@ func runLogin(_ *cobra.Command, args []string) {
 	}
 
 	if err := config.SetContext(ctxName, ctxConfig, true); err != nil {
-		logger.Log.Fatalw("Failed to save configuration", "error", err)
+		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
 	configPath, _ := config.GetConfigPath()
@@ -152,6 +151,8 @@ func runLogin(_ *cobra.Command, args []string) {
 	if password != "" {
 		output.PrintSecurityWarning()
 	}
+
+	return nil
 }
 
 func testConnection(endpoints []string, username, password string) bool {

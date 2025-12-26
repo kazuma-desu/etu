@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -139,7 +138,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 			if outputFormat != "json" {
 				logger.Log.Error("Validation failed - not applying to etcd")
 			}
-			os.Exit(1)
+			return fmt.Errorf("validation failed")
 		}
 
 		if outputFormat != "json" {
