@@ -30,16 +30,16 @@ func TestConfigCommands(t *testing.T) {
 		cleanup := setupTestConfig(t)
 		defer cleanup()
 
-		// This should not panic even with no config file
-		runGetContexts(getContextsCmd, []string{})
+		err := runGetContexts(getContextsCmd, []string{})
+		assert.NoError(t, err)
 	})
 
 	t.Run("Current context with no active context", func(t *testing.T) {
 		cleanup := setupTestConfig(t)
 		defer cleanup()
 
-		// Should handle gracefully
-		runCurrentContext(currentContextCmd, []string{})
+		err := runCurrentContext(currentContextCmd, []string{})
+		assert.NoError(t, err)
 	})
 
 	t.Run("Use context", func(t *testing.T) {
@@ -56,8 +56,8 @@ func TestConfigCommands(t *testing.T) {
 		err := config.SetContext("test-context", ctxConfig, true)
 		require.NoError(t, err)
 
-		// Now switch to it
-		runUseContext(useContextCmd, []string{"test-context"})
+		err = runUseContext(useContextCmd, []string{"test-context"})
+		assert.NoError(t, err)
 
 		// Verify it's current
 		cfg, err := config.LoadConfig()
@@ -79,8 +79,8 @@ func TestConfigCommands(t *testing.T) {
 		err := config.SetContext("delete-me", ctxConfig, false)
 		require.NoError(t, err)
 
-		// Delete it
-		runDeleteContext(deleteContextCmd, []string{"delete-me"})
+		err = runDeleteContext(deleteContextCmd, []string{"delete-me"})
+		assert.NoError(t, err)
 
 		// Verify it's gone
 		cfg, err := config.LoadConfig()
@@ -92,10 +92,9 @@ func TestConfigCommands(t *testing.T) {
 		cleanup := setupTestConfig(t)
 		defer cleanup()
 
-		// Set log level
-		runSetConfig(setConfigCmd, []string{"log-level", "debug"})
+		err := runSetConfig(setConfigCmd, []string{"log-level", "debug"})
+		assert.NoError(t, err)
 
-		// Verify it was set
 		cfg, err := config.LoadConfig()
 		require.NoError(t, err)
 		assert.Equal(t, "debug", cfg.LogLevel)
@@ -105,10 +104,9 @@ func TestConfigCommands(t *testing.T) {
 		cleanup := setupTestConfig(t)
 		defer cleanup()
 
-		// Set default format
-		runSetConfig(setConfigCmd, []string{"default-format", "etcdctl"})
+		err := runSetConfig(setConfigCmd, []string{"default-format", "etcdctl"})
+		assert.NoError(t, err)
 
-		// Verify it was set
 		cfg, err := config.LoadConfig()
 		require.NoError(t, err)
 		assert.Equal(t, "etcdctl", cfg.DefaultFormat)
@@ -118,10 +116,9 @@ func TestConfigCommands(t *testing.T) {
 		cleanup := setupTestConfig(t)
 		defer cleanup()
 
-		// Enable strict mode
-		runSetConfig(setConfigCmd, []string{"strict", "true"})
+		err := runSetConfig(setConfigCmd, []string{"strict", "true"})
+		assert.NoError(t, err)
 
-		// Verify it was set
 		cfg, err := config.LoadConfig()
 		require.NoError(t, err)
 		assert.True(t, cfg.Strict)
@@ -131,10 +128,9 @@ func TestConfigCommands(t *testing.T) {
 		cleanup := setupTestConfig(t)
 		defer cleanup()
 
-		// Enable no-validate
-		runSetConfig(setConfigCmd, []string{"no-validate", "true"})
+		err := runSetConfig(setConfigCmd, []string{"no-validate", "true"})
+		assert.NoError(t, err)
 
-		// Verify it was set
 		cfg, err := config.LoadConfig()
 		require.NoError(t, err)
 		assert.True(t, cfg.NoValidate)
@@ -144,7 +140,6 @@ func TestConfigCommands(t *testing.T) {
 		cleanup := setupTestConfig(t)
 		defer cleanup()
 
-		// Create some config
 		ctxConfig := &config.ContextConfig{
 			Endpoints: []string{"localhost:2379"},
 			Username:  "testuser",
@@ -154,15 +149,14 @@ func TestConfigCommands(t *testing.T) {
 		err := config.SetContext("view-test", ctxConfig, true)
 		require.NoError(t, err)
 
-		// View should not panic
-		runViewConfig(viewConfigCmd, []string{})
+		err = runViewConfig(viewConfigCmd, []string{})
+		assert.NoError(t, err)
 	})
 
 	t.Run("Get contexts with multiple contexts", func(t *testing.T) {
 		cleanup := setupTestConfig(t)
 		defer cleanup()
 
-		// Create multiple contexts
 		ctx1 := &config.ContextConfig{
 			Endpoints: []string{"localhost:2379"},
 			Username:  "user1",
@@ -180,7 +174,50 @@ func TestConfigCommands(t *testing.T) {
 		err = config.SetContext("ctx2", ctx2, false)
 		require.NoError(t, err)
 
-		// List contexts should not panic
-		runGetContexts(getContextsCmd, []string{})
+		err = runGetContexts(getContextsCmd, []string{})
+		assert.NoError(t, err)
+	})
+
+	t.Run("Use nonexistent context returns error", func(t *testing.T) {
+		cleanup := setupTestConfig(t)
+		defer cleanup()
+
+		err := runUseContext(useContextCmd, []string{"nonexistent-context"})
+		assert.Error(t, err)
+	})
+
+	t.Run("Delete nonexistent context returns error", func(t *testing.T) {
+		cleanup := setupTestConfig(t)
+		defer cleanup()
+
+		err := runDeleteContext(deleteContextCmd, []string{"nonexistent-context"})
+		assert.Error(t, err)
+	})
+
+	t.Run("Set invalid log level returns error", func(t *testing.T) {
+		cleanup := setupTestConfig(t)
+		defer cleanup()
+
+		err := runSetConfig(setConfigCmd, []string{"log-level", "invalid-level"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid log level")
+	})
+
+	t.Run("Set invalid format returns error", func(t *testing.T) {
+		cleanup := setupTestConfig(t)
+		defer cleanup()
+
+		err := runSetConfig(setConfigCmd, []string{"default-format", "invalid-format"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid format")
+	})
+
+	t.Run("Set unknown config key returns error", func(t *testing.T) {
+		cleanup := setupTestConfig(t)
+		defer cleanup()
+
+		err := runSetConfig(setConfigCmd, []string{"unknown-key", "value"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unknown configuration key")
 	})
 }

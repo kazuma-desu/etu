@@ -34,10 +34,23 @@ myapp
 		assert.NoError(t, err)
 	})
 
-	t.Run("Validate with invalid key format", func(t *testing.T) {
-		// Skip this test because runValidate calls os.Exit(1) on validation failure
-		// which terminates the test process. This would require refactoring to be testable.
-		t.Skip("Skipping because validation failure calls os.Exit(1)")
+	t.Run("Validate with invalid key format returns error", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configFile := filepath.Join(tempDir, "invalid.txt")
+
+		keyWithInvalidCharacters := `/app/invalid key with spaces
+value
+`
+		err := os.WriteFile(configFile, []byte(keyWithInvalidCharacters), 0644)
+		require.NoError(t, err)
+
+		validateOpts.FilePath = configFile
+		validateOpts.Format = "etcdctl"
+		validateOpts.Strict = false
+
+		err = runValidate(validateCmd, []string{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "validation failed")
 	})
 
 	t.Run("Validate with strict mode", func(t *testing.T) {

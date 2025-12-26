@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -52,40 +53,65 @@ func TestLoginCommand_Integration(t *testing.T) {
 	// Wait for etcd to be ready
 	time.Sleep(2 * time.Second)
 
-	t.Run("Login with valid endpoint", func(_ *testing.T) {
+	t.Run("Login with valid endpoint", func(t *testing.T) {
 		loginEndpoints = []string{fullEndpoint}
 		loginUsername = ""
 		loginPassword = ""
 		loginNoAuth = true
 		loginNoTest = false
 
-		runLogin(loginCmd, []string{"test-context"})
-
-		// Verify context was created
-		// Note: This will print output, which is expected
+		err := runLogin(loginCmd, []string{"test-context"})
+		assert.NoError(t, err)
 	})
 
-	t.Run("Login with no-test flag", func(_ *testing.T) {
+	t.Run("Login with no-test flag", func(t *testing.T) {
 		loginEndpoints = []string{fullEndpoint}
 		loginUsername = ""
 		loginPassword = ""
 		loginNoAuth = true
 		loginNoTest = true
 
-		runLogin(loginCmd, []string{"notest-context"})
-
-		// Should succeed even without testing connection
+		err := runLogin(loginCmd, []string{"notest-context"})
+		assert.NoError(t, err)
 	})
 
-	t.Run("Login with multiple endpoints", func(_ *testing.T) {
+	t.Run("Login with multiple endpoints", func(t *testing.T) {
 		loginEndpoints = []string{fullEndpoint, fullEndpoint}
 		loginUsername = ""
 		loginPassword = ""
 		loginNoAuth = true
 		loginNoTest = true
 
-		runLogin(loginCmd, []string{"multi-context"})
+		err := runLogin(loginCmd, []string{"multi-context"})
+		assert.NoError(t, err)
+	})
+}
 
-		// Should handle multiple endpoints
+func TestLoginCommand_ErrorReturns(t *testing.T) {
+	tempDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tempDir)
+	defer os.Setenv("HOME", oldHome)
+
+	t.Run("Login with invalid endpoint returns error", func(t *testing.T) {
+		loginEndpoints = []string{"http://invalid-host-that-does-not-exist:2379"}
+		loginUsername = ""
+		loginPassword = ""
+		loginNoAuth = true
+		loginNoTest = false
+
+		err := runLogin(loginCmd, []string{"invalid-context"})
+		assert.Error(t, err)
+	})
+
+	t.Run("Login saves config even with failed connection test when user declines", func(t *testing.T) {
+		loginEndpoints = []string{"http://localhost:9999"}
+		loginUsername = ""
+		loginPassword = ""
+		loginNoAuth = true
+		loginNoTest = true
+
+		err := runLogin(loginCmd, []string{"notest-saves-context"})
+		assert.NoError(t, err)
 	})
 }
