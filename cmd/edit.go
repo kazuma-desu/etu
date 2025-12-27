@@ -38,10 +38,8 @@ func init() {
 }
 
 func runEdit(_ *cobra.Command, args []string) error {
-	ctx := context.Background()
 	key := args[0]
 
-	// Get etcd config with context
 	logger.Log.Info("Connecting to etcd")
 	cfg, err := config.GetEtcdConfigWithContext(contextName)
 	if err != nil {
@@ -54,9 +52,10 @@ func runEdit(_ *cobra.Command, args []string) error {
 	}
 	defer etcdClient.Close()
 
-	// Fetch current value
 	logger.Log.Infow("Fetching current value", "key", key)
-	value, err := etcdClient.Get(ctx, key)
+	getCtx, getCancel := context.WithTimeout(context.Background(), operationTimeout)
+	value, err := etcdClient.Get(getCtx, key)
+	getCancel()
 	if err != nil {
 		return fmt.Errorf("failed to get key %q: %w", key, err)
 	}
@@ -132,9 +131,10 @@ func runEdit(_ *cobra.Command, args []string) error {
 	}
 	newValue := string(modifiedContent)
 
-	// Write back to etcd
 	logger.Log.Infow("Updating key in etcd", "key", key)
-	if err := etcdClient.Put(ctx, key, newValue); err != nil {
+	putCtx, putCancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer putCancel()
+	if err := etcdClient.Put(putCtx, key, newValue); err != nil {
 		return fmt.Errorf("failed to update key %q: %w", key, err)
 	}
 

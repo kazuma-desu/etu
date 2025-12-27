@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
@@ -10,10 +11,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const defaultOperationTimeout = 30 * time.Second
+
 var (
-	logLevel     string
-	contextName  string
-	outputFormat string
+	logLevel         string
+	contextName      string
+	outputFormat     string
+	operationTimeout time.Duration
 
 	rootCmd = &cobra.Command{
 		Use:   "etu",
@@ -35,6 +39,8 @@ func init() {
 		"context to use for etcd connection (overrides current context)")
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "simple",
 		"output format (simple, json, table, tree)")
+	rootCmd.PersistentFlags().DurationVar(&operationTimeout, "timeout", defaultOperationTimeout,
+		"timeout for etcd operations (e.g., 30s, 1m, 2m30s)")
 }
 
 // Execute runs the root command

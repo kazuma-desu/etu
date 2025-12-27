@@ -121,7 +121,8 @@ func init() {
 }
 
 func runGet(_ *cobra.Command, args []string) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
 	key := args[0]
 
 	// Handle range_end if provided
