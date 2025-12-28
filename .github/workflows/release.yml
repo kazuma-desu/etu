@@ -51,7 +51,14 @@ jobs:
             BINARY_NAME="etu.exe"
           fi
 
-          go build -v -ldflags="-s -w -X main.version=$VERSION" -o $BINARY_NAME .
+          COMMIT=$(git rev-parse --short HEAD)
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          go build -v -ldflags="-s -w \
+            -X github.com/kazuma-desu/etu/cmd.Version=$VERSION \
+            -X github.com/kazuma-desu/etu/cmd.Commit=$COMMIT \
+            -X github.com/kazuma-desu/etu/cmd.BuildDate=$BUILD_DATE" \
+            -o $BINARY_NAME .
 
           # Create archive
           ARCHIVE_NAME="etu_${VERSION#v}_${GOOS}_${{ matrix.goarch }}"
