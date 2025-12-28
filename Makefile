@@ -1,17 +1,25 @@
 .PHONY: build clean test test-integration test-all test-coverage test-verbose install run-example help
 
+# Version info (injected at build time via ldflags)
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+LDFLAGS := -ldflags "-X github.com/kazuma-desu/etu/cmd.Version=$(VERSION) \
+                     -X github.com/kazuma-desu/etu/cmd.Commit=$(COMMIT) \
+                     -X github.com/kazuma-desu/etu/cmd.BuildDate=$(BUILD_DATE)"
+
 # Build the binary
 build:
-	go build -o etu .
+	go build $(LDFLAGS) -o etu .
 
 # Install to $GOPATH/bin
 install:
-	go install
+	go install $(LDFLAGS)
 
 # Run unit tests (no containers needed)
 test:
 	@echo "Running unit tests..."
-	@go test ./pkg/... -race
+	@go test ./pkg/... ./cmd/... -race
 
 # Run integration tests (requires Podman/Docker)
 test-integration:
@@ -47,10 +55,10 @@ run-example:
 
 # Build for multiple platforms
 build-all:
-	GOOS=linux GOARCH=amd64 go build -o dist/etu-linux-amd64 .
-	GOOS=darwin GOARCH=amd64 go build -o dist/etu-darwin-amd64 .
-	GOOS=darwin GOARCH=arm64 go build -o dist/etu-darwin-arm64 .
-	GOOS=windows GOARCH=amd64 go build -o dist/etu-windows-amd64.exe .
+	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o dist/etu-linux-amd64 .
+	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o dist/etu-darwin-amd64 .
+	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o dist/etu-darwin-arm64 .
+	GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o dist/etu-windows-amd64.exe .
 
 # Show help
 help:
