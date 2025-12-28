@@ -1,6 +1,9 @@
 package logger
 
 import (
+	"fmt"
+	"os"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -15,7 +18,11 @@ func init() {
 	config.Encoding = "console"
 	config.Level = zap.NewAtomicLevelAt(zapcore.WarnLevel)
 
-	logger, _ := config.Build()
+	logger, err := config.Build()
+	if err != nil {
+		logger = zap.NewNop()
+		fmt.Fprintf(os.Stderr, "Warning: failed to initialize logger: %v\n", err)
+	}
 	Log = logger.Sugar()
 }
 
@@ -40,6 +47,10 @@ func SetLevel(level string) {
 	config.Encoding = "console"
 	config.Level = zap.NewAtomicLevelAt(zapLevel)
 
-	logger, _ := config.Build()
+	logger, err := config.Build()
+	if err != nil {
+		logger = zap.NewNop()
+		fmt.Fprintf(os.Stderr, "Warning: failed to set log level: %v\n", err)
+	}
 	Log = logger.Sugar()
 }

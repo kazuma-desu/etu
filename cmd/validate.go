@@ -5,11 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kazuma-desu/etu/pkg/config"
-	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
-	"github.com/kazuma-desu/etu/pkg/parsers"
 	"github.com/kazuma-desu/etu/pkg/validator"
 )
 
@@ -59,65 +56,29 @@ func init() {
 }
 
 func runValidate(cmd *cobra.Command, _ []string) error {
-	// Load config for defaults
-	appCfg, _ := config.LoadConfig()
+	appCfg := loadAppConfig()
 
-	// Apply config defaults if flags not set
-	// Priority: flag > config > default
-	format := validateOpts.Format
-	if format == "" && appCfg != nil && appCfg.DefaultFormat != "" {
-		format = models.FormatType(appCfg.DefaultFormat)
-	}
-	if format == "" {
-		format = models.FormatAuto
-	}
-
-	strict := validateOpts.Strict
-	if !cmd.Flags().Changed("strict") && appCfg != nil {
-		strict = appCfg.Strict
-	}
-
-	// Parse the file
-	registry := parsers.NewRegistry()
-	if format == models.FormatAuto {
-		var err error
-		format, err = registry.DetectFormat(validateOpts.FilePath)
-		if err != nil {
-			return fmt.Errorf("failed to detect format: %w", err)
-		}
-		logger.Log.Debugw("Auto-detected format", "format", format)
-	}
-
-	parser, err := registry.GetParser(format)
+	pairs, err := parseConfigFile(validateOpts.FilePath, validateOpts.Format, appCfg)
 	if err != nil {
 		return err
 	}
 
-	logger.Log.Infow("Parsing configuration", "file", validateOpts.FilePath, "format", format)
-	pairs, err := parser.Parse(validateOpts.FilePath)
-	if err != nil {
-		return fmt.Errorf("failed to parse file: %w", err)
-	}
+	strict := resolveStrictOption(validateOpts.Strict, cmd.Flags().Changed("strict"), appCfg)
 
-	// Only show info messages for human-readable formats
-	if outputFormat != "json" {
-		logger.Log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
+	if !isQuietOutput() {
+		logVerboseInfo(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
 		fmt.Println()
-		logger.Log.Info("Validating configuration")
+		logVerboseInfo("Validating configuration")
 	}
 
-	// Validate
 	v := validator.NewValidator(strict)
 	result := v.Validate(pairs)
 
-	// Normalize format (tree not supported for validate)
-	supportedFormats := []string{"simple", "json", "table"}
-	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
+	normalizedFormat, err := normalizeOutputFormat(formatsWithoutTree)
 	if err != nil {
 		return err
 	}
 
-	// Display validation results
 	if err := output.PrintValidationWithFormat(result, strict, normalizedFormat); err != nil {
 		return err
 	}

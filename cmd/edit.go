@@ -1,15 +1,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-
-	"github.com/kazuma-desu/etu/pkg/client"
-	"github.com/kazuma-desu/etu/pkg/config"
-	"github.com/kazuma-desu/etu/pkg/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -40,20 +35,15 @@ func init() {
 func runEdit(_ *cobra.Command, args []string) error {
 	key := args[0]
 
-	logger.Log.Info("Connecting to etcd")
-	cfg, err := config.GetEtcdConfigWithContext(contextName)
+	logVerboseInfo("Connecting to etcd")
+	etcdClient, cleanup, err := newEtcdClient()
 	if err != nil {
-		return fmt.Errorf("failed to get etcd config: %w", err)
+		return err
 	}
+	defer cleanup()
 
-	etcdClient, err := client.NewClient(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to create etcd client: %w", err)
-	}
-	defer etcdClient.Close()
-
-	logger.Log.Infow("Fetching current value", "key", key)
-	getCtx, getCancel := context.WithTimeout(context.Background(), operationTimeout)
+	logVerbose("Fetching current value", "key", key)
+	getCtx, getCancel := getOperationContext()
 	value, err := etcdClient.Get(getCtx, key)
 	getCancel()
 	if err != nil {
@@ -101,7 +91,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 	initialModTime := initialStat.ModTime()
 
 	// Open editor
-	logger.Log.Infow("Opening editor", "editor", editor, "file", filepath.Base(tmpPath))
+	logVerbose("Opening editor", "editor", editor, "file", filepath.Base(tmpPath))
 	editorCmd := exec.Command(editor, tmpPath)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
@@ -119,7 +109,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 	finalModTime := finalStat.ModTime()
 
 	if finalModTime.Equal(initialModTime) {
-		logger.Log.Info("No changes detected, skipping update")
+		logVerboseInfo("No changes detected, skipping update")
 		fmt.Println("No changes made.")
 		return nil
 	}
@@ -131,14 +121,14 @@ func runEdit(_ *cobra.Command, args []string) error {
 	}
 	newValue := string(modifiedContent)
 
-	logger.Log.Infow("Updating key in etcd", "key", key)
-	putCtx, putCancel := context.WithTimeout(context.Background(), operationTimeout)
+	logVerbose("Updating key in etcd", "key", key)
+	putCtx, putCancel := getOperationContext()
 	defer putCancel()
 	if err := etcdClient.Put(putCtx, key, newValue); err != nil {
 		return fmt.Errorf("failed to update key %q: %w", key, err)
 	}
 
-	logger.Log.Infow("Successfully updated key", "key", key)
+	logVerbose("Successfully updated key", "key", key)
 	fmt.Printf("Successfully updated %s\n", key)
 
 	return nil

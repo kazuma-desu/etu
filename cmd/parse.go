@@ -5,11 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kazuma-desu/etu/pkg/config"
-	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
-	"github.com/kazuma-desu/etu/pkg/parsers"
 )
 
 var (
@@ -58,52 +55,17 @@ func init() {
 }
 
 func runParse(_ *cobra.Command, _ []string) error {
-	// Load config for defaults
-	appCfg, _ := config.LoadConfig()
+	appCfg := loadAppConfig()
 
-	// Apply config defaults if flags not set
-	// Priority: flag > config > default
-	format := parseOpts.Format
-	if format == "" && appCfg != nil && appCfg.DefaultFormat != "" {
-		format = models.FormatType(appCfg.DefaultFormat)
-	}
-	if format == "" {
-		format = models.FormatAuto
-	}
-
-	// Parse the file
-	registry := parsers.NewRegistry()
-	if format == models.FormatAuto {
-		var err error
-		format, err = registry.DetectFormat(parseOpts.FilePath)
-		if err != nil {
-			return fmt.Errorf("failed to detect format: %w", err)
-		}
-		logger.Log.Debugw("Auto-detected format", "format", format)
-	}
-
-	parser, err := registry.GetParser(format)
+	pairs, err := parseConfigFile(parseOpts.FilePath, parseOpts.Format, appCfg)
 	if err != nil {
 		return err
 	}
 
-	// Only show info message for human-readable formats
-	if outputFormat != "json" {
-		logger.Log.Infow("Parsing configuration", "file", parseOpts.FilePath, "format", format)
-	}
-
-	pairs, err := parser.Parse(parseOpts.FilePath)
-	if err != nil {
-		return fmt.Errorf("failed to parse file: %w", err)
-	}
-
-	// Normalize format (tree is supported for parse)
-	supportedFormats := []string{"simple", "json", "table", "tree"}
-	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
+	normalizedFormat, err := normalizeOutputFormat(formatsWithTree)
 	if err != nil {
 		return err
 	}
 
-	// Display using the new format function
 	return output.PrintConfigPairsWithFormat(pairs, normalizedFormat)
 }
