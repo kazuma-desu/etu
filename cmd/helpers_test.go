@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/kazuma-desu/etu/pkg/config"
@@ -97,7 +98,7 @@ func TestWrapTimeoutError(t *testing.T) {
 				t.Errorf("wrapTimeoutError() = nil, want error containing %q", tt.wantMsg)
 				return
 			}
-			if !containsString(got.Error(), tt.wantMsg) {
+			if !strings.Contains(got.Error(), tt.wantMsg) {
 				t.Errorf("wrapTimeoutError() = %v, want error containing %q", got, tt.wantMsg)
 			}
 		})
@@ -325,17 +326,4 @@ func TestNormalizeOutputFormat(t *testing.T) {
 			}
 		})
 	}
-}
-
-func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsStringHelper(s, substr))
-}
-
-func containsStringHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
