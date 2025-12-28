@@ -64,7 +64,8 @@ func init() {
 }
 
 func runApply(cmd *cobra.Command, _ []string) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
 
 	// Load config for defaults
 	appCfg, _ := config.LoadConfig()
