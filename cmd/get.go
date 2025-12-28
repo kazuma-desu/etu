@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/client"
-	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
@@ -121,7 +119,7 @@ func init() {
 }
 
 func runGet(_ *cobra.Command, args []string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	ctx, cancel := getOperationContext()
 	defer cancel()
 	key := args[0]
 
@@ -131,17 +129,11 @@ func runGet(_ *cobra.Command, args []string) error {
 	}
 
 	// Connect to etcd
-	logger.Log.Debug("Connecting to etcd")
-	cfg, err := config.GetEtcdConfigWithContext(contextName)
+	etcdClient, cleanup, err := newEtcdClient()
 	if err != nil {
-		return fmt.Errorf("failed to get etcd config: %w", err)
+		return err
 	}
-
-	etcdClient, err := client.NewClient(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to create etcd client: %w", err)
-	}
-	defer etcdClient.Close()
+	defer cleanup()
 
 	// Build get options
 	opts := &client.GetOptions{

@@ -24,6 +24,10 @@ linters:
           - errcheck
           - gosec
         path: _test\.go
+      - linters:
+          - govet
+        path: _test\.go
+        text: fieldalignment
     paths:
       - third_party$
       - builtin$

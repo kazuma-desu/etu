@@ -1,17 +1,13 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
-	"github.com/kazuma-desu/etu/pkg/client"
-	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
-	"github.com/kazuma-desu/etu/pkg/parsers"
 	"github.com/kazuma-desu/etu/pkg/validator"
 )
 
@@ -64,133 +60,69 @@ func init() {
 }
 
 func runApply(cmd *cobra.Command, _ []string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	ctx, cancel := getOperationContext()
 	defer cancel()
 
-	// Load config for defaults
-	appCfg, _ := config.LoadConfig()
+	appCfg := loadAppConfig()
+	noValidate := resolveNoValidateOption(applyOpts.NoValidate, cmd.Flags().Changed("no-validate"), appCfg)
+	strict := resolveStrictOption(applyOpts.Strict, cmd.Flags().Changed("strict"), appCfg)
 
-	// Apply config defaults if flags not set
-	// Priority: flag > config > default
-	format := applyOpts.Format
-	if format == "" && appCfg != nil && appCfg.DefaultFormat != "" {
-		format = models.FormatType(appCfg.DefaultFormat)
-	}
-	if format == "" {
-		format = models.FormatAuto
-	}
-
-	noValidate := applyOpts.NoValidate
-	if !cmd.Flags().Changed("no-validate") && appCfg != nil {
-		noValidate = appCfg.NoValidate
-	}
-
-	strict := applyOpts.Strict
-	if !cmd.Flags().Changed("strict") && appCfg != nil {
-		strict = appCfg.Strict
-	}
-
-	// Parse the file
-	registry := parsers.NewRegistry()
-	if format == models.FormatAuto {
-		var err error
-		format, err = registry.DetectFormat(applyOpts.FilePath)
-		if err != nil {
-			return fmt.Errorf("failed to detect format: %w", err)
-		}
-		logger.Log.Debugw("Auto-detected format", "format", format)
-	}
-
-	parser, err := registry.GetParser(format)
+	pairs, err := parseConfigFile(applyOpts.FilePath, applyOpts.Format, appCfg)
 	if err != nil {
 		return err
 	}
+	logVerboseInfo(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
 
-	// Only show info messages for human-readable formats
-	if outputFormat != "json" {
-		logger.Log.Infow("Parsing configuration", "file", applyOpts.FilePath, "format", format)
-	}
-
-	pairs, err := parser.Parse(applyOpts.FilePath)
-	if err != nil {
-		return fmt.Errorf("failed to parse file: %w", err)
-	}
-
-	if outputFormat != "json" {
-		logger.Log.Info(fmt.Sprintf("Parsed %d configuration items", len(pairs)))
-	}
-
-	// Validate unless --no-validate is set
 	if !noValidate {
-		if outputFormat != "json" {
-			logger.Log.Info("Validating configuration")
-		}
+		logVerboseInfo("Validating configuration")
 
 		v := validator.NewValidator(strict)
 		result := v.Validate(pairs)
 
-		// Only print validation results for non-JSON formats
-		// (JSON format will include validation status in final output)
-		if outputFormat != "json" {
+		if !isQuietOutput() {
 			output.PrintValidationResult(result, strict)
 		}
 
 		if !result.Valid {
-			if outputFormat != "json" {
+			if !isQuietOutput() {
 				logger.Log.Error("Validation failed - not applying to etcd")
 			}
 			return fmt.Errorf("validation failed")
 		}
 
-		if outputFormat != "json" {
+		if !isQuietOutput() {
 			logger.Log.Info("Validation passed")
 			fmt.Println()
 		}
 	}
 
-	// Normalize format (tree not supported for apply)
-	supportedFormats := []string{"simple", "json", "table"}
-	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
+	normalizedFormat, err := normalizeOutputFormat(formatsWithoutTree)
 	if err != nil {
 		return err
 	}
 
-	// Dry run - just show what would be applied
 	if applyOpts.DryRun {
 		return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, true)
 	}
 
-	// Apply to etcd
-	if outputFormat != "json" {
-		logger.Log.Info("Connecting to etcd")
-	}
+	logVerboseInfo("Connecting to etcd")
 
-	cfg, err := config.GetEtcdConfigWithContext(contextName)
+	etcdClient, cleanup, err := newEtcdClient()
 	if err != nil {
-		return fmt.Errorf("failed to get etcd config: %w", err)
+		return err
 	}
+	defer cleanup()
 
-	etcdClient, err := client.NewClient(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to create etcd client: %w", err)
-	}
-	defer etcdClient.Close()
+	logVerboseInfo(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
 
-	if outputFormat != "json" {
-		logger.Log.Info(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
-	}
-
-	// Apply each item
 	for i, pair := range pairs {
-		// Only show progress for simple format
 		if normalizedFormat == "simple" {
 			output.PrintApplyProgress(i+1, len(pairs), pair.Key)
 		}
 		if err := etcdClient.PutAll(ctx, []*models.ConfigPair{pair}); err != nil {
-			return fmt.Errorf("failed to apply configuration: %w", err)
+			return wrapTimeoutError(fmt.Errorf("failed to apply configuration: %w", err))
 		}
 	}
 
-	// Print results in requested format
 	return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, false)
 }
