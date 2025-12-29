@@ -14,28 +14,17 @@ var (
 	validateOpts models.ValidateOptions
 
 	validateCmd = &cobra.Command{
-		Use:   "validate -f FILE",
+		Use:   "validate -f <file>",
 		Short: "Validate configuration without applying",
-		Long: `Parse and validate configuration from a file without applying it to etcd.
-
-The validate command performs comprehensive checks on your configuration including:
-  - Key format validation (must start with /, valid characters, length limits)
-  - Value validation (non-null, size limits, structured data validity)
-  - URL validation for keys containing "url"
-  - Duplicate key detection
-
-This is useful for CI/CD pipelines or pre-deployment checks.`,
+		Long:  `Validate a configuration file without applying to etcd. Useful for CI/CD pipelines.`,
 		Example: `  # Validate a configuration file
   etu validate -f config.txt
 
-  # Strict mode (treat warnings as errors)
+  # Strict mode (warnings as errors)
   etu validate -f config.txt --strict
 
-  # JSON output for CI/CD pipelines
-  etu validate -f config.txt -o json
-
-  # Table format for summary view
-  etu validate -f config.txt -o table`,
+  # JSON output for CI/CD
+  etu validate -f config.txt -o json`,
 		RunE: runValidate,
 	}
 )

@@ -11,18 +11,11 @@ import (
 
 var (
 	editCmd = &cobra.Command{
-		Use:   "edit KEY",
+		Use:   "edit <key>",
 		Short: "Edit a key's value in your $EDITOR",
-		Long: `Edit a key's value from etcd in your preferred text editor.
-
-The edit command fetches the current value of a key from etcd, opens it in
-your $EDITOR (or vi/nano as fallback), and writes the modified value back
-to etcd after you save and close the editor.`,
+		Long:  `Fetch a key's value, open in $EDITOR, and save changes back to etcd.`,
 		Example: `  # Edit a key's value
-  etu edit /config/app/database/host
-
-  # Edit a key using a specific context
-  etu edit /config/app/database/host --context production`,
+  etu edit /config/app/database/host`,
 		Args: cobra.ExactArgs(1),
 		RunE: runEdit,
 	}

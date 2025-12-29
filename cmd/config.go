@@ -13,104 +13,47 @@ import (
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage etu configuration",
-	Long: `Manage etu configuration including contexts and settings.
-
-Available subcommands:
-  get-contexts     - List all available contexts
-  current-context  - Display the current active context
-  use-context      - Switch to a different context
-  delete-context   - Delete a context
-  set              - Set a configuration value
-  view             - View the current configuration`,
+	Long:  `Manage contexts and settings.`,
 }
 
 var getContextsCmd = &cobra.Command{
 	Use:   "get-contexts",
 	Short: "List all available contexts",
-	Long:  `List all saved contexts with their connection details.`,
-	Example: `  # List all contexts
-  etu config get-contexts
-
-  # List contexts in JSON format
-  etu config get-contexts -o json
-
-  # List contexts in table format
-  etu config get-contexts -o table`,
-	RunE: runGetContexts,
+	RunE:  runGetContexts,
 }
 
 var currentContextCmd = &cobra.Command{
 	Use:   "current-context",
 	Short: "Display current active context",
-	Long:  `Display name of currently active context.`,
 	RunE:  runCurrentContext,
 }
 
 var useContextCmd = &cobra.Command{
-	Use:   "use-context [context-name]",
+	Use:   "use-context <context-name>",
 	Short: "Switch to a different context",
-	Long: `Switch active context to a different saved configuration.
-
-Examples:
-  # Switch to production context
-  etu config use-context prod
-
-  # Switch to development context
-  etu config use-context dev`,
-	Args: cobra.ExactArgs(1),
-	RunE: runUseContext,
+	Args:  cobra.ExactArgs(1),
+	RunE:  runUseContext,
 }
 
 var deleteContextCmd = &cobra.Command{
-	Use:   "delete-context [context-name]",
+	Use:   "delete-context <context-name>",
 	Short: "Delete a context",
-	Long: `Delete a saved context from configuration.
-
-Examples:
-  # Delete a context
-  etu config delete-context old-dev`,
-	Args: cobra.ExactArgs(1),
-	RunE: runDeleteContext,
+	Args:  cobra.ExactArgs(1),
+	RunE:  runDeleteContext,
 }
 
 var viewConfigCmd = &cobra.Command{
 	Use:   "view",
 	Short: "View current configuration",
-	Long:  `Display current configuration file contents with sensitive information redacted.`,
-	Example: `  # View current configuration
-  etu config view
-
-  # View configuration in JSON format
-  etu config view -o json
-
-  # View configuration in table format
-  etu config view -o table`,
-	RunE: runViewConfig,
+	RunE:  runViewConfig,
 }
 
 var setConfigCmd = &cobra.Command{
 	Use:   "set <key> <value>",
 	Short: "Set a configuration value",
-	Long: `Set a configuration value in config file.
-
-Available settings:
-  log-level       - Default log level (debug, info, warn, error)
-  default-format  - Default file format (auto, etcdctl)
-  strict          - Enable strict validation by default (true, false)
-  no-validate     - Skip validation by default (true, false)
-
-Examples:
-  # Set default log level to debug
-  etu config set log-level debug
-
-  # Set default format to etcdctl
-  etu config set default-format etcdctl
-
-  # Enable strict validation by default
-  etu config set strict true
-
-  # Disable validation by default (not recommended)
-  etu config set no-validate true`,
+	Long:  `Keys: log-level, default-format, strict, no-validate`,
+	Example: `  etu config set log-level debug
+  etu config set strict true`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: runSetConfig,
 }

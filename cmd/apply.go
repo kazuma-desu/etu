@@ -15,26 +15,19 @@ var (
 	applyOpts models.ApplyOptions
 
 	applyCmd = &cobra.Command{
-		Use:   "apply -f FILE",
+		Use:   "apply -f <file>",
 		Short: "Apply configuration to etcd",
-		Long: `Parse configuration from a file, validate it, and apply it to etcd.
-
-The apply command reads configuration from a file, performs validation checks,
-and writes the configuration to etcd. Similar to 'kubectl apply', this command
-ensures your configuration is validated before being applied.`,
-		Example: `  # Apply configuration from a file
+		Long:  `Parse, validate, and apply configuration from a file to etcd.`,
+		Example: `  # Apply configuration
   etu apply -f config.txt
 
-  # Preview changes without applying (dry run)
+  # Preview changes without applying
   etu apply -f config.txt --dry-run
 
-  # JSON output for CI/CD pipelines
+  # JSON output for CI/CD
   etu apply -f config.txt -o json
 
-  # Table format showing applied keys
-  etu apply -f config.txt -o table
-
-  # Apply with strict validation (warnings treated as errors)
+  # Strict validation (warnings as errors)
   etu apply -f config.txt --strict`,
 		RunE: runApply,
 	}

@@ -36,47 +36,19 @@ var (
 	}
 
 	getCmd = &cobra.Command{
-		Use:   "get [options] <key> [range_end]",
-		Short: "Get the key or a range of keys",
-		Long: `Get the key or a range of keys from etcd.
-
-The get command retrieves keys and their values from etcd. It supports various
-options for filtering, sorting, and formatting the output. Compatible with
-etcdctl get command and provides additional features.`,
+		Use:   "get <key> [range_end]",
+		Short: "Get keys from etcd",
+		Long:  `Retrieve keys and values from etcd. Supports prefix queries, filtering, and multiple output formats.`,
 		Example: `  # Get a single key
   etu get /config/app/host
 
   # Get all keys with a prefix
   etu get /config/app/ --prefix
 
-  # Get keys in a range
-  etu get /config/app/a /config/app/z
-
   # Get only keys (no values)
-  etu get /config/app/ --prefix --keys-only
+  etu get /config/ --prefix --keys-only
 
-  # Get count of keys with prefix
-  etu get /config/app/ --prefix --count-only
-
-  # Get with limit and sorted
-  etu get /config/ --prefix --limit 10 --sort-by CREATE --order DESCEND
-
-  # Get at specific revision
-  etu get /config/app/host --rev 100
-
-  # Get with metadata in table format
-  etu get /config/app/ --prefix --show-metadata -o table
-
-  # Get only values (for scripting)
-  etu get /config/app/host --print-value-only
-
-  # Get from a key onwards
-  etu get /config/app/m --from-key
-
-  # Get with revision filters
-  etu get /config/ --prefix --min-mod-revision 50 --max-mod-revision 100
-
-  # JSON output
+  # JSON output for scripting
   etu get /config/app/ --prefix -o json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: runGet,
