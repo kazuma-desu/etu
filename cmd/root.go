@@ -21,11 +21,8 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:   "etu",
-		Short: "Etcd Terminal Utility",
-		Long: `etu (Etcd Terminal Utility) is a CLI tool for managing etcd configurations from multiple file formats.
-
-It provides a familiar interface similar to kubectl for parsing, validating, and
-applying etcd configuration from various sources.`,
+		Short: "Etcd Terminal Utility - kubectl-like CLI for etcd",
+		Long:  `A CLI tool for managing etcd configurations with kubectl-like UX.`,
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			configureLogging()
 		},

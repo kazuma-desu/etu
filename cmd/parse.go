@@ -13,30 +13,17 @@ var (
 	parseOpts models.ParseOptions
 
 	parseCmd = &cobra.Command{
-		Use:   "parse -f FILE",
+		Use:   "parse -f <file>",
 		Short: "Parse and display configuration",
-		Long: `Parse configuration from a file and display it without validation or applying to etcd.
-
-The parse command is useful for:
-  - Inspecting configuration file contents
-  - Converting between formats (with -o json)
-  - Visualizing hierarchical structure (with -o tree)
-  - Debugging parser behavior
-  - Integrating with other tools via JSON output`,
-		Example: `  # Parse and display configuration
+		Long:  `Parse a configuration file and display its contents without applying to etcd.`,
+		Example: `  # Parse and display
   etu parse -f config.txt
 
-  # Display as a tree view
+  # Tree view
   etu parse -f config.txt -o tree
 
-  # Display as a table
-  etu parse -f config.txt -o table
-
-  # Output as JSON for scripting
-  etu parse -f config.txt -o json
-
-  # Pipe to jq for filtering
-  etu parse -f config.txt -o json | jq '.[] | select(.key | contains("database"))'`,
+  # JSON output for scripting
+  etu parse -f config.txt -o json`,
 		RunE: runParse,
 	}
 )

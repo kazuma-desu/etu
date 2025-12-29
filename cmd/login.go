@@ -16,32 +16,23 @@ import (
 )
 
 var loginCmd = &cobra.Command{
-	Use:   "login [context-name]",
+	Use:   "login <context-name>",
 	Short: "Save etcd connection configuration",
-	Long: `Save etcd connection configuration for convenient reuse.
+	Long: `Save connection details for an etcd cluster as a named context.
 
-The login command allows you to save connection details for one or more etcd clusters.
-You can manage multiple contexts (e.g., dev, staging, production) and switch between them.
-
-Examples:
-  # Interactive login
+Passwords are stored in plain text in ~/.config/etu/config.yaml.
+For production: use ETCD_PASSWORD env var or --password at runtime.`,
+	Example: `  # Interactive login
   etu login dev
 
   # Login with authentication
   etu login prod --endpoints http://prod:2379 --username admin --password secret
 
-  # Login without authentication (etcd without auth enabled)
+  # Login without authentication
   etu login dev --endpoints http://localhost:2379 --no-auth
 
-  # Login without storing password (more secure)
-  etu login prod --endpoints http://prod:2379 --username admin
-
-Security Note:
-  Passwords are stored in plain text in ~/.config/etu/config.yaml (like Docker).
-  For better security in production/CI environments:
-  - Don't store passwords, provide via --password flag at runtime
-  - Use environment variables (ETCD_PASSWORD)
-  - Restrict file permissions (automatically set to 0600)`,
+  # Skip connection test
+  etu login staging --endpoints http://staging:2379 --no-test`,
 	Args: cobra.ExactArgs(1),
 	RunE: runLogin,
 }
