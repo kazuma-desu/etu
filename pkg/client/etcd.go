@@ -28,7 +28,6 @@ type Config struct {
 	DialTimeout time.Duration
 }
 
-// NewClient creates a new etcd client
 func NewClient(cfg *Config) (*Client, error) {
 	if len(cfg.Endpoints) == 0 {
 		return nil, fmt.Errorf("at least one endpoint is required")
@@ -59,7 +58,6 @@ func NewClient(cfg *Config) (*Client, error) {
 	}, nil
 }
 
-// Put writes a single key-value pair to etcd
 func (c *Client) Put(ctx context.Context, key, value string) error {
 	_, err := c.client.Put(ctx, key, value)
 	if err != nil {
@@ -68,7 +66,6 @@ func (c *Client) Put(ctx context.Context, key, value string) error {
 	return nil
 }
 
-// PutAll writes multiple configuration pairs to etcd
 func (c *Client) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
 	for _, pair := range pairs {
 		value := formatValue(pair.Value)
@@ -79,7 +76,6 @@ func (c *Client) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
 	return nil
 }
 
-// GetOptions contains options for Get operations
 type GetOptions struct {
 	SortOrder    string // ASCEND or DESCEND
 	SortTarget   string // CREATE, KEY, MODIFY, VALUE, or VERSION
@@ -96,7 +92,6 @@ type GetOptions struct {
 	CountOnly    bool   // Return only count
 }
 
-// KeyValue represents a key-value pair with metadata
 type KeyValue struct {
 	Key            string
 	Value          string
@@ -106,14 +101,12 @@ type KeyValue struct {
 	Lease          int64
 }
 
-// GetResponse contains the response from a Get operation
 type GetResponse struct {
 	Kvs   []*KeyValue
 	Count int64
 	More  bool
 }
 
-// Get retrieves a value from etcd (simple version for backward compatibility)
 func (c *Client) Get(ctx context.Context, key string) (string, error) {
 	opts := &GetOptions{}
 	resp, err := c.GetWithOptions(ctx, key, opts)
@@ -128,42 +121,33 @@ func (c *Client) Get(ctx context.Context, key string) (string, error) {
 	return resp.Kvs[0].Value, nil
 }
 
-// GetWithOptions retrieves keys from etcd with various options
 func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error) {
-	// Build options array
 	var clientOpts []clientv3.OpOption
 
-	// Handle prefix mode
 	if opts.Prefix {
 		clientOpts = append(clientOpts, clientv3.WithPrefix())
 	}
 
-	// Handle from-key mode
 	if opts.FromKey {
 		clientOpts = append(clientOpts, clientv3.WithFromKey())
 	}
 
-	// Handle range
 	if opts.RangeEnd != "" {
 		clientOpts = append(clientOpts, clientv3.WithRange(opts.RangeEnd))
 	}
 
-	// Handle limit
 	if opts.Limit > 0 {
 		clientOpts = append(clientOpts, clientv3.WithLimit(opts.Limit))
 	}
 
-	// Handle revision
 	if opts.Revision > 0 {
 		clientOpts = append(clientOpts, clientv3.WithRev(opts.Revision))
 	}
 
-	// Handle sort order
 	if opts.SortOrder != "" || opts.SortTarget != "" {
 		var order clientv3.SortOrder
 		var target clientv3.SortTarget
 
-		// Parse order
 		switch opts.SortOrder {
 		case "ASCEND", "":
 			order = clientv3.SortAscend
@@ -173,7 +157,6 @@ func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOption
 			return nil, fmt.Errorf("invalid sort order: %s (use ASCEND or DESCEND)", opts.SortOrder)
 		}
 
-		// Parse target
 		switch opts.SortTarget {
 		case "KEY", "":
 			target = clientv3.SortByKey
@@ -192,17 +175,14 @@ func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOption
 		clientOpts = append(clientOpts, clientv3.WithSort(target, order))
 	}
 
-	// Handle keys-only
 	if opts.KeysOnly {
 		clientOpts = append(clientOpts, clientv3.WithKeysOnly())
 	}
 
-	// Handle count-only
 	if opts.CountOnly {
 		clientOpts = append(clientOpts, clientv3.WithCountOnly())
 	}
 
-	// Handle revision filters
 	if opts.MinModRev > 0 {
 		clientOpts = append(clientOpts, clientv3.WithMinModRev(opts.MinModRev))
 	}
@@ -216,13 +196,11 @@ func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOption
 		clientOpts = append(clientOpts, clientv3.WithMaxCreateRev(opts.MaxCreateRev))
 	}
 
-	// Execute get
 	resp, err := c.client.Get(ctx, key, clientOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get key %s: %w", key, err)
 	}
 
-	// Convert response
 	result := &GetResponse{
 		Count: resp.Count,
 		More:  resp.More,
@@ -243,17 +221,14 @@ func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOption
 	return result, nil
 }
 
-// Close closes the etcd client connection
 func (c *Client) Close() error {
 	return c.client.Close()
 }
 
-// Status gets the status of an etcd endpoint
 func (c *Client) Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error) {
 	return c.client.Status(ctx, endpoint)
 }
 
-// formatValue converts various value types to string format for etcd
 func formatValue(val any) string {
 	switch v := val.(type) {
 	case string:
@@ -263,7 +238,6 @@ func formatValue(val any) string {
 	case float64:
 		return fmt.Sprintf("%f", v)
 	case map[string]any:
-		// Format as key: value lines
 		var lines []string
 		for k, val := range v {
 			lines = append(lines, fmt.Sprintf("%s: %v", k, val))
@@ -273,3 +247,6 @@ func formatValue(val any) string {
 		return fmt.Sprintf("%v", v)
 	}
 }
+
+// Compile-time verification that Client implements EtcdClient
+var _ EtcdClient = (*Client)(nil)
