@@ -100,6 +100,13 @@ func newEtcdClient() (*client.Client, func(), error) {
 	return etcdClient, cleanup, nil
 }
 
+func newEtcdClientOrDryRun(dryRun bool) (client.EtcdClient, func(), error) {
+	if dryRun {
+		return client.NewDryRunClient(), func() {}, nil
+	}
+	return newEtcdClient()
+}
+
 func normalizeOutputFormat(supportedFormats []string) (string, error) {
 	return output.NormalizeFormat(outputFormat, supportedFormats)
 }

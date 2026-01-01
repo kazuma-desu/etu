@@ -94,13 +94,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if applyOpts.DryRun {
-		return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, true)
-	}
-
-	logVerboseInfo("Connecting to etcd")
-
-	etcdClient, cleanup, err := newEtcdClient()
+	etcdClient, cleanup, err := newEtcdClientOrDryRun(applyOpts.DryRun)
 	if err != nil {
 		return err
 	}
@@ -109,13 +103,14 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	logVerboseInfo(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
 
 	for i, pair := range pairs {
-		if normalizedFormat == "simple" {
+		if normalizedFormat == "simple" && !applyOpts.DryRun {
 			output.PrintApplyProgress(i+1, len(pairs), pair.Key)
-		}
-		if err := etcdClient.PutAll(ctx, []*models.ConfigPair{pair}); err != nil {
-			return wrapTimeoutError(fmt.Errorf("failed to apply configuration: %w", err))
 		}
 	}
 
-	return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, false)
+	if err := etcdClient.PutAll(ctx, pairs); err != nil {
+		return wrapTimeoutError(fmt.Errorf("failed to apply configuration: %w", err))
+	}
+
+	return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, applyOpts.DryRun)
 }
