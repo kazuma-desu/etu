@@ -18,29 +18,36 @@ type GetWithOptionsCall struct {
 	Key  string
 }
 
-type MockClient struct {
-	PutFunc            func(ctx context.Context, key, value string) error
-	PutAllFunc         func(ctx context.Context, pairs []*models.ConfigPair) error
-	GetFunc            func(ctx context.Context, key string) (string, error)
-	GetWithOptionsFunc func(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error)
-	CloseFunc          func() error
-	StatusFunc         func(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error)
+type PutAllWithProgressCall struct {
+	Pairs []*models.ConfigPair
+}
 
-	PutCalls            []PutCall
-	PutAllCalls         [][]*models.ConfigPair
-	GetCalls            []string
-	GetWithOptionsCalls []GetWithOptionsCall
-	StatusCalls         []string
-	CloseCalled         bool
+type MockClient struct {
+	PutFunc                func(ctx context.Context, key, value string) error
+	PutAllFunc             func(ctx context.Context, pairs []*models.ConfigPair) error
+	PutAllWithProgressFunc func(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error)
+	GetFunc                func(ctx context.Context, key string) (string, error)
+	GetWithOptionsFunc     func(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error)
+	CloseFunc              func() error
+	StatusFunc             func(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error)
+
+	PutCalls                []PutCall
+	PutAllCalls             [][]*models.ConfigPair
+	PutAllWithProgressCalls []PutAllWithProgressCall
+	GetCalls                []string
+	GetWithOptionsCalls     []GetWithOptionsCall
+	StatusCalls             []string
+	CloseCalled             bool
 }
 
 func NewMockClient() *MockClient {
 	return &MockClient{
-		PutCalls:            make([]PutCall, 0),
-		PutAllCalls:         make([][]*models.ConfigPair, 0),
-		GetCalls:            make([]string, 0),
-		GetWithOptionsCalls: make([]GetWithOptionsCall, 0),
-		StatusCalls:         make([]string, 0),
+		PutCalls:                make([]PutCall, 0),
+		PutAllCalls:             make([][]*models.ConfigPair, 0),
+		PutAllWithProgressCalls: make([]PutAllWithProgressCall, 0),
+		GetCalls:                make([]string, 0),
+		GetWithOptionsCalls:     make([]GetWithOptionsCall, 0),
+		StatusCalls:             make([]string, 0),
 	}
 }
 
@@ -60,6 +67,25 @@ func (m *MockClient) PutAll(ctx context.Context, pairs []*models.ConfigPair) err
 		return m.PutAllFunc(ctx, pairs)
 	}
 	return nil
+}
+
+func (m *MockClient) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
+	pairsCopy := make([]*models.ConfigPair, len(pairs))
+	copy(pairsCopy, pairs)
+	m.PutAllWithProgressCalls = append(m.PutAllWithProgressCalls, PutAllWithProgressCall{Pairs: pairsCopy})
+
+	if m.PutAllWithProgressFunc != nil {
+		return m.PutAllWithProgressFunc(ctx, pairs, onProgress)
+	}
+
+	result := &PutAllResult{Total: len(pairs)}
+	for i, pair := range pairs {
+		result.Succeeded++
+		if onProgress != nil {
+			onProgress(i+1, result.Total, pair.Key)
+		}
+	}
+	return result, nil
 }
 
 func (m *MockClient) Get(ctx context.Context, key string) (string, error) {
@@ -104,6 +130,7 @@ func (m *MockClient) Status(ctx context.Context, endpoint string) (*clientv3.Sta
 func (m *MockClient) Reset() {
 	m.PutCalls = make([]PutCall, 0)
 	m.PutAllCalls = make([][]*models.ConfigPair, 0)
+	m.PutAllWithProgressCalls = make([]PutAllWithProgressCall, 0)
 	m.GetCalls = make([]string, 0)
 	m.GetWithOptionsCalls = make([]GetWithOptionsCall, 0)
 	m.StatusCalls = make([]string, 0)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
@@ -102,7 +103,19 @@ func runApply(cmd *cobra.Command, _ []string) error {
 
 	logVerboseInfo(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
 
-	if err := etcdClient.PutAll(ctx, pairs); err != nil {
+	var onProgress client.ProgressFunc
+	if normalizedFormat == "simple" && !applyOpts.DryRun {
+		onProgress = func(current, total int, key string) {
+			output.PrintApplyProgress(current, total, key)
+		}
+	}
+
+	result, err := etcdClient.PutAllWithProgress(ctx, pairs, onProgress)
+	if err != nil {
+		if result != nil && result.Succeeded > 0 {
+			output.Warning(fmt.Sprintf("Partial failure: %d/%d items applied before error",
+				result.Succeeded, result.Total))
+		}
 		return wrapTimeoutError(fmt.Errorf("failed to apply configuration: %w", err))
 	}
 

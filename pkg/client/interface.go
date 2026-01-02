@@ -8,6 +8,18 @@ import (
 	"github.com/kazuma-desu/etu/pkg/models"
 )
 
+// PutAllResult contains the outcome of a batch put operation.
+type PutAllResult struct {
+	FailedKey string // Key that caused failure, empty if all succeeded
+	Succeeded int    // Number of items successfully applied
+	Failed    int    // Number of items that failed (0 or 1, since we stop on first error)
+	Total     int    // Total items in the batch
+}
+
+// ProgressFunc is called after each successful put operation.
+// Parameters: current (1-indexed), total count, and the key just written.
+type ProgressFunc func(current, total int, key string)
+
 // EtcdReader defines read operations on etcd.
 // Implementations must be safe for concurrent use.
 type EtcdReader interface {
@@ -25,8 +37,15 @@ type EtcdWriter interface {
 	Put(ctx context.Context, key, value string) error
 
 	// PutAll writes multiple configuration pairs.
-	// May use transactions for atomicity (implementation-dependent).
+	// Applies items sequentially; partial failures are possible (items before
+	// the failed one are committed). For progress feedback or partial failure
+	// details, use PutAllWithProgress.
 	PutAll(ctx context.Context, pairs []*models.ConfigPair) error
+
+	// PutAllWithProgress writes multiple pairs with optional progress callback.
+	// If onProgress is non-nil, it's called after each successful put.
+	// Returns PutAllResult with success/failure counts even on error.
+	PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error)
 }
 
 // EtcdClient combines read and write operations with lifecycle management.

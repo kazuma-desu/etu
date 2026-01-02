@@ -42,15 +42,28 @@ func (d *DryRunClient) Put(_ context.Context, key, value string) error {
 	return nil
 }
 
-func (d *DryRunClient) PutAll(_ context.Context, pairs []*models.ConfigPair) error {
-	for _, pair := range pairs {
+func (d *DryRunClient) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
+	_, err := d.PutAllWithProgress(ctx, pairs, nil)
+	return err
+}
+
+func (d *DryRunClient) PutAllWithProgress(_ context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
+	result := &PutAllResult{Total: len(pairs)}
+
+	for i, pair := range pairs {
 		d.operations = append(d.operations, Operation{
 			Type:  "PUT",
 			Key:   pair.Key,
 			Value: formatValue(pair.Value),
 		})
+		result.Succeeded++
+
+		if onProgress != nil {
+			onProgress(i+1, result.Total, pair.Key)
+		}
 	}
-	return nil
+
+	return result, nil
 }
 
 func (d *DryRunClient) Get(ctx context.Context, key string) (string, error) {

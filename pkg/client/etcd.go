@@ -68,13 +68,29 @@ func (c *Client) Put(ctx context.Context, key, value string) error {
 }
 
 func (c *Client) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
-	for _, pair := range pairs {
+	_, err := c.PutAllWithProgress(ctx, pairs, nil)
+	return err
+}
+
+func (c *Client) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
+	result := &PutAllResult{Total: len(pairs)}
+
+	for i, pair := range pairs {
 		value := formatValue(pair.Value)
 		if err := c.Put(ctx, pair.Key, value); err != nil {
-			return err
+			result.Failed = 1
+			result.FailedKey = pair.Key
+			return result, fmt.Errorf("failed on key %q (%d/%d applied): %w",
+				pair.Key, result.Succeeded, result.Total, err)
+		}
+		result.Succeeded++
+
+		if onProgress != nil {
+			onProgress(i+1, result.Total, pair.Key)
 		}
 	}
-	return nil
+
+	return result, nil
 }
 
 type GetOptions struct {
