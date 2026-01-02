@@ -102,6 +102,7 @@ func newEtcdClient() (*client.Client, func(), error) {
 
 func newEtcdClientOrDryRun(dryRun bool) (client.EtcdClient, func(), error) {
 	if dryRun {
+		// DryRunClient has no resources to release, so cleanup is a no-op
 		return client.NewDryRunClient(), func() {}, nil
 	}
 	return newEtcdClient()
