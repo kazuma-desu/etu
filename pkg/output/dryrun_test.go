@@ -15,17 +15,28 @@ import (
 
 func captureOutputWithError(f func() error) (string, error) {
 	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		return "", err
+	}
+
+	defer func() {
+		os.Stdout = oldStdout
+		w.Close()
+	}()
+
 	os.Stdout = w
 
-	err := f()
+	if err := f(); err != nil {
+		return "", err
+	}
 
 	w.Close()
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
 	_, _ = io.Copy(&buf, r)
-	return buf.String(), err
+	return buf.String(), nil
 }
 
 func TestPrintDryRunOperations(t *testing.T) {

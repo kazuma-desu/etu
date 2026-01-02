@@ -26,7 +26,6 @@ func printDryRunSimple(ops []client.Operation) error {
 	fmt.Println()
 
 	for i, op := range ops {
-		// Show progress indicator
 		progress := fmt.Sprintf("[%d/%d]", i+1, len(ops))
 
 		var actionStyle string
@@ -39,7 +38,6 @@ func printDryRunSimple(ops []client.Operation) error {
 		key := keyStyle.Render(op.Key)
 		fmt.Printf("%s %s → %s\n", valueStyle.Render(progress), actionStyle, key)
 
-		// Show the value being written if present
 		if op.Value != "" {
 			fmt.Printf("%s\n\n", valueStyle.Render(op.Value))
 		}
