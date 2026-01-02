@@ -119,7 +119,6 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		return wrapTimeoutError(fmt.Errorf("failed to apply configuration: %w", err))
 	}
 
-	// Output results (DryRunClient recorded all operations)
 	if dryClient, ok := etcdClient.(*client.DryRunClient); ok {
 		return output.PrintDryRunOperations(dryClient.Operations(), normalizedFormat)
 	}

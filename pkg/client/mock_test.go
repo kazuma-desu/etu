@@ -59,7 +59,7 @@ func TestMockClient_PutAllWithProgress(t *testing.T) {
 		}
 
 		var progressCalls []string
-		onProgress := func(current, total int, key string) {
+		onProgress := func(_, _ int, key string) {
 			progressCalls = append(progressCalls, key)
 		}
 
