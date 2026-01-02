@@ -5,9 +5,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMockClient_Integration(t *testing.T) {
@@ -29,7 +30,7 @@ func TestMockClient_Integration(t *testing.T) {
 
 	t.Run("simulates connection errors", func(t *testing.T) {
 		mock := client.NewMockClient()
-		mock.PutAllFunc = func(ctx context.Context, pairs []*models.ConfigPair) error {
+		mock.PutAllFunc = func(_ context.Context, _ []*models.ConfigPair) error {
 			return errors.New("connection refused")
 		}
 
@@ -43,7 +44,7 @@ func TestMockClient_Integration(t *testing.T) {
 
 	t.Run("simulates timeout", func(t *testing.T) {
 		mock := client.NewMockClient()
-		mock.GetFunc = func(ctx context.Context, key string) (string, error) {
+		mock.GetFunc = func(_ context.Context, _ string) (string, error) {
 			return "", context.DeadlineExceeded
 		}
 

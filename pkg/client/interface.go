@@ -3,8 +3,9 @@ package client
 import (
 	"context"
 
-	"github.com/kazuma-desu/etu/pkg/models"
 	clientv3 "go.etcd.io/etcd/client/v3"
+
+	"github.com/kazuma-desu/etu/pkg/models"
 )
 
 // EtcdReader defines read operations on etcd.

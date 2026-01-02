@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kazuma-desu/etu/pkg/models"
 )
 
 func TestDryRunClient_Put(t *testing.T) {
@@ -52,7 +53,7 @@ func TestDryRunClient_Get_WithoutReader(t *testing.T) {
 
 func TestDryRunClient_Get_WithReader(t *testing.T) {
 	mock := NewMockClient()
-	mock.GetFunc = func(ctx context.Context, key string) (string, error) {
+	mock.GetFunc = func(_ context.Context, _ string) (string, error) {
 		return "test-value", nil
 	}
 
@@ -82,6 +83,6 @@ func TestDryRunClient_Operations_ReturnsCopy(t *testing.T) {
 	assert.Equal(t, "/key", ops2[0].Key)
 }
 
-func TestDryRunClient_ImplementsInterface(t *testing.T) {
+func TestDryRunClient_ImplementsInterface(_ *testing.T) {
 	var _ EtcdClient = (*DryRunClient)(nil)
 }

@@ -5,9 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kazuma-desu/etu/pkg/models"
 )
 
 func TestMockClient_Put(t *testing.T) {
@@ -24,7 +25,7 @@ func TestMockClient_Put(t *testing.T) {
 	t.Run("custom function is called", func(t *testing.T) {
 		expectedErr := errors.New("put failed")
 		mock := NewMockClient()
-		mock.PutFunc = func(ctx context.Context, key, value string) error {
+		mock.PutFunc = func(_ context.Context, _, _ string) error {
 			return expectedErr
 		}
 
@@ -52,7 +53,7 @@ func TestMockClient_PutAll(t *testing.T) {
 func TestMockClient_Get(t *testing.T) {
 	t.Run("custom function returns value", func(t *testing.T) {
 		mock := NewMockClient()
-		mock.GetFunc = func(ctx context.Context, key string) (string, error) {
+		mock.GetFunc = func(_ context.Context, _ string) (string, error) {
 			return "test-value", nil
 		}
 
@@ -97,6 +98,6 @@ func TestMockClient_Reset(t *testing.T) {
 	assert.False(t, mock.CloseCalled)
 }
 
-func TestMockClient_ImplementsInterface(t *testing.T) {
+func TestMockClient_ImplementsInterface(_ *testing.T) {
 	var _ EtcdClient = (*MockClient)(nil)
 }

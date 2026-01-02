@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kazuma-desu/etu/pkg/models"
 	clientv3 "go.etcd.io/etcd/client/v3"
+
+	"github.com/kazuma-desu/etu/pkg/models"
 )
 
 type Operation struct {
@@ -15,8 +16,8 @@ type Operation struct {
 }
 
 type DryRunClient struct {
-	operations []Operation
 	reader     EtcdReader
+	operations []Operation
 }
 
 func NewDryRunClient() *DryRunClient {
@@ -32,7 +33,7 @@ func NewDryRunClientWithReader(reader EtcdReader) *DryRunClient {
 	}
 }
 
-func (d *DryRunClient) Put(ctx context.Context, key, value string) error {
+func (d *DryRunClient) Put(_ context.Context, key, value string) error {
 	d.operations = append(d.operations, Operation{
 		Type:  "PUT",
 		Key:   key,
@@ -41,7 +42,7 @@ func (d *DryRunClient) Put(ctx context.Context, key, value string) error {
 	return nil
 }
 
-func (d *DryRunClient) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
+func (d *DryRunClient) PutAll(_ context.Context, pairs []*models.ConfigPair) error {
 	for _, pair := range pairs {
 		d.operations = append(d.operations, Operation{
 			Type:  "PUT",
@@ -70,7 +71,7 @@ func (d *DryRunClient) Close() error {
 	return nil
 }
 
-func (d *DryRunClient) Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error) {
+func (d *DryRunClient) Status(_ context.Context, _ string) (*clientv3.StatusResponse, error) {
 	return nil, fmt.Errorf("dry-run mode: status check not available")
 }
 
