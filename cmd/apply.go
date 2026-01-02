@@ -102,12 +102,6 @@ func runApply(cmd *cobra.Command, _ []string) error {
 
 	logVerboseInfo(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
 
-	for i, pair := range pairs {
-		if normalizedFormat == "simple" && !applyOpts.DryRun {
-			output.PrintApplyProgress(i+1, len(pairs), pair.Key)
-		}
-	}
-
 	if err := etcdClient.PutAll(ctx, pairs); err != nil {
 		return wrapTimeoutError(fmt.Errorf("failed to apply configuration: %w", err))
 	}

@@ -53,7 +53,9 @@ func (m *MockClient) Put(ctx context.Context, key, value string) error {
 }
 
 func (m *MockClient) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
-	m.PutAllCalls = append(m.PutAllCalls, pairs)
+	pairsCopy := make([]*models.ConfigPair, len(pairs))
+	copy(pairsCopy, pairs)
+	m.PutAllCalls = append(m.PutAllCalls, pairsCopy)
 	if m.PutAllFunc != nil {
 		return m.PutAllFunc(ctx, pairs)
 	}
@@ -69,7 +71,12 @@ func (m *MockClient) Get(ctx context.Context, key string) (string, error) {
 }
 
 func (m *MockClient) GetWithOptions(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error) {
-	m.GetWithOptionsCalls = append(m.GetWithOptionsCalls, GetWithOptionsCall{Key: key, Opts: opts})
+	var optsCopy *GetOptions
+	if opts != nil {
+		copied := *opts
+		optsCopy = &copied
+	}
+	m.GetWithOptionsCalls = append(m.GetWithOptionsCalls, GetWithOptionsCall{Opts: optsCopy, Key: key})
 	if m.GetWithOptionsFunc != nil {
 		return m.GetWithOptionsFunc(ctx, key, opts)
 	}
@@ -92,6 +99,8 @@ func (m *MockClient) Status(ctx context.Context, endpoint string) (*clientv3.Sta
 	return &clientv3.StatusResponse{}, nil
 }
 
+// Reset clears all call history but preserves function hooks (PutFunc, GetFunc, etc.),
+// allowing test setup to be reused across multiple test cases.
 func (m *MockClient) Reset() {
 	m.PutCalls = make([]PutCall, 0)
 	m.PutAllCalls = make([][]*models.ConfigPair, 0)

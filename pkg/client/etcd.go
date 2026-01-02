@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
-
-	"github.com/kazuma-desu/etu/pkg/models"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc/grpclog"
+
+	"github.com/kazuma-desu/etu/pkg/models"
 )
 
 func init() {
@@ -242,7 +243,7 @@ func formatValue(val any) string {
 		for k, val := range v {
 			lines = append(lines, fmt.Sprintf("%s: %v", k, val))
 		}
-		return fmt.Sprintf("%v", lines)
+		return strings.Join(lines, "\n")
 	default:
 		return fmt.Sprintf("%v", v)
 	}
