@@ -75,6 +75,52 @@ func TestMockClient_Get(t *testing.T) {
 	})
 }
 
+func TestMockClient_GetWithOptions(t *testing.T) {
+	t.Run("records calls with key and options", func(t *testing.T) {
+		mock := NewMockClient()
+		opts := &GetOptions{Prefix: true, Limit: 10}
+
+		_, err := mock.GetWithOptions(context.Background(), "/prefix/", opts)
+
+		assert.NoError(t, err)
+		require.Len(t, mock.GetWithOptionsCalls, 1)
+		assert.Equal(t, "/prefix/", mock.GetWithOptionsCalls[0].Key)
+		assert.Equal(t, opts, mock.GetWithOptionsCalls[0].Opts)
+	})
+
+	t.Run("tracks multiple calls", func(t *testing.T) {
+		mock := NewMockClient()
+
+		mock.GetWithOptions(context.Background(), "/key1", nil)
+		mock.GetWithOptions(context.Background(), "/key2", &GetOptions{Prefix: true})
+
+		require.Len(t, mock.GetWithOptionsCalls, 2)
+		assert.Equal(t, "/key1", mock.GetWithOptionsCalls[0].Key)
+		assert.Equal(t, "/key2", mock.GetWithOptionsCalls[1].Key)
+	})
+}
+
+func TestMockClient_Status(t *testing.T) {
+	t.Run("records endpoint calls", func(t *testing.T) {
+		mock := NewMockClient()
+
+		_, err := mock.Status(context.Background(), "http://localhost:2379")
+
+		assert.NoError(t, err)
+		require.Len(t, mock.StatusCalls, 1)
+		assert.Equal(t, "http://localhost:2379", mock.StatusCalls[0])
+	})
+
+	t.Run("tracks multiple calls", func(t *testing.T) {
+		mock := NewMockClient()
+
+		mock.Status(context.Background(), "http://node1:2379")
+		mock.Status(context.Background(), "http://node2:2379")
+
+		assert.Equal(t, []string{"http://node1:2379", "http://node2:2379"}, mock.StatusCalls)
+	})
+}
+
 func TestMockClient_Close(t *testing.T) {
 	mock := NewMockClient()
 	assert.False(t, mock.CloseCalled)
@@ -88,13 +134,19 @@ func TestMockClient_Close(t *testing.T) {
 func TestMockClient_Reset(t *testing.T) {
 	mock := NewMockClient()
 	mock.Put(context.Background(), "/key", "value")
+	mock.PutAll(context.Background(), []*models.ConfigPair{{Key: "/all", Value: "value"}})
 	mock.Get(context.Background(), "/key")
+	mock.GetWithOptions(context.Background(), "/prefix/", &GetOptions{Prefix: true})
+	mock.Status(context.Background(), "http://localhost:2379")
 	mock.Close()
 
 	mock.Reset()
 
 	assert.Empty(t, mock.PutCalls)
+	assert.Empty(t, mock.PutAllCalls)
 	assert.Empty(t, mock.GetCalls)
+	assert.Empty(t, mock.GetWithOptionsCalls)
+	assert.Empty(t, mock.StatusCalls)
 	assert.False(t, mock.CloseCalled)
 }
 

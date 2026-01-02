@@ -13,6 +13,11 @@ type PutCall struct {
 	Value string
 }
 
+type GetWithOptionsCall struct {
+	Opts *GetOptions
+	Key  string
+}
+
 type MockClient struct {
 	PutFunc            func(ctx context.Context, key, value string) error
 	PutAllFunc         func(ctx context.Context, pairs []*models.ConfigPair) error
@@ -21,17 +26,21 @@ type MockClient struct {
 	CloseFunc          func() error
 	StatusFunc         func(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error)
 
-	PutCalls    []PutCall
-	PutAllCalls [][]*models.ConfigPair
-	GetCalls    []string
-	CloseCalled bool
+	PutCalls            []PutCall
+	PutAllCalls         [][]*models.ConfigPair
+	GetCalls            []string
+	GetWithOptionsCalls []GetWithOptionsCall
+	StatusCalls         []string
+	CloseCalled         bool
 }
 
 func NewMockClient() *MockClient {
 	return &MockClient{
-		PutCalls:    make([]PutCall, 0),
-		PutAllCalls: make([][]*models.ConfigPair, 0),
-		GetCalls:    make([]string, 0),
+		PutCalls:            make([]PutCall, 0),
+		PutAllCalls:         make([][]*models.ConfigPair, 0),
+		GetCalls:            make([]string, 0),
+		GetWithOptionsCalls: make([]GetWithOptionsCall, 0),
+		StatusCalls:         make([]string, 0),
 	}
 }
 
@@ -60,6 +69,7 @@ func (m *MockClient) Get(ctx context.Context, key string) (string, error) {
 }
 
 func (m *MockClient) GetWithOptions(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error) {
+	m.GetWithOptionsCalls = append(m.GetWithOptionsCalls, GetWithOptionsCall{Key: key, Opts: opts})
 	if m.GetWithOptionsFunc != nil {
 		return m.GetWithOptionsFunc(ctx, key, opts)
 	}
@@ -75,6 +85,7 @@ func (m *MockClient) Close() error {
 }
 
 func (m *MockClient) Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error) {
+	m.StatusCalls = append(m.StatusCalls, endpoint)
 	if m.StatusFunc != nil {
 		return m.StatusFunc(ctx, endpoint)
 	}
@@ -85,6 +96,8 @@ func (m *MockClient) Reset() {
 	m.PutCalls = make([]PutCall, 0)
 	m.PutAllCalls = make([][]*models.ConfigPair, 0)
 	m.GetCalls = make([]string, 0)
+	m.GetWithOptionsCalls = make([]GetWithOptionsCall, 0)
+	m.StatusCalls = make([]string, 0)
 	m.CloseCalled = false
 }
 
