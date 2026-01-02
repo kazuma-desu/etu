@@ -100,6 +100,14 @@ func newEtcdClient() (*client.Client, func(), error) {
 	return etcdClient, cleanup, nil
 }
 
+func newEtcdClientOrDryRun(dryRun bool) (client.EtcdClient, func(), error) {
+	if dryRun {
+		// DryRunClient has no resources to release, so cleanup is a no-op
+		return client.NewDryRunClient(), func() {}, nil
+	}
+	return newEtcdClient()
+}
+
 func normalizeOutputFormat(supportedFormats []string) (string, error) {
 	return output.NormalizeFormat(outputFormat, supportedFormats)
 }

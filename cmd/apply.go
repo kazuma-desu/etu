@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
@@ -94,13 +95,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if applyOpts.DryRun {
-		return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, true)
-	}
-
-	logVerboseInfo("Connecting to etcd")
-
-	etcdClient, cleanup, err := newEtcdClient()
+	etcdClient, cleanup, err := newEtcdClientOrDryRun(applyOpts.DryRun)
 	if err != nil {
 		return err
 	}
@@ -108,14 +103,21 @@ func runApply(cmd *cobra.Command, _ []string) error {
 
 	logVerboseInfo(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
 
-	for i, pair := range pairs {
-		if normalizedFormat == "simple" {
-			output.PrintApplyProgress(i+1, len(pairs), pair.Key)
-		}
-		if err := etcdClient.PutAll(ctx, []*models.ConfigPair{pair}); err != nil {
-			return wrapTimeoutError(fmt.Errorf("failed to apply configuration: %w", err))
+	var onProgress client.ProgressFunc
+	if normalizedFormat == "simple" && !applyOpts.DryRun {
+		onProgress = func(current, total int, key string) {
+			output.PrintApplyProgress(current, total, key)
 		}
 	}
 
-	return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, false)
+	result, err := etcdClient.PutAllWithProgress(ctx, pairs, onProgress)
+	if err != nil {
+		if result != nil && result.Succeeded > 0 {
+			output.Warning(fmt.Sprintf("Partial failure: %d/%d items applied before error",
+				result.Succeeded, result.Total))
+		}
+		return wrapTimeoutError(fmt.Errorf("failed to apply configuration: %w", err))
+	}
+
+	return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, applyOpts.DryRun)
 }
