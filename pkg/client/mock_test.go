@@ -50,6 +50,64 @@ func TestMockClient_PutAll(t *testing.T) {
 	assert.Equal(t, pairs, mock.PutAllCalls[0])
 }
 
+func TestMockClient_PutAllWithProgress(t *testing.T) {
+	t.Run("default behavior with progress callback", func(t *testing.T) {
+		mock := NewMockClient()
+		pairs := []*models.ConfigPair{
+			{Key: "/app/name", Value: "test"},
+			{Key: "/app/port", Value: "8080"},
+		}
+
+		var progressCalls []string
+		onProgress := func(_, _ int, key string) {
+			progressCalls = append(progressCalls, key)
+		}
+
+		result, err := mock.PutAllWithProgress(context.Background(), pairs, onProgress)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 2, result.Succeeded)
+		assert.Equal(t, 0, result.Failed)
+		assert.Equal(t, 2, result.Total)
+		assert.Empty(t, result.FailedKey)
+		assert.Equal(t, []string{"/app/name", "/app/port"}, progressCalls)
+		require.Len(t, mock.PutAllWithProgressCalls, 1)
+	})
+
+	t.Run("custom function simulates partial failure", func(t *testing.T) {
+		mock := NewMockClient()
+		pairs := []*models.ConfigPair{
+			{Key: "/key1", Value: "val1"},
+			{Key: "/key2", Value: "val2"},
+		}
+
+		mock.PutAllWithProgressFunc = func(_ context.Context, _ []*models.ConfigPair, _ ProgressFunc) (*PutAllResult, error) {
+			return &PutAllResult{
+				Succeeded: 1,
+				Failed:    1,
+				Total:     2,
+				FailedKey: "/key2",
+			}, errors.New("connection lost")
+		}
+
+		result, err := mock.PutAllWithProgress(context.Background(), pairs, nil)
+
+		assert.Error(t, err)
+		assert.Equal(t, 1, result.Succeeded)
+		assert.Equal(t, "/key2", result.FailedKey)
+	})
+
+	t.Run("nil progress callback is handled", func(t *testing.T) {
+		mock := NewMockClient()
+		pairs := []*models.ConfigPair{{Key: "/key", Value: "val"}}
+
+		result, err := mock.PutAllWithProgress(context.Background(), pairs, nil)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, result.Succeeded)
+	})
+}
+
 func TestMockClient_Get(t *testing.T) {
 	t.Run("custom function returns value", func(t *testing.T) {
 		mock := NewMockClient()
