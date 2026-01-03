@@ -82,7 +82,7 @@ func wrapTimeoutError(err error) error {
 	return err
 }
 
-func newEtcdClient() (*client.Client, func(), error) {
+func newEtcdClient() (client.EtcdClient, func(), error) {
 	cfg, err := config.GetEtcdConfigWithContext(contextName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get etcd config: %w", err)

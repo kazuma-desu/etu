@@ -193,6 +193,7 @@ func TestMockClient_Reset(t *testing.T) {
 	mock := NewMockClient()
 	mock.Put(context.Background(), "/key", "value")
 	mock.PutAll(context.Background(), []*models.ConfigPair{{Key: "/all", Value: "value"}})
+	mock.PutAllWithProgress(context.Background(), []*models.ConfigPair{{Key: "/progress", Value: "val"}}, nil)
 	mock.Get(context.Background(), "/key")
 	mock.GetWithOptions(context.Background(), "/prefix/", &GetOptions{Prefix: true})
 	mock.Status(context.Background(), "http://localhost:2379")
@@ -202,6 +203,7 @@ func TestMockClient_Reset(t *testing.T) {
 
 	assert.Empty(t, mock.PutCalls)
 	assert.Empty(t, mock.PutAllCalls)
+	assert.Empty(t, mock.PutAllWithProgressCalls)
 	assert.Empty(t, mock.GetCalls)
 	assert.Empty(t, mock.GetWithOptionsCalls)
 	assert.Empty(t, mock.StatusCalls)

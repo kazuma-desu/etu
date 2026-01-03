@@ -42,6 +42,40 @@ func TestDryRunClient_PutAll(t *testing.T) {
 	assert.Equal(t, "8080", ops[1].Value)
 }
 
+func TestDryRunClient_PutAllWithProgress(t *testing.T) {
+	t.Run("records operations with progress", func(t *testing.T) {
+		client := NewDryRunClient()
+		pairs := []*models.ConfigPair{
+			{Key: "/app/name", Value: "myapp"},
+			{Key: "/app/port", Value: int64(8080)},
+		}
+
+		var progressCalls []int
+		onProgress := func(current, _ int, _ string) {
+			progressCalls = append(progressCalls, current)
+		}
+
+		result, err := client.PutAllWithProgress(context.Background(), pairs, onProgress)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 2, result.Succeeded)
+		assert.Equal(t, 0, result.Failed)
+		assert.Equal(t, 2, result.Total)
+		assert.Equal(t, []int{1, 2}, progressCalls)
+		assert.Equal(t, 2, client.OperationCount())
+	})
+
+	t.Run("nil progress callback is handled", func(t *testing.T) {
+		client := NewDryRunClient()
+		pairs := []*models.ConfigPair{{Key: "/key", Value: "val"}}
+
+		result, err := client.PutAllWithProgress(context.Background(), pairs, nil)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, result.Succeeded)
+	})
+}
+
 func TestDryRunClient_Get_WithoutReader(t *testing.T) {
 	client := NewDryRunClient()
 
