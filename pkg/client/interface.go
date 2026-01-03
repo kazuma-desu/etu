@@ -60,3 +60,19 @@ type EtcdClient interface {
 	// Status returns cluster status for the given endpoint.
 	Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error)
 }
+
+// OperationRecorder is implemented by clients that record operations
+// for preview/dry-run purposes. Real clients (Client) do not implement this.
+// Use type assertion to check if a client supports operation recording:
+//
+//	if recorder, ok := client.(OperationRecorder); ok {
+//	    ops := recorder.Operations()
+//	}
+type OperationRecorder interface {
+	// Operations returns a copy of all recorded operations.
+	// The returned slice is safe to modify.
+	Operations() []Operation
+
+	// OperationCount returns the number of recorded operations.
+	OperationCount() int
+}

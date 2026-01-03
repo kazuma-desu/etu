@@ -98,4 +98,7 @@ func (d *DryRunClient) OperationCount() int {
 	return len(d.operations)
 }
 
-var _ EtcdClient = (*DryRunClient)(nil)
+var (
+	_ EtcdClient        = (*DryRunClient)(nil)
+	_ OperationRecorder = (*DryRunClient)(nil)
+)
