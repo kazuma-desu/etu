@@ -210,6 +210,45 @@ func TestMockClient_Reset(t *testing.T) {
 	assert.False(t, mock.CloseCalled)
 }
 
+func TestMockClient_Operations(t *testing.T) {
+	t.Run("returns empty slice when no puts", func(t *testing.T) {
+		mock := NewMockClient()
+
+		ops := mock.Operations()
+
+		assert.Empty(t, ops)
+		assert.Equal(t, 0, mock.OperationCount())
+	})
+
+	t.Run("converts put calls to operations", func(t *testing.T) {
+		mock := NewMockClient()
+		mock.Put(context.Background(), "/key1", "value1")
+		mock.Put(context.Background(), "/key2", "value2")
+
+		ops := mock.Operations()
+
+		assert.Len(t, ops, 2)
+		assert.Equal(t, 2, mock.OperationCount())
+		assert.Equal(t, Operation{Type: "PUT", Key: "/key1", Value: "value1"}, ops[0])
+		assert.Equal(t, Operation{Type: "PUT", Key: "/key2", Value: "value2"}, ops[1])
+	})
+
+	t.Run("returns copy that is safe to modify", func(t *testing.T) {
+		mock := NewMockClient()
+		mock.Put(context.Background(), "/key", "value")
+
+		ops1 := mock.Operations()
+		ops1[0].Key = "modified"
+		ops2 := mock.Operations()
+
+		assert.Equal(t, "/key", ops2[0].Key)
+	})
+}
+
 func TestMockClient_ImplementsInterface(_ *testing.T) {
 	var _ EtcdClient = (*MockClient)(nil)
+}
+
+func TestMockClient_ImplementsOperationRecorder(_ *testing.T) {
+	var _ OperationRecorder = (*MockClient)(nil)
 }

@@ -137,4 +137,19 @@ func (m *MockClient) Reset() {
 	m.CloseCalled = false
 }
 
-var _ EtcdClient = (*MockClient)(nil)
+func (m *MockClient) Operations() []Operation {
+	ops := make([]Operation, len(m.PutCalls))
+	for i, call := range m.PutCalls {
+		ops[i] = Operation{Type: "PUT", Key: call.Key, Value: call.Value}
+	}
+	return ops
+}
+
+func (m *MockClient) OperationCount() int {
+	return len(m.PutCalls)
+}
+
+var (
+	_ EtcdClient        = (*MockClient)(nil)
+	_ OperationRecorder = (*MockClient)(nil)
+)
