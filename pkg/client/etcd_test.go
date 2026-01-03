@@ -158,30 +158,19 @@ func TestBuildClientOptions(t *testing.T) {
 	}
 }
 
-func TestNewClient(t *testing.T) {
+func TestValidateAndPrepareConfig(t *testing.T) {
 	tests := []struct {
-		name        string
-		cfg         *Config
-		expectError bool
-		errorMsg    string
+		name            string
+		cfg             *Config
+		expectError     bool
+		errorMsg        string
+		expectedTimeout time.Duration
 	}{
 		{
-			name: "valid configuration",
-			cfg: &Config{
-				Endpoints:   []string{"localhost:2379"},
-				DialTimeout: 100 * time.Millisecond,
-			},
-			expectError: false,
-		},
-		{
-			name: "valid configuration with auth",
-			cfg: &Config{
-				Endpoints:   []string{"localhost:2379"},
-				Username:    "user",
-				Password:    "pass",
-				DialTimeout: 100 * time.Millisecond,
-			},
-			expectError: false,
+			name:        "nil config",
+			cfg:         nil,
+			expectError: true,
+			errorMsg:    "config cannot be nil",
 		},
 		{
 			name: "missing endpoints",
@@ -192,51 +181,56 @@ func TestNewClient(t *testing.T) {
 			errorMsg:    "at least one endpoint is required",
 		},
 		{
-			name: "default timeout",
+			name: "valid config with explicit timeout",
+			cfg: &Config{
+				Endpoints:   []string{"localhost:2379"},
+				DialTimeout: 10 * time.Second,
+			},
+			expectError:     false,
+			expectedTimeout: 10 * time.Second,
+		},
+		{
+			name: "valid config applies default timeout",
 			cfg: &Config{
 				Endpoints: []string{"localhost:2379"},
-				// DialTimeout is 0, should default to 5s
 			},
-			expectError: false,
+			expectError:     false,
+			expectedTimeout: 5 * time.Second,
+		},
+		{
+			name: "valid config with auth credentials",
+			cfg: &Config{
+				Endpoints:   []string{"localhost:2379"},
+				Username:    "user",
+				Password:    "pass",
+				DialTimeout: 1 * time.Second,
+			},
+			expectError:     false,
+			expectedTimeout: 1 * time.Second,
+		},
+		{
+			name: "multiple endpoints",
+			cfg: &Config{
+				Endpoints:   []string{"localhost:2379", "localhost:2380", "localhost:2381"},
+				DialTimeout: 3 * time.Second,
+			},
+			expectError:     false,
+			expectedTimeout: 3 * time.Second,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewClient(tt.cfg)
+			err := validateAndPrepareConfig(tt.cfg)
+
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Nil(t, client)
 				if tt.errorMsg != "" {
 					assert.Contains(t, err.Error(), tt.errorMsg)
 				}
 			} else {
-				// Note: clientv3.New might fail if it tries to connect immediately and fails,
-				// or it might succeed but be disconnected.
-				// For unit tests, we mainly care about validation.
-				// If NewClient returns error because of network (context deadline exceeded), that's fine/expected in unit test env.
-				// However, if we want to test that *validation* passed, we should distinguish.
-
-				// In this codebase, NewClient calls clientv3.New.
-				// clientv3.New checks config sanitization.
-				// It DOES NOT block for connection unless configured.
-				// However, we are not setting `DialKeepAliveTimeout`.
-				// So it should return a client object even if backend is down, unless basic config is wrong.
-
-				if err != nil {
-					// Relax check: if it failed but not due to validation, it might be acceptable for unit test env without etcd.
-					// But wait, clientv3.New usually doesn't error on network unless DialTimeout is involved in handshake?
-					// Actually, with `DialTimeout`, it might block waiting for handshake if `PermitWithoutStream` is not set?
-					// etcd.go sets `PermitWithoutStream: true`.
-					// So it should succeed!
-					t.Logf("NewClient returned error: %v (might be expected in no-etcd env)", err)
-				} else {
-					assert.NotNil(t, client)
-					if tt.name == "default timeout" {
-						assert.Equal(t, 5*time.Second, client.config.DialTimeout)
-					}
-					client.Close()
-				}
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedTimeout, tt.cfg.DialTimeout)
 			}
 		})
 	}

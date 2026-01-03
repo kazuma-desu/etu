@@ -30,12 +30,8 @@ type Config struct {
 }
 
 func NewClient(cfg *Config) (*Client, error) {
-	if len(cfg.Endpoints) == 0 {
-		return nil, fmt.Errorf("at least one endpoint is required")
-	}
-
-	if cfg.DialTimeout == 0 {
-		cfg.DialTimeout = 5 * time.Second
+	if err := validateAndPrepareConfig(cfg); err != nil {
+		return nil, err
 	}
 
 	clientConfig := clientv3.Config{
@@ -58,6 +54,22 @@ func NewClient(cfg *Config) (*Client, error) {
 		client: cli,
 		config: cfg,
 	}, nil
+}
+
+func validateAndPrepareConfig(cfg *Config) error {
+	if cfg == nil {
+		return fmt.Errorf("config cannot be nil")
+	}
+
+	if len(cfg.Endpoints) == 0 {
+		return fmt.Errorf("at least one endpoint is required")
+	}
+
+	if cfg.DialTimeout == 0 {
+		cfg.DialTimeout = 5 * time.Second
+	}
+
+	return nil
 }
 
 func (c *Client) Put(ctx context.Context, key, value string) error {
