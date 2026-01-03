@@ -7,6 +7,10 @@ import (
 )
 
 func buildClientOptions(opts *GetOptions) ([]clientv3.OpOption, error) {
+	if opts == nil {
+		return nil, nil
+	}
+
 	var clientOpts []clientv3.OpOption
 
 	if opts.Prefix {

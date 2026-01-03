@@ -17,13 +17,10 @@ func TestBuildClientOptions(t *testing.T) {
 		expectOptions int // Minimum number of options expected
 	}{
 		{
-			name:        "nil options",
-			opts:        nil,
-			expectError: false, // Should handle nil safely or unused? Actually code dereferences it?
-			// Checking code: buildClientOptions takes *GetOptions.
-			// Currently code does NOT check for nil. It accesses opts.Prefix etc.
-			// Let's assume caller provides non-nil or we accept panic for nil (bad practice but existing code behavior).
-			// Safe to skip nil test if we don't fix implementation, but let's test valid cases primarily.
+			name:          "nil options returns empty slice",
+			opts:          nil,
+			expectError:   false,
+			expectOptions: 0,
 		},
 		{
 			name:        "empty options",
@@ -142,10 +139,6 @@ func TestBuildClientOptions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.opts == nil && tt.name == "nil options" {
-				// skip nil test if not supported
-				return
-			}
 			opts, err := buildClientOptions(tt.opts)
 			if tt.expectError {
 				if err == nil {
