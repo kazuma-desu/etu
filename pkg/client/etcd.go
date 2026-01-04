@@ -17,6 +17,14 @@ func init() {
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(io.Discard, io.Discard, io.Discard))
 }
 
+const (
+	// DefaultMaxOpsPerTxn is etcd's server limit (embed.DefaultMaxTxnOps).
+	DefaultMaxOpsPerTxn = 128
+
+	// WarnValueSize threshold for performance warnings (100KB).
+	WarnValueSize = 100 * 1024
+)
+
 type Client struct {
 	client *clientv3.Client
 	config *Config

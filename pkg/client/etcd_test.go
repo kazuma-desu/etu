@@ -1,11 +1,25 @@
 package client
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kazuma-desu/etu/pkg/models"
 )
+
+func generateTestPairs(prefix string, count int) []*models.ConfigPair {
+	pairs := make([]*models.ConfigPair, count)
+	for i := range count {
+		pairs[i] = &models.ConfigPair{
+			Key:   fmt.Sprintf("%s/key%04d", prefix, i),
+			Value: fmt.Sprintf("value%04d", i),
+		}
+	}
+	return pairs
+}
 
 func TestBuildClientOptions(t *testing.T) {
 	tests := []struct {
@@ -233,7 +247,7 @@ func TestValidateAndPrepareConfig(t *testing.T) {
 func TestFormatValueUnit(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected string
 	}{
 		{"string", "test", "test"},
@@ -257,4 +271,54 @@ func TestFormatValueUnit(t *testing.T) {
 		assert.Contains(t, result, "key1: value1")
 		assert.Contains(t, result, "key2: value2")
 	})
+}
+
+func TestBatchConstants(t *testing.T) {
+	t.Run("DefaultMaxOpsPerTxn matches etcd limit", func(t *testing.T) {
+		assert.Equal(t, 128, DefaultMaxOpsPerTxn)
+	})
+
+	t.Run("WarnValueSize is 100KB", func(t *testing.T) {
+		assert.Equal(t, 100*1024, WarnValueSize)
+	})
+}
+
+func TestGenerateTestPairs(t *testing.T) {
+	tests := []struct {
+		name   string
+		prefix string
+		count  int
+	}{
+		{"empty", "/test", 0},
+		{"single", "/app/config", 1},
+		{"small batch", "/batch", 10},
+		{"exact limit", "/limit", DefaultMaxOpsPerTxn},
+		{"over limit", "/over", DefaultMaxOpsPerTxn + 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pairs := generateTestPairs(tt.prefix, tt.count)
+
+			assert.Len(t, pairs, tt.count)
+
+			for i, pair := range pairs {
+				expectedKey := fmt.Sprintf("%s/key%04d", tt.prefix, i)
+				expectedValue := fmt.Sprintf("value%04d", i)
+
+				assert.Equal(t, expectedKey, pair.Key)
+				assert.Equal(t, expectedValue, pair.Value)
+			}
+		})
+	}
+}
+
+func TestGenerateTestPairs_UniqueKeys(t *testing.T) {
+	pairs := generateTestPairs("/unique", 100)
+
+	seen := make(map[string]bool)
+	for _, pair := range pairs {
+		assert.False(t, seen[pair.Key], "duplicate key: %s", pair.Key)
+		seen[pair.Key] = true
+	}
 }
