@@ -138,15 +138,27 @@ func (m *MockClient) Reset() {
 }
 
 func (m *MockClient) Operations() []Operation {
-	ops := make([]Operation, len(m.PutCalls))
-	for i, call := range m.PutCalls {
-		ops[i] = Operation{Type: "PUT", Key: call.Key, Value: call.Value}
+	ops := make([]Operation, 0, m.OperationCount())
+
+	for _, call := range m.PutCalls {
+		ops = append(ops, Operation{Type: "PUT", Key: call.Key, Value: call.Value})
 	}
+
+	for _, call := range m.PutAllWithProgressCalls {
+		for _, pair := range call.Pairs {
+			ops = append(ops, Operation{Type: "PUT", Key: pair.Key, Value: formatValue(pair.Value)})
+		}
+	}
+
 	return ops
 }
 
 func (m *MockClient) OperationCount() int {
-	return len(m.PutCalls)
+	count := len(m.PutCalls)
+	for _, call := range m.PutAllWithProgressCalls {
+		count += len(call.Pairs)
+	}
+	return count
 }
 
 var (

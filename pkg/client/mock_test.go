@@ -243,6 +243,23 @@ func TestMockClient_Operations(t *testing.T) {
 
 		assert.Equal(t, "/key", ops2[0].Key)
 	})
+
+	t.Run("includes PutAllWithProgress calls", func(t *testing.T) {
+		mock := NewMockClient()
+		mock.Put(context.Background(), "/single", "value")
+		mock.PutAllWithProgress(context.Background(), []*models.ConfigPair{
+			{Key: "/batch/key1", Value: "batch1"},
+			{Key: "/batch/key2", Value: int64(42)},
+		}, nil)
+
+		ops := mock.Operations()
+
+		assert.Len(t, ops, 3)
+		assert.Equal(t, 3, mock.OperationCount())
+		assert.Equal(t, Operation{Type: "PUT", Key: "/single", Value: "value"}, ops[0])
+		assert.Equal(t, Operation{Type: "PUT", Key: "/batch/key1", Value: "batch1"}, ops[1])
+		assert.Equal(t, Operation{Type: "PUT", Key: "/batch/key2", Value: "42"}, ops[2])
+	})
 }
 
 func TestMockClient_ImplementsInterface(_ *testing.T) {

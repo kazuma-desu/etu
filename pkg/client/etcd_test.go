@@ -1,7 +1,6 @@
 package client
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -141,18 +140,13 @@ func TestBuildClientOptions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			opts, err := buildClientOptions(tt.opts)
 			if tt.expectError {
-				if err == nil {
-					t.Errorf("expected error containing %q, got nil", tt.errorMsg)
-				} else if !strings.Contains(err.Error(), tt.errorMsg) {
-					t.Errorf("expected error containing %q, got %q", tt.errorMsg, err.Error())
+				assert.Error(t, err)
+				if err != nil {
+					assert.Contains(t, err.Error(), tt.errorMsg)
 				}
 			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-				if len(opts) < tt.expectOptions {
-					t.Errorf("expected at least %d options, got %d", tt.expectOptions, len(opts))
-				}
+				assert.NoError(t, err)
+				assert.GreaterOrEqual(t, len(opts), tt.expectOptions)
 			}
 		})
 	}
@@ -253,9 +247,7 @@ func TestFormatValueUnit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := formatValue(tt.input)
-			if result != tt.expected {
-				t.Errorf("formatValue(%v) = %v, want %v", tt.input, result, tt.expected)
-			}
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 

@@ -291,6 +291,257 @@ func TestClient_Integration(t *testing.T) {
 	})
 }
 
+// TestGetWithOptions_Integration tests the GetWithOptions function with various options
+// against a real etcd instance. These tests verify that buildClientOptions correctly
+// translates GetOptions into clientv3.OpOption behaviors.
+func TestGetWithOptions_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	t.Run("Prefix returns matching keys", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		// Setup: create keys with different prefixes
+		require.NoError(t, client.Put(ctx, "/app/name", "myapp"))
+		require.NoError(t, client.Put(ctx, "/app/version", "1.0.0"))
+		require.NoError(t, client.Put(ctx, "/app/port", "8080"))
+		require.NoError(t, client.Put(ctx, "/other/key", "value"))
+
+		// Test: get all keys with /app/ prefix
+		resp, err := client.GetWithOptions(ctx, "/app/", &GetOptions{Prefix: true})
+		require.NoError(t, err)
+
+		assert.Len(t, resp.Kvs, 3, "should return exactly 3 keys with /app/ prefix")
+
+		// Verify all returned keys have the correct prefix
+		for _, kv := range resp.Kvs {
+			assert.True(t, len(kv.Key) >= 5 && kv.Key[:5] == "/app/",
+				"key %s should have /app/ prefix", kv.Key)
+		}
+	})
+
+	t.Run("Limit restricts result count", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		// Setup: create multiple keys
+		for i := 0; i < 10; i++ {
+			key := "/limit/key" + string(rune('0'+i))
+			require.NoError(t, client.Put(ctx, key, "value"))
+		}
+
+		// Test: get with limit of 3
+		resp, err := client.GetWithOptions(ctx, "/limit/", &GetOptions{
+			Prefix: true,
+			Limit:  3,
+		})
+		require.NoError(t, err)
+
+		assert.Len(t, resp.Kvs, 3, "should return exactly 3 keys due to limit")
+		assert.True(t, resp.More, "More flag should be true when more keys exist")
+	})
+
+	t.Run("Sort order ASCEND by KEY", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		// Setup: create keys in random order
+		require.NoError(t, client.Put(ctx, "/sort/zebra", "z"))
+		require.NoError(t, client.Put(ctx, "/sort/apple", "a"))
+		require.NoError(t, client.Put(ctx, "/sort/mango", "m"))
+
+		// Test: get with ascending sort by key
+		resp, err := client.GetWithOptions(ctx, "/sort/", &GetOptions{
+			Prefix:     true,
+			SortOrder:  "ASCEND",
+			SortTarget: "KEY",
+		})
+		require.NoError(t, err)
+
+		require.Len(t, resp.Kvs, 3, "should return all 3 keys")
+		assert.Equal(t, "/sort/apple", resp.Kvs[0].Key, "first key should be apple")
+		assert.Equal(t, "/sort/mango", resp.Kvs[1].Key, "second key should be mango")
+		assert.Equal(t, "/sort/zebra", resp.Kvs[2].Key, "third key should be zebra")
+	})
+
+	t.Run("Sort order DESCEND by KEY", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		// Setup: create keys
+		require.NoError(t, client.Put(ctx, "/desc/a", "1"))
+		require.NoError(t, client.Put(ctx, "/desc/b", "2"))
+		require.NoError(t, client.Put(ctx, "/desc/c", "3"))
+
+		// Test: get with descending sort by key
+		resp, err := client.GetWithOptions(ctx, "/desc/", &GetOptions{
+			Prefix:     true,
+			SortOrder:  "DESCEND",
+			SortTarget: "KEY",
+		})
+		require.NoError(t, err)
+
+		require.Len(t, resp.Kvs, 3, "should return all 3 keys")
+		assert.Equal(t, "/desc/c", resp.Kvs[0].Key, "first key should be c (descending)")
+		assert.Equal(t, "/desc/b", resp.Kvs[1].Key, "second key should be b")
+		assert.Equal(t, "/desc/a", resp.Kvs[2].Key, "third key should be a")
+	})
+
+	t.Run("KeysOnly returns empty values", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		// Setup: create keys with values
+		require.NoError(t, client.Put(ctx, "/keysonly/a", "value-a"))
+		require.NoError(t, client.Put(ctx, "/keysonly/b", "value-b"))
+
+		// Test: get with KeysOnly option
+		resp, err := client.GetWithOptions(ctx, "/keysonly/", &GetOptions{
+			Prefix:   true,
+			KeysOnly: true,
+		})
+		require.NoError(t, err)
+
+		assert.Len(t, resp.Kvs, 2, "should return 2 keys")
+		for _, kv := range resp.Kvs {
+			assert.Empty(t, kv.Value, "value should be empty when KeysOnly is true")
+			assert.NotEmpty(t, kv.Key, "key should not be empty")
+		}
+	})
+
+	t.Run("CountOnly returns count without values", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		// Setup: create 5 keys
+		for i := 0; i < 5; i++ {
+			key := "/count/key" + string(rune('0'+i))
+			require.NoError(t, client.Put(ctx, key, "value"))
+		}
+
+		// Test: get with CountOnly option
+		resp, err := client.GetWithOptions(ctx, "/count/", &GetOptions{
+			Prefix:    true,
+			CountOnly: true,
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, int64(5), resp.Count, "count should be 5")
+		assert.Empty(t, resp.Kvs, "Kvs should be empty when CountOnly is true")
+	})
+
+	t.Run("FromKey returns keys greater than or equal", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		// Setup: create keys
+		require.NoError(t, client.Put(ctx, "/fromkey/a", "1"))
+		require.NoError(t, client.Put(ctx, "/fromkey/b", "2"))
+		require.NoError(t, client.Put(ctx, "/fromkey/c", "3"))
+		require.NoError(t, client.Put(ctx, "/fromkey/d", "4"))
+
+		// Test: get keys starting from /fromkey/b
+		resp, err := client.GetWithOptions(ctx, "/fromkey/b", &GetOptions{
+			FromKey: true,
+		})
+		require.NoError(t, err)
+
+		// Should return /fromkey/b, /fromkey/c, /fromkey/d (and potentially more keys in etcd)
+		assert.GreaterOrEqual(t, len(resp.Kvs), 3, "should return at least 3 keys >= /fromkey/b")
+
+		// First key should be /fromkey/b
+		found := false
+		for _, kv := range resp.Kvs {
+			if kv.Key == "/fromkey/b" {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "result should include /fromkey/b")
+	})
+
+	t.Run("RangeEnd limits key range", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		// Setup: create keys
+		require.NoError(t, client.Put(ctx, "/range/a", "1"))
+		require.NoError(t, client.Put(ctx, "/range/b", "2"))
+		require.NoError(t, client.Put(ctx, "/range/c", "3"))
+		require.NoError(t, client.Put(ctx, "/range/d", "4"))
+
+		// Test: get keys in range [/range/a, /range/c) - excludes /range/c and beyond
+		resp, err := client.GetWithOptions(ctx, "/range/a", &GetOptions{
+			RangeEnd: "/range/c",
+		})
+		require.NoError(t, err)
+
+		assert.Len(t, resp.Kvs, 2, "should return exactly 2 keys in range [a, c)")
+		keys := make([]string, len(resp.Kvs))
+		for i, kv := range resp.Kvs {
+			keys[i] = kv.Key
+		}
+		assert.Contains(t, keys, "/range/a", "should contain /range/a")
+		assert.Contains(t, keys, "/range/b", "should contain /range/b")
+	})
+
+	t.Run("Combined options: Prefix + Limit + Sort", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		// Setup: create many keys
+		require.NoError(t, client.Put(ctx, "/combined/z", "last"))
+		require.NoError(t, client.Put(ctx, "/combined/a", "first"))
+		require.NoError(t, client.Put(ctx, "/combined/m", "middle"))
+		require.NoError(t, client.Put(ctx, "/combined/b", "second"))
+		require.NoError(t, client.Put(ctx, "/combined/y", "almost-last"))
+
+		// Test: get top 3 keys sorted ascending
+		resp, err := client.GetWithOptions(ctx, "/combined/", &GetOptions{
+			Prefix:     true,
+			Limit:      3,
+			SortOrder:  "ASCEND",
+			SortTarget: "KEY",
+		})
+		require.NoError(t, err)
+
+		assert.Len(t, resp.Kvs, 3, "should return exactly 3 keys")
+		assert.Equal(t, "/combined/a", resp.Kvs[0].Key, "first should be /combined/a")
+		assert.Equal(t, "/combined/b", resp.Kvs[1].Key, "second should be /combined/b")
+		assert.Equal(t, "/combined/m", resp.Kvs[2].Key, "third should be /combined/m")
+		assert.True(t, resp.More, "More should be true")
+	})
+}
+
 func TestClient_ConnectionFailure(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
