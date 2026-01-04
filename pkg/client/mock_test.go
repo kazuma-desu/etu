@@ -193,6 +193,7 @@ func TestMockClient_Reset(t *testing.T) {
 	mock := NewMockClient()
 	mock.Put(context.Background(), "/key", "value")
 	mock.PutAll(context.Background(), []*models.ConfigPair{{Key: "/all", Value: "value"}})
+	mock.PutAllWithProgress(context.Background(), []*models.ConfigPair{{Key: "/progress", Value: "val"}}, nil)
 	mock.Get(context.Background(), "/key")
 	mock.GetWithOptions(context.Background(), "/prefix/", &GetOptions{Prefix: true})
 	mock.Status(context.Background(), "http://localhost:2379")
@@ -202,12 +203,69 @@ func TestMockClient_Reset(t *testing.T) {
 
 	assert.Empty(t, mock.PutCalls)
 	assert.Empty(t, mock.PutAllCalls)
+	assert.Empty(t, mock.PutAllWithProgressCalls)
 	assert.Empty(t, mock.GetCalls)
 	assert.Empty(t, mock.GetWithOptionsCalls)
 	assert.Empty(t, mock.StatusCalls)
 	assert.False(t, mock.CloseCalled)
 }
 
+func TestMockClient_Operations(t *testing.T) {
+	t.Run("returns empty slice when no puts", func(t *testing.T) {
+		mock := NewMockClient()
+
+		ops := mock.Operations()
+
+		assert.Empty(t, ops)
+		assert.Equal(t, 0, mock.OperationCount())
+	})
+
+	t.Run("converts put calls to operations", func(t *testing.T) {
+		mock := NewMockClient()
+		mock.Put(context.Background(), "/key1", "value1")
+		mock.Put(context.Background(), "/key2", "value2")
+
+		ops := mock.Operations()
+
+		assert.Len(t, ops, 2)
+		assert.Equal(t, 2, mock.OperationCount())
+		assert.Equal(t, Operation{Type: "PUT", Key: "/key1", Value: "value1"}, ops[0])
+		assert.Equal(t, Operation{Type: "PUT", Key: "/key2", Value: "value2"}, ops[1])
+	})
+
+	t.Run("returns copy that is safe to modify", func(t *testing.T) {
+		mock := NewMockClient()
+		mock.Put(context.Background(), "/key", "value")
+
+		ops1 := mock.Operations()
+		ops1[0].Key = "modified"
+		ops2 := mock.Operations()
+
+		assert.Equal(t, "/key", ops2[0].Key)
+	})
+
+	t.Run("includes PutAllWithProgress calls", func(t *testing.T) {
+		mock := NewMockClient()
+		mock.Put(context.Background(), "/single", "value")
+		mock.PutAllWithProgress(context.Background(), []*models.ConfigPair{
+			{Key: "/batch/key1", Value: "batch1"},
+			{Key: "/batch/key2", Value: int64(42)},
+		}, nil)
+
+		ops := mock.Operations()
+
+		assert.Len(t, ops, 3)
+		assert.Equal(t, 3, mock.OperationCount())
+		assert.Equal(t, Operation{Type: "PUT", Key: "/single", Value: "value"}, ops[0])
+		assert.Equal(t, Operation{Type: "PUT", Key: "/batch/key1", Value: "batch1"}, ops[1])
+		assert.Equal(t, Operation{Type: "PUT", Key: "/batch/key2", Value: "42"}, ops[2])
+	})
+}
+
 func TestMockClient_ImplementsInterface(_ *testing.T) {
 	var _ EtcdClient = (*MockClient)(nil)
+}
+
+func TestMockClient_ImplementsOperationRecorder(_ *testing.T) {
+	var _ OperationRecorder = (*MockClient)(nil)
 }

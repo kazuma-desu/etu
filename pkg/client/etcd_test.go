@@ -2,66 +2,234 @@ package client
 
 import (
 	"testing"
+	"time"
 
-	"github.com/kazuma-desu/etu/pkg/models"
+	"github.com/stretchr/testify/assert"
 )
 
-// TestGetWithOptionsErrorCases tests error handling in GetWithOptions
-func TestGetWithOptionsErrorCases(t *testing.T) {
-	opts := &GetOptions{
-		SortOrder: "INVALID",
+func TestBuildClientOptions(t *testing.T) {
+	tests := []struct {
+		name          string
+		opts          *GetOptions
+		expectError   bool
+		errorMsg      string
+		expectOptions int // Minimum number of options expected
+	}{
+		{
+			name:          "nil options returns empty slice",
+			opts:          nil,
+			expectError:   false,
+			expectOptions: 0,
+		},
+		{
+			name:        "empty options",
+			opts:        &GetOptions{},
+			expectError: false,
+		},
+		{
+			name: "prefix",
+			opts: &GetOptions{Prefix: true},
+			// Expect: WithPrefix
+			expectOptions: 1,
+		},
+		{
+			name: "from key",
+			opts: &GetOptions{FromKey: true},
+			// Expect: WithFromKey
+			expectOptions: 1,
+		},
+		{
+			name: "range end",
+			opts: &GetOptions{RangeEnd: "\x00"},
+			// Expect: WithRange
+			expectOptions: 1,
+		},
+		{
+			name: "limit",
+			opts: &GetOptions{Limit: 100},
+			// Expect: WithLimit
+			expectOptions: 1,
+		},
+		{
+			name: "revision",
+			opts: &GetOptions{Revision: 123},
+			// Expect: WithRev
+			expectOptions: 1,
+		},
+		{
+			name: "keys only",
+			opts: &GetOptions{KeysOnly: true},
+			// Expect: WithKeysOnly
+			expectOptions: 1,
+		},
+		{
+			name: "count only",
+			opts: &GetOptions{CountOnly: true},
+			// Expect: WithCountOnly
+			expectOptions: 1,
+		},
+		{
+			name: "min mod revision",
+			opts: &GetOptions{MinModRev: 10},
+			// Expect: WithMinModRev
+			expectOptions: 1,
+		},
+		{
+			name: "max mod revision",
+			opts: &GetOptions{MaxModRev: 20},
+			// Expect: WithMaxModRev
+			expectOptions: 1,
+		},
+		{
+			name: "min create revision",
+			opts: &GetOptions{MinCreateRev: 10},
+			// Expect: WithMinCreateRev
+			expectOptions: 1,
+		},
+		{
+			name: "max create revision",
+			opts: &GetOptions{MaxCreateRev: 20},
+			// Expect: WithMaxCreateRev
+			expectOptions: 1,
+		},
+		{
+			name: "sort ascend key",
+			opts: &GetOptions{SortOrder: "ASCEND", SortTarget: "KEY"},
+			// Expect: WithSort
+			expectOptions: 1,
+		},
+		{
+			name: "sort descend version",
+			opts: &GetOptions{SortOrder: "DESCEND", SortTarget: "VERSION"},
+			// Expect: WithSort
+			expectOptions: 1,
+		},
+		{
+			name: "sort create revision",
+			opts: &GetOptions{SortOrder: "ASCEND", SortTarget: "CREATE"},
+			// Expect: WithSort
+			expectOptions: 1,
+		},
+		{
+			name: "sort modify revision",
+			opts: &GetOptions{SortOrder: "ASCEND", SortTarget: "MODIFY"},
+			// Expect: WithSort
+			expectOptions: 1,
+		},
+		{
+			name: "sort value",
+			opts: &GetOptions{SortOrder: "ASCEND", SortTarget: "VALUE"},
+			// Expect: WithSort
+			expectOptions: 1,
+		},
+		{
+			name:        "invalid sort order",
+			opts:        &GetOptions{SortOrder: "INVALID"},
+			expectError: true,
+			errorMsg:    "invalid sort order",
+		},
+		{
+			name:        "invalid sort target",
+			opts:        &GetOptions{SortTarget: "INVALID"},
+			expectError: true,
+			errorMsg:    "invalid sort target",
+		},
 	}
 
-	if opts.SortOrder != "INVALID" {
-		t.Error("Expected sort order to be set")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts, err := buildClientOptions(tt.opts)
+			if tt.expectError {
+				assert.Error(t, err)
+				if err != nil {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.GreaterOrEqual(t, len(opts), tt.expectOptions)
+			}
+		})
 	}
 }
 
-func TestClientStructure(t *testing.T) {
-	cfg := &Config{
-		Endpoints: []string{"localhost:2379"},
+func TestValidateAndPrepareConfig(t *testing.T) {
+	tests := []struct {
+		name            string
+		cfg             *Config
+		expectError     bool
+		errorMsg        string
+		expectedTimeout time.Duration
+	}{
+		{
+			name:        "nil config",
+			cfg:         nil,
+			expectError: true,
+			errorMsg:    "config cannot be nil",
+		},
+		{
+			name: "missing endpoints",
+			cfg: &Config{
+				Endpoints: []string{},
+			},
+			expectError: true,
+			errorMsg:    "at least one endpoint is required",
+		},
+		{
+			name: "valid config with explicit timeout",
+			cfg: &Config{
+				Endpoints:   []string{"localhost:2379"},
+				DialTimeout: 10 * time.Second,
+			},
+			expectError:     false,
+			expectedTimeout: 10 * time.Second,
+		},
+		{
+			name: "valid config applies default timeout",
+			cfg: &Config{
+				Endpoints: []string{"localhost:2379"},
+			},
+			expectError:     false,
+			expectedTimeout: 5 * time.Second,
+		},
+		{
+			name: "valid config with auth credentials",
+			cfg: &Config{
+				Endpoints:   []string{"localhost:2379"},
+				Username:    "user",
+				Password:    "pass",
+				DialTimeout: 1 * time.Second,
+			},
+			expectError:     false,
+			expectedTimeout: 1 * time.Second,
+		},
+		{
+			name: "multiple endpoints",
+			cfg: &Config{
+				Endpoints:   []string{"localhost:2379", "localhost:2380", "localhost:2381"},
+				DialTimeout: 3 * time.Second,
+			},
+			expectError:     false,
+			expectedTimeout: 3 * time.Second,
+		},
 	}
 
-	if len(cfg.Endpoints) != 1 {
-		t.Error("Expected one endpoint")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAndPrepareConfig(tt.cfg)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedTimeout, tt.cfg.DialTimeout)
+			}
+		})
 	}
 }
 
-func TestGetResponse(t *testing.T) {
-	resp := &GetResponse{
-		Count: 1,
-	}
-
-	if resp.Count != 1 {
-		t.Error("Expected count to be 1")
-	}
-}
-
-func TestKeyValue(t *testing.T) {
-	kv := &KeyValue{
-		Key: "/test",
-	}
-
-	if kv.Key != "/test" {
-		t.Error("Expected key to be /test")
-	}
-}
-
-func TestGetOptions(t *testing.T) {
-	opts := &GetOptions{
-		Prefix: true,
-		Limit:  10,
-	}
-
-	if !opts.Prefix {
-		t.Error("Expected prefix to be true")
-	}
-	if opts.Limit != 10 {
-		t.Error("Expected limit to be 10")
-	}
-}
-
-// TestFormatValueUnit tests formatValue function
 func TestFormatValueUnit(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -79,60 +247,14 @@ func TestFormatValueUnit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := formatValue(tt.input)
-			if result != tt.expected {
-				t.Errorf("formatValue(%v) = %v, want %v", tt.input, result, tt.expected)
-			}
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 
-	// Test map formatting
 	t.Run("map", func(t *testing.T) {
 		mapVal := map[string]any{"key1": "value1", "key2": "value2"}
 		result := formatValue(mapVal)
-		// Map iteration order is not guaranteed, so just check it's not empty
-		if result == "" {
-			t.Error("formatValue(map) should not be empty")
-		}
+		assert.Contains(t, result, "key1: value1")
+		assert.Contains(t, result, "key2: value2")
 	})
-}
-
-// TestPutAllWithError tests PutAll error handling
-func TestPutAllWithError(t *testing.T) {
-	// This test verifies the structure but can't test actual error
-	// without a real etcd instance
-	pairs := []*models.ConfigPair{
-		{Key: "/test1", Value: "value1"},
-		{Key: "/test2", Value: "value2"},
-	}
-
-	if len(pairs) != 2 {
-		t.Error("Expected 2 pairs")
-	}
-}
-
-// TestConfigPair tests ConfigPair structure
-func TestConfigPair(t *testing.T) {
-	pair := &models.ConfigPair{
-		Key:   "/test",
-		Value: "value",
-	}
-
-	if pair.Key != "/test" {
-		t.Error("Expected key to be /test")
-	}
-	if pair.Value != "value" {
-		t.Error("Expected value to be 'value'")
-	}
-}
-
-// TestNewClientWithEmptyEndpoints tests NewClient validation
-func TestNewClientWithEmptyEndpoints(t *testing.T) {
-	cfg := &Config{
-		Endpoints: []string{},
-	}
-
-	_, err := NewClient(cfg)
-	if err == nil {
-		t.Error("Expected error when creating client with empty endpoints")
-	}
 }

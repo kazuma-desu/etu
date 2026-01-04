@@ -137,4 +137,31 @@ func (m *MockClient) Reset() {
 	m.CloseCalled = false
 }
 
-var _ EtcdClient = (*MockClient)(nil)
+func (m *MockClient) Operations() []Operation {
+	ops := make([]Operation, 0, m.OperationCount())
+
+	for _, call := range m.PutCalls {
+		ops = append(ops, Operation{Type: "PUT", Key: call.Key, Value: call.Value})
+	}
+
+	for _, call := range m.PutAllWithProgressCalls {
+		for _, pair := range call.Pairs {
+			ops = append(ops, Operation{Type: "PUT", Key: pair.Key, Value: formatValue(pair.Value)})
+		}
+	}
+
+	return ops
+}
+
+func (m *MockClient) OperationCount() int {
+	count := len(m.PutCalls)
+	for _, call := range m.PutAllWithProgressCalls {
+		count += len(call.Pairs)
+	}
+	return count
+}
+
+var (
+	_ EtcdClient        = (*MockClient)(nil)
+	_ OperationRecorder = (*MockClient)(nil)
+)
