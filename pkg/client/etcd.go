@@ -96,18 +96,42 @@ func (c *Client) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
 func (c *Client) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
 	result := &PutAllResult{Total: len(pairs)}
 
-	for i, pair := range pairs {
-		value := formatValue(pair.Value)
-		if err := c.Put(ctx, pair.Key, value); err != nil {
-			result.Failed = 1
-			result.FailedKey = pair.Key
-			return result, fmt.Errorf("failed on key %q (%d/%d applied): %w",
-				pair.Key, result.Succeeded, result.Total, err)
+	if len(pairs) == 0 {
+		return result, nil
+	}
+
+	for i := 0; i < len(pairs); i += DefaultMaxOpsPerTxn {
+		end := i + DefaultMaxOpsPerTxn
+		if end > len(pairs) {
+			end = len(pairs)
 		}
-		result.Succeeded++
+		chunk := pairs[i:end]
+
+		ops := make([]clientv3.Op, 0, len(chunk))
+		for _, pair := range chunk {
+			value := formatValue(pair.Value)
+			ops = append(ops, clientv3.OpPut(pair.Key, value))
+		}
+
+		resp, err := c.client.Txn(ctx).Then(ops...).Commit()
+		if err != nil {
+			result.Failed = len(chunk)
+			result.FailedKey = chunk[0].Key
+			return result, fmt.Errorf("batch %d-%d failed: %w", i+1, end, err)
+		}
+
+		if !resp.Succeeded {
+			result.Failed = len(chunk)
+			result.FailedKey = chunk[0].Key
+			return result, fmt.Errorf("batch %d-%d: transaction did not succeed", i+1, end)
+		}
+
+		result.Succeeded += len(chunk)
 
 		if onProgress != nil {
-			onProgress(i+1, result.Total, pair.Key)
+			for j, pair := range chunk {
+				onProgress(i+j+1, result.Total, pair.Key)
+			}
 		}
 	}
 
