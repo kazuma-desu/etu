@@ -93,6 +93,13 @@ func (c *Client) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
 	return err
 }
 
+// PutAllWithProgress writes multiple pairs with optional progress callback.
+// If onProgress is non-nil, it's called after each successful put.
+//
+// Partial Failure Behavior:
+// When a batch fails mid-way through processing multiple batches, the function
+// returns an error but result.Succeeded reflects items that were already written.
+// result.FailedKey captures the first key in the failed batch.
 func (c *Client) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
 	result := &PutAllResult{Total: len(pairs)}
 
@@ -117,13 +124,13 @@ func (c *Client) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigP
 		if err != nil {
 			result.Failed = len(chunk)
 			result.FailedKey = chunk[0].Key
-			return result, fmt.Errorf("batch %d-%d failed: %w", i+1, end, err)
+			return result, fmt.Errorf("batch items %d-%d failed: %w", i+1, end, err)
 		}
 
 		if !resp.Succeeded {
 			result.Failed = len(chunk)
 			result.FailedKey = chunk[0].Key
-			return result, fmt.Errorf("batch %d-%d: transaction did not succeed", i+1, end)
+			return result, fmt.Errorf("batch items %d-%d: transaction did not succeed", i+1, end)
 		}
 
 		result.Succeeded += len(chunk)
