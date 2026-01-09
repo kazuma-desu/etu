@@ -22,6 +22,9 @@ const (
 	DefaultMaxOpsPerTxn = 128
 
 	// WarnValueSize threshold for performance warnings (100KB).
+	// TODO: Wire this into Put/PutAll methods to emit warnings when value sizes
+	// exceed this threshold. Reserved for future implementation of large value
+	// detection and performance optimization warnings.
 	WarnValueSize = 100 * 1024
 )
 
@@ -122,13 +125,13 @@ func (c *Client) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigP
 
 		resp, err := c.client.Txn(ctx).Then(ops...).Commit()
 		if err != nil {
-			result.Failed = len(chunk)
+			result.Failed = 1
 			result.FailedKey = chunk[0].Key
 			return result, fmt.Errorf("batch items %d-%d failed: %w", i+1, end, err)
 		}
 
 		if !resp.Succeeded {
-			result.Failed = len(chunk)
+			result.Failed = 1
 			result.FailedKey = chunk[0].Key
 			return result, fmt.Errorf("batch items %d-%d: transaction did not succeed", i+1, end)
 		}
