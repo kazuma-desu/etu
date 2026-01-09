@@ -542,6 +542,184 @@ func TestGetWithOptions_Integration(t *testing.T) {
 	})
 }
 
+func TestPutAllWithProgress_BatchOperations_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	t.Run("empty batch", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		pairs := []*models.ConfigPair{}
+		result, err := client.PutAllWithProgress(ctx, pairs, nil)
+
+		require.NoError(t, err)
+		assert.Equal(t, 0, result.Total)
+		assert.Equal(t, 0, result.Succeeded)
+		assert.Equal(t, 0, result.Failed)
+	})
+
+	t.Run("small batch within single transaction", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		pairs := generateTestPairs("/small", 10)
+		result, err := client.PutAllWithProgress(ctx, pairs, nil)
+
+		require.NoError(t, err)
+		assert.Equal(t, 10, result.Total)
+		assert.Equal(t, 10, result.Succeeded)
+		assert.Equal(t, 0, result.Failed)
+
+		for _, pair := range pairs {
+			val, err := client.Get(ctx, pair.Key)
+			require.NoError(t, err)
+			assert.Equal(t, pair.Value, val)
+		}
+	})
+
+	t.Run("exact limit batch (128 items)", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		pairs := generateTestPairs("/exact", DefaultMaxOpsPerTxn)
+		result, err := client.PutAllWithProgress(ctx, pairs, nil)
+
+		require.NoError(t, err)
+		assert.Equal(t, DefaultMaxOpsPerTxn, result.Total)
+		assert.Equal(t, DefaultMaxOpsPerTxn, result.Succeeded)
+		assert.Equal(t, 0, result.Failed)
+
+		val, err := client.Get(ctx, pairs[0].Key)
+		require.NoError(t, err)
+		assert.Equal(t, pairs[0].Value, val)
+
+		val, err = client.Get(ctx, pairs[DefaultMaxOpsPerTxn-1].Key)
+		require.NoError(t, err)
+		assert.Equal(t, pairs[DefaultMaxOpsPerTxn-1].Value, val)
+	})
+
+	t.Run("over limit batch (129 items - 2 transactions)", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		pairs := generateTestPairs("/over", DefaultMaxOpsPerTxn+1)
+		result, err := client.PutAllWithProgress(ctx, pairs, nil)
+
+		require.NoError(t, err)
+		assert.Equal(t, DefaultMaxOpsPerTxn+1, result.Total)
+		assert.Equal(t, DefaultMaxOpsPerTxn+1, result.Succeeded)
+		assert.Equal(t, 0, result.Failed)
+
+		val, err := client.Get(ctx, pairs[0].Key)
+		require.NoError(t, err)
+		assert.Equal(t, pairs[0].Value, val)
+
+		val, err = client.Get(ctx, pairs[DefaultMaxOpsPerTxn].Key)
+		require.NoError(t, err)
+		assert.Equal(t, pairs[DefaultMaxOpsPerTxn].Value, val)
+	})
+
+	t.Run("large batch (300 items - 3 transactions)", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		pairs := generateTestPairs("/large", 300)
+		result, err := client.PutAllWithProgress(ctx, pairs, nil)
+
+		require.NoError(t, err)
+		assert.Equal(t, 300, result.Total)
+		assert.Equal(t, 300, result.Succeeded)
+		assert.Equal(t, 0, result.Failed)
+
+		val, err := client.Get(ctx, pairs[0].Key)
+		require.NoError(t, err)
+		assert.Equal(t, pairs[0].Value, val)
+
+		val, err = client.Get(ctx, pairs[150].Key)
+		require.NoError(t, err)
+		assert.Equal(t, pairs[150].Value, val)
+
+		val, err = client.Get(ctx, pairs[299].Key)
+		require.NoError(t, err)
+		assert.Equal(t, pairs[299].Value, val)
+	})
+
+	t.Run("progress callback is called correctly", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		pairs := generateTestPairs("/progress", 10)
+		var progressCalls []struct {
+			current int
+			total   int
+			key     string
+		}
+
+		onProgress := func(current, total int, key string) {
+			progressCalls = append(progressCalls, struct {
+				current int
+				total   int
+				key     string
+			}{current, total, key})
+		}
+
+		result, err := client.PutAllWithProgress(ctx, pairs, onProgress)
+
+		require.NoError(t, err)
+		assert.Equal(t, 10, result.Succeeded)
+		assert.Len(t, progressCalls, 10)
+
+		for i, call := range progressCalls {
+			assert.Equal(t, i+1, call.current)
+			assert.Equal(t, 10, call.total)
+			assert.Equal(t, pairs[i].Key, call.key)
+		}
+	})
+
+	t.Run("progress callback across multiple chunks", func(t *testing.T) {
+		endpoint, cleanup := setupEtcdContainer(t)
+		defer cleanup()
+
+		client := newTestClient(t, endpoint)
+		ctx := testContext(t)
+
+		pairs := generateTestPairs("/multiprogress", 150)
+		callCount := 0
+
+		onProgress := func(current, total int, key string) {
+			callCount++
+			assert.Equal(t, callCount, current)
+			assert.Equal(t, 150, total)
+		}
+
+		result, err := client.PutAllWithProgress(ctx, pairs, onProgress)
+
+		require.NoError(t, err)
+		assert.Equal(t, 150, result.Succeeded)
+		assert.Equal(t, 150, callCount)
+	})
+}
+
 func TestClient_ConnectionFailure(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

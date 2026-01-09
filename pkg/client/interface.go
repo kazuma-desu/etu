@@ -45,6 +45,7 @@ type EtcdWriter interface {
 	// PutAllWithProgress writes multiple pairs with optional progress callback.
 	// If onProgress is non-nil, it's called after each successful put.
 	// Returns PutAllResult with success/failure counts even on error.
+	// Partial failures are possible; result.Succeeded reflects items committed before failure.
 	PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error)
 }
 

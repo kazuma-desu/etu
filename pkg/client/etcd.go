@@ -17,6 +17,17 @@ func init() {
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(io.Discard, io.Discard, io.Discard))
 }
 
+const (
+	// DefaultMaxOpsPerTxn is etcd's server limit (embed.DefaultMaxTxnOps).
+	DefaultMaxOpsPerTxn = 128
+
+	// WarnValueSize threshold for performance warnings (100KB).
+	// TODO: Wire this into Put/PutAll methods to emit warnings when value sizes
+	// exceed this threshold. Reserved for future implementation of large value
+	// detection and performance optimization warnings.
+	WarnValueSize = 100 * 1024
+)
+
 type Client struct {
 	client *clientv3.Client
 	config *Config
@@ -85,21 +96,52 @@ func (c *Client) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
 	return err
 }
 
+// PutAllWithProgress writes multiple pairs with optional progress callback.
+// If onProgress is non-nil, it's called after each successful put.
+//
+// Partial Failure Behavior:
+// When a batch fails mid-way through processing multiple batches, the function
+// returns an error but result.Succeeded reflects items that were already written.
+// result.FailedKey captures the first key in the failed batch.
 func (c *Client) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
 	result := &PutAllResult{Total: len(pairs)}
 
-	for i, pair := range pairs {
-		value := formatValue(pair.Value)
-		if err := c.Put(ctx, pair.Key, value); err != nil {
-			result.Failed = 1
-			result.FailedKey = pair.Key
-			return result, fmt.Errorf("failed on key %q (%d/%d applied): %w",
-				pair.Key, result.Succeeded, result.Total, err)
+	if len(pairs) == 0 {
+		return result, nil
+	}
+
+	for i := 0; i < len(pairs); i += DefaultMaxOpsPerTxn {
+		end := i + DefaultMaxOpsPerTxn
+		if end > len(pairs) {
+			end = len(pairs)
 		}
-		result.Succeeded++
+		chunk := pairs[i:end]
+
+		ops := make([]clientv3.Op, 0, len(chunk))
+		for _, pair := range chunk {
+			value := formatValue(pair.Value)
+			ops = append(ops, clientv3.OpPut(pair.Key, value))
+		}
+
+		resp, err := c.client.Txn(ctx).Then(ops...).Commit()
+		if err != nil {
+			result.Failed = 1
+			result.FailedKey = chunk[0].Key
+			return result, fmt.Errorf("batch items %d-%d failed: %w", i+1, end, err)
+		}
+
+		if !resp.Succeeded {
+			result.Failed = 1
+			result.FailedKey = chunk[0].Key
+			return result, fmt.Errorf("batch items %d-%d: transaction did not succeed", i+1, end)
+		}
+
+		result.Succeeded += len(chunk)
 
 		if onProgress != nil {
-			onProgress(i+1, result.Total, pair.Key)
+			for j, pair := range chunk {
+				onProgress(i+j+1, result.Total, pair.Key)
+			}
 		}
 	}
 
