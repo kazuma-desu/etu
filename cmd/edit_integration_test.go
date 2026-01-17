@@ -106,7 +106,7 @@ echo "modified value" > "$1"
 		// Verify value was updated
 		newValue, getErr := etcdClient.Get(ctx, testKey)
 		require.NoError(t, getErr)
-		require.Equal(t, "modified value\n", newValue)
+		require.Equal(t, "modified value", newValue)
 	})
 
 	t.Run("Edit non-existent key returns error", func(t *testing.T) {
