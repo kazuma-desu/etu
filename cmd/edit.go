@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -112,7 +113,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read modified file: %w", err)
 	}
-	newValue := string(modifiedContent)
+	newValue := strings.TrimRight(string(modifiedContent), "\r\n")
 
 	logVerbose("Updating key in etcd", "key", key)
 	putCtx, putCancel := getOperationContext()
