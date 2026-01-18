@@ -69,7 +69,7 @@ func TestMockClient_PutAllWithProgress(t *testing.T) {
 		assert.Equal(t, 2, result.Succeeded)
 		assert.Equal(t, 0, result.Failed)
 		assert.Equal(t, 2, result.Total)
-		assert.Empty(t, result.FailedKey)
+		assert.Empty(t, result.FailedKey())
 		assert.Equal(t, []string{"/app/name", "/app/port"}, progressCalls)
 		require.Len(t, mock.PutAllWithProgressCalls, 1)
 	})
@@ -83,10 +83,10 @@ func TestMockClient_PutAllWithProgress(t *testing.T) {
 
 		mock.PutAllWithProgressFunc = func(_ context.Context, _ []*models.ConfigPair, _ ProgressFunc) (*PutAllResult, error) {
 			return &PutAllResult{
-				Succeeded: 1,
-				Failed:    1,
-				Total:     2,
-				FailedKey: "/key2",
+				Succeeded:  1,
+				Failed:     1,
+				Total:      2,
+				FailedKeys: []string{"/key2"},
 			}, errors.New("connection lost")
 		}
 
@@ -94,7 +94,7 @@ func TestMockClient_PutAllWithProgress(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Equal(t, 1, result.Succeeded)
-		assert.Equal(t, "/key2", result.FailedKey)
+		assert.Equal(t, "/key2", result.FailedKey())
 	})
 
 	t.Run("nil progress callback is handled", func(t *testing.T) {

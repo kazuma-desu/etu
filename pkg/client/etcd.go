@@ -96,14 +96,15 @@ func (c *Client) PutAll(ctx context.Context, pairs []*models.ConfigPair) error {
 	return err
 }
 
-// PutAllWithProgress writes multiple pairs with optional progress callback.
-// If onProgress is non-nil, it's called after each successful put.
-//
-// Partial Failure Behavior:
-// When a batch fails mid-way through processing multiple batches, the function
-// returns an error but result.Succeeded reflects items that were already written.
-// result.FailedKey captures the first key in the failed batch.
 func (c *Client) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
+	return c.PutAllWithOptions(ctx, pairs, onProgress, nil)
+}
+
+func (c *Client) PutAllWithOptions(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, opts *BatchOptions) (*PutAllResult, error) {
+	if opts == nil {
+		opts = DefaultBatchOptions()
+	}
+
 	result := &PutAllResult{Total: len(pairs)}
 
 	if len(pairs) == 0 {
@@ -111,29 +112,33 @@ func (c *Client) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigP
 	}
 
 	for i := 0; i < len(pairs); i += DefaultMaxOpsPerTxn {
-		end := i + DefaultMaxOpsPerTxn
-		if end > len(pairs) {
-			end = len(pairs)
-		}
+		end := min(i+DefaultMaxOpsPerTxn, len(pairs))
 		chunk := pairs[i:end]
+		batchNum := (i / DefaultMaxOpsPerTxn) + 1
 
-		ops := make([]clientv3.Op, 0, len(chunk))
-		for _, pair := range chunk {
-			value := formatValue(pair.Value)
-			ops = append(ops, clientv3.OpPut(pair.Key, value))
+		if opts.Logger != nil {
+			opts.Logger.Debug("attempting batch", "batch", batchNum, "keys", len(chunk), "startIdx", i+1, "endIdx", end)
 		}
 
-		resp, err := c.client.Txn(ctx).Then(ops...).Commit()
+		err := c.executeBatchWithRetry(ctx, chunk, opts, result, batchNum)
 		if err != nil {
-			result.Failed = 1
-			result.FailedKey = chunk[0].Key
-			return result, fmt.Errorf("batch items %d-%d failed: %w", i+1, end, err)
-		}
+			if opts.FallbackToSingleKeys {
+				if opts.Logger != nil {
+					opts.Logger.Warn("batch failed, falling back to single-key mode", "batch", batchNum, "error", err)
+				}
+				fallbackErr := c.executeSingleKeyFallback(ctx, chunk, opts, result, i, onProgress)
+				if fallbackErr != nil {
+					return result, fallbackErr
+				}
+				result.UsedFallback = true
+				continue
+			}
 
-		if !resp.Succeeded {
-			result.Failed = 1
-			result.FailedKey = chunk[0].Key
-			return result, fmt.Errorf("batch items %d-%d: transaction did not succeed", i+1, end)
+			for _, pair := range chunk {
+				result.FailedKeys = append(result.FailedKeys, pair.Key)
+			}
+			result.Failed += len(chunk)
+			return result, fmt.Errorf("batch %d (items %d-%d) failed: %w", batchNum, i+1, end, err)
 		}
 
 		result.Succeeded += len(chunk)
@@ -145,7 +150,90 @@ func (c *Client) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigP
 		}
 	}
 
+	if opts.Logger != nil {
+		opts.Logger.Info("PutAll complete", "succeeded", result.Succeeded, "failed", result.Failed, "total", result.Total, "retries", result.RetryCount, "usedFallback", result.UsedFallback)
+	}
+
 	return result, nil
+}
+
+func (c *Client) executeBatchWithRetry(ctx context.Context, chunk []*models.ConfigPair, opts *BatchOptions, result *PutAllResult, batchNum int) error {
+	ops := make([]clientv3.Op, 0, len(chunk))
+	for _, pair := range chunk {
+		value := formatValue(pair.Value)
+		ops = append(ops, clientv3.OpPut(pair.Key, value))
+	}
+
+	var lastErr error
+	backoff := opts.InitialBackoff
+
+	for attempt := 0; attempt <= opts.MaxRetries; attempt++ {
+		if attempt > 0 {
+			result.RetryCount++
+			if opts.Logger != nil {
+				opts.Logger.Warn("retrying batch", "batch", batchNum, "attempt", attempt, "maxRetries", opts.MaxRetries, "backoff", backoff)
+			}
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(backoff):
+			}
+
+			backoff = min(backoff*2, opts.MaxBackoff)
+		}
+
+		resp, err := c.client.Txn(ctx).Then(ops...).Commit()
+		if err != nil {
+			lastErr = err
+			if opts.Logger != nil {
+				opts.Logger.Debug("batch transaction failed", "batch", batchNum, "attempt", attempt, "error", err)
+			}
+			continue
+		}
+
+		if !resp.Succeeded {
+			lastErr = fmt.Errorf("transaction did not succeed")
+			if opts.Logger != nil {
+				opts.Logger.Debug("batch transaction returned false", "batch", batchNum, "attempt", attempt)
+			}
+			continue
+		}
+
+		return nil
+	}
+
+	return lastErr
+}
+
+func (c *Client) executeSingleKeyFallback(ctx context.Context, chunk []*models.ConfigPair, opts *BatchOptions, result *PutAllResult, baseIdx int, onProgress ProgressFunc) error {
+	for j, pair := range chunk {
+		value := formatValue(pair.Value)
+
+		if opts.Logger != nil {
+			opts.Logger.Debug("single-key put", "key", pair.Key, "idx", baseIdx+j+1)
+		}
+
+		_, err := c.client.Put(ctx, pair.Key, value)
+		if err != nil {
+			result.FailedKeys = append(result.FailedKeys, pair.Key)
+			result.Failed++
+
+			if opts.Logger != nil {
+				opts.Logger.Error("single-key put failed", "key", pair.Key, "error", err)
+			}
+
+			return fmt.Errorf("single-key fallback failed for key %s: %w", pair.Key, err)
+		}
+
+		result.Succeeded++
+
+		if onProgress != nil {
+			onProgress(baseIdx+j+1, result.Total, pair.Key)
+		}
+	}
+
+	return nil
 }
 
 type GetOptions struct {

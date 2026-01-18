@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 
@@ -10,10 +11,77 @@ import (
 
 // PutAllResult contains the outcome of a batch put operation.
 type PutAllResult struct {
-	FailedKey string // Key that caused failure, empty if all succeeded
-	Succeeded int    // Number of items successfully applied
-	Failed    int    // Number of items that failed (0 or 1, since we stop on first error)
-	Total     int    // Total items in the batch
+	// FailedKeys contains all keys that failed to be written.
+	// When a batch fails, all keys in that batch are included since batches are atomic.
+	FailedKeys []string
+
+	// Succeeded is the number of items successfully applied.
+	Succeeded int
+
+	// Failed is the number of items that failed.
+	Failed int
+
+	// Total is the total number of items in the operation.
+	Total int
+
+	// RetryCount is the total number of retry attempts made across all batches.
+	RetryCount int
+
+	// UsedFallback indicates whether single-key fallback mode was used.
+	UsedFallback bool
+}
+
+// FailedKey returns the first failed key for backward compatibility.
+// Returns empty string if no keys failed.
+func (r *PutAllResult) FailedKey() string {
+	if len(r.FailedKeys) == 0 {
+		return ""
+	}
+	return r.FailedKeys[0]
+}
+
+// BatchOptions configures batch operation behavior including retry and fallback strategies.
+type BatchOptions struct {
+	// MaxRetries is the maximum number of retry attempts for failed batches.
+	// Default: 3
+	MaxRetries int
+
+	// InitialBackoff is the initial backoff duration before first retry.
+	// Subsequent retries use exponential backoff: InitialBackoff * 2^attempt
+	// Default: 100ms
+	InitialBackoff time.Duration
+
+	// MaxBackoff is the maximum backoff duration between retries.
+	// Default: 5s
+	MaxBackoff time.Duration
+
+	// FallbackToSingleKeys enables falling back to single-key puts when a batch
+	// transaction fails after all retries are exhausted.
+	// Default: true
+	FallbackToSingleKeys bool
+
+	// Logger receives log messages about batch operations.
+	// If nil, no logging is performed.
+	Logger Logger
+}
+
+// DefaultBatchOptions returns BatchOptions with sensible defaults.
+func DefaultBatchOptions() *BatchOptions {
+	return &BatchOptions{
+		MaxRetries:           3,
+		InitialBackoff:       100 * time.Millisecond,
+		MaxBackoff:           5 * time.Second,
+		FallbackToSingleKeys: true,
+		Logger:               nil,
+	}
+}
+
+type Logger interface {
+	Debug(msg string, keysAndValues ...any)
+	Info(msg string, keysAndValues ...any)
+
+	Warn(msg string, keysAndValues ...any)
+	Error(msg string, keysAndValues ...any)
 }
 
 // ProgressFunc is called after each successful put operation.
@@ -33,20 +101,10 @@ type EtcdReader interface {
 
 // EtcdWriter defines write operations on etcd.
 type EtcdWriter interface {
-	// Put writes a single key-value pair.
 	Put(ctx context.Context, key, value string) error
-
-	// PutAll writes multiple configuration pairs.
-	// Applies items sequentially; partial failures are possible (items before
-	// the failed one are committed). For progress feedback or partial failure
-	// details, use PutAllWithProgress.
 	PutAll(ctx context.Context, pairs []*models.ConfigPair) error
-
-	// PutAllWithProgress writes multiple pairs with optional progress callback.
-	// If onProgress is non-nil, it's called after each successful put.
-	// Returns PutAllResult with success/failure counts even on error.
-	// Partial failures are possible; result.Succeeded reflects items committed before failure.
 	PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error)
+	PutAllWithOptions(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, opts *BatchOptions) (*PutAllResult, error)
 }
 
 // EtcdClient combines read and write operations with lifecycle management.

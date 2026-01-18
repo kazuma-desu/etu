@@ -47,7 +47,11 @@ func (d *DryRunClient) PutAll(ctx context.Context, pairs []*models.ConfigPair) e
 	return err
 }
 
-func (d *DryRunClient) PutAllWithProgress(_ context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
+func (d *DryRunClient) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
+	return d.PutAllWithOptions(ctx, pairs, onProgress, nil)
+}
+
+func (d *DryRunClient) PutAllWithOptions(_ context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, _ *BatchOptions) (*PutAllResult, error) {
 	result := &PutAllResult{Total: len(pairs)}
 
 	for i, pair := range pairs {

@@ -322,3 +322,69 @@ func TestGenerateTestPairs_UniqueKeys(t *testing.T) {
 		seen[pair.Key] = true
 	}
 }
+
+func TestDefaultBatchOptions(t *testing.T) {
+	opts := DefaultBatchOptions()
+
+	assert.Equal(t, 3, opts.MaxRetries)
+	assert.Equal(t, 100*time.Millisecond, opts.InitialBackoff)
+	assert.Equal(t, 5*time.Second, opts.MaxBackoff)
+	assert.True(t, opts.FallbackToSingleKeys)
+	assert.Nil(t, opts.Logger)
+}
+
+func TestPutAllResult_FailedKey(t *testing.T) {
+	t.Run("returns empty string when no failed keys", func(t *testing.T) {
+		result := &PutAllResult{
+			FailedKeys: nil,
+			Succeeded:  10,
+			Total:      10,
+		}
+		assert.Empty(t, result.FailedKey())
+	})
+
+	t.Run("returns empty string for empty slice", func(t *testing.T) {
+		result := &PutAllResult{
+			FailedKeys: []string{},
+			Succeeded:  10,
+			Total:      10,
+		}
+		assert.Empty(t, result.FailedKey())
+	})
+
+	t.Run("returns first failed key", func(t *testing.T) {
+		result := &PutAllResult{
+			FailedKeys: []string{"/key1", "/key2", "/key3"},
+			Failed:     3,
+			Total:      10,
+		}
+		assert.Equal(t, "/key1", result.FailedKey())
+	})
+}
+
+type testLogger struct {
+	debugMsgs []string
+	infoMsgs  []string
+	warnMsgs  []string
+	errorMsgs []string
+}
+
+func (l *testLogger) Debug(msg string, _ ...any) { l.debugMsgs = append(l.debugMsgs, msg) }
+func (l *testLogger) Info(msg string, _ ...any)  { l.infoMsgs = append(l.infoMsgs, msg) }
+func (l *testLogger) Warn(msg string, _ ...any)  { l.warnMsgs = append(l.warnMsgs, msg) }
+func (l *testLogger) Error(msg string, _ ...any) { l.errorMsgs = append(l.errorMsgs, msg) }
+
+func TestLoggerInterface(t *testing.T) {
+	var logger Logger = &testLogger{}
+
+	logger.Debug("debug message")
+	logger.Info("info message")
+	logger.Warn("warn message")
+	logger.Error("error message")
+
+	tl := logger.(*testLogger)
+	assert.Equal(t, []string{"debug message"}, tl.debugMsgs)
+	assert.Equal(t, []string{"info message"}, tl.infoMsgs)
+	assert.Equal(t, []string{"warn message"}, tl.warnMsgs)
+	assert.Equal(t, []string{"error message"}, tl.errorMsgs)
+}

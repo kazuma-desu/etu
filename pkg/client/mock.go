@@ -26,6 +26,7 @@ type MockClient struct {
 	PutFunc                func(ctx context.Context, key, value string) error
 	PutAllFunc             func(ctx context.Context, pairs []*models.ConfigPair) error
 	PutAllWithProgressFunc func(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error)
+	PutAllWithOptionsFunc  func(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, opts *BatchOptions) (*PutAllResult, error)
 	GetFunc                func(ctx context.Context, key string) (string, error)
 	GetWithOptionsFunc     func(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error)
 	CloseFunc              func() error
@@ -70,9 +71,17 @@ func (m *MockClient) PutAll(ctx context.Context, pairs []*models.ConfigPair) err
 }
 
 func (m *MockClient) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
+	return m.PutAllWithOptions(ctx, pairs, onProgress, nil)
+}
+
+func (m *MockClient) PutAllWithOptions(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, opts *BatchOptions) (*PutAllResult, error) {
 	pairsCopy := make([]*models.ConfigPair, len(pairs))
 	copy(pairsCopy, pairs)
 	m.PutAllWithProgressCalls = append(m.PutAllWithProgressCalls, PutAllWithProgressCall{Pairs: pairsCopy})
+
+	if m.PutAllWithOptionsFunc != nil {
+		return m.PutAllWithOptionsFunc(ctx, pairs, onProgress, opts)
+	}
 
 	if m.PutAllWithProgressFunc != nil {
 		return m.PutAllWithProgressFunc(ctx, pairs, onProgress)
