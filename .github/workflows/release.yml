@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  GO_VERSION: "1.24"
+
 jobs:
   build:
     name: Build and Release
@@ -33,7 +36,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Get version from tag
@@ -95,6 +98,7 @@ jobs:
         id: changelog
         run: |
           PREVIOUS_TAG=$(git describe --abbrev=0 --tags ${GITHUB_REF}^ 2>/dev/null || echo "")
+          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
           if [ -z "$PREVIOUS_TAG" ]; then
             CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
           else
