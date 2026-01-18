@@ -52,7 +52,7 @@ func init() {
 		"preview what would be deleted without actually deleting")
 }
 
-func runDelete(cmd *cobra.Command, args []string) error {
+func runDelete(_ *cobra.Command, args []string) error {
 	ctx, cancel := getOperationContext()
 	defer cancel()
 
@@ -119,7 +119,7 @@ func runDeletePrefix(ctx context.Context, prefix string) error {
 
 	if !deleteOpts.force {
 		if !confirmDeletion(keys, prefix, os.Stdin, os.Stdout) {
-			output.Info("Deletion cancelled")
+			output.Info("Deletion canceled")
 			return nil
 		}
 	}

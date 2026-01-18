@@ -52,7 +52,7 @@ func init() {
 		"validate key and value before writing")
 }
 
-func runPut(cmd *cobra.Command, args []string) error {
+func runPut(_ *cobra.Command, args []string) error {
 	ctx, cancel := getOperationContext()
 	defer cancel()
 
@@ -68,8 +68,8 @@ func runPut(cmd *cobra.Command, args []string) error {
 	}
 
 	if putOpts.validate {
-		if err := validateKeyValue(key, value); err != nil {
-			return err
+		if validationErr := validateKeyValue(key, value); validationErr != nil {
+			return validationErr
 		}
 		if !isQuietOutput() {
 			output.Success("Validation passed")

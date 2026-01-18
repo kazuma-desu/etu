@@ -42,9 +42,9 @@ func (r *PutAllResult) FailedKey() string {
 
 // BatchOptions configures batch operation behavior including retry and fallback strategies.
 type BatchOptions struct {
-	// MaxRetries is the maximum number of retry attempts for failed batches.
-	// Default: 3
-	MaxRetries int
+	// Logger receives log messages about batch operations.
+	// If nil, no logging is performed.
+	Logger Logger
 
 	// InitialBackoff is the initial backoff duration before first retry.
 	// Subsequent retries use exponential backoff: InitialBackoff * 2^attempt
@@ -55,14 +55,14 @@ type BatchOptions struct {
 	// Default: 5s
 	MaxBackoff time.Duration
 
+	// MaxRetries is the maximum number of retry attempts for failed batches.
+	// Default: 3
+	MaxRetries int
+
 	// FallbackToSingleKeys enables falling back to single-key puts when a batch
 	// transaction fails after all retries are exhausted.
 	// Default: true
 	FallbackToSingleKeys bool
-
-	// Logger receives log messages about batch operations.
-	// If nil, no logging is performed.
-	Logger Logger
 }
 
 // DefaultBatchOptions returns BatchOptions with sensible defaults.
