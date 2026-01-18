@@ -312,6 +312,22 @@ func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOption
 	return result, nil
 }
 
+func (c *Client) Delete(ctx context.Context, key string) (int64, error) {
+	resp, err := c.client.Delete(ctx, key)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete key %s: %w", key, err)
+	}
+	return resp.Deleted, nil
+}
+
+func (c *Client) DeletePrefix(ctx context.Context, prefix string) (int64, error) {
+	resp, err := c.client.Delete(ctx, prefix, clientv3.WithPrefix())
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete prefix %s: %w", prefix, err)
+	}
+	return resp.Deleted, nil
+}
+
 func (c *Client) Close() error {
 	return c.client.Close()
 }

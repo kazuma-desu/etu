@@ -105,6 +105,8 @@ type EtcdWriter interface {
 	PutAll(ctx context.Context, pairs []*models.ConfigPair) error
 	PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error)
 	PutAllWithOptions(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, opts *BatchOptions) (*PutAllResult, error)
+	Delete(ctx context.Context, key string) (int64, error)
+	DeletePrefix(ctx context.Context, prefix string) (int64, error)
 }
 
 // EtcdClient combines read and write operations with lifecycle management.

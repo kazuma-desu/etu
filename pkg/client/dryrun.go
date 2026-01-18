@@ -84,6 +84,22 @@ func (d *DryRunClient) GetWithOptions(ctx context.Context, key string, opts *Get
 	return nil, fmt.Errorf("dry-run mode: cannot read keys without connection")
 }
 
+func (d *DryRunClient) Delete(_ context.Context, key string) (int64, error) {
+	d.operations = append(d.operations, Operation{
+		Type: "DELETE",
+		Key:  key,
+	})
+	return 1, nil
+}
+
+func (d *DryRunClient) DeletePrefix(_ context.Context, prefix string) (int64, error) {
+	d.operations = append(d.operations, Operation{
+		Type: "DELETE_PREFIX",
+		Key:  prefix,
+	})
+	return 0, nil
+}
+
 func (d *DryRunClient) Close() error {
 	return nil
 }

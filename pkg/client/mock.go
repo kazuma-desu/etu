@@ -29,6 +29,8 @@ type MockClient struct {
 	PutAllWithOptionsFunc  func(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, opts *BatchOptions) (*PutAllResult, error)
 	GetFunc                func(ctx context.Context, key string) (string, error)
 	GetWithOptionsFunc     func(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error)
+	DeleteFunc             func(ctx context.Context, key string) (int64, error)
+	DeletePrefixFunc       func(ctx context.Context, prefix string) (int64, error)
 	CloseFunc              func() error
 	StatusFunc             func(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error)
 
@@ -37,6 +39,8 @@ type MockClient struct {
 	PutAllWithProgressCalls []PutAllWithProgressCall
 	GetCalls                []string
 	GetWithOptionsCalls     []GetWithOptionsCall
+	DeleteCalls             []string
+	DeletePrefixCalls       []string
 	StatusCalls             []string
 	CloseCalled             bool
 }
@@ -48,6 +52,8 @@ func NewMockClient() *MockClient {
 		PutAllWithProgressCalls: make([]PutAllWithProgressCall, 0),
 		GetCalls:                make([]string, 0),
 		GetWithOptionsCalls:     make([]GetWithOptionsCall, 0),
+		DeleteCalls:             make([]string, 0),
+		DeletePrefixCalls:       make([]string, 0),
 		StatusCalls:             make([]string, 0),
 	}
 }
@@ -118,6 +124,22 @@ func (m *MockClient) GetWithOptions(ctx context.Context, key string, opts *GetOp
 	return &GetResponse{Kvs: []*KeyValue{}}, nil
 }
 
+func (m *MockClient) Delete(ctx context.Context, key string) (int64, error) {
+	m.DeleteCalls = append(m.DeleteCalls, key)
+	if m.DeleteFunc != nil {
+		return m.DeleteFunc(ctx, key)
+	}
+	return 1, nil
+}
+
+func (m *MockClient) DeletePrefix(ctx context.Context, prefix string) (int64, error) {
+	m.DeletePrefixCalls = append(m.DeletePrefixCalls, prefix)
+	if m.DeletePrefixFunc != nil {
+		return m.DeletePrefixFunc(ctx, prefix)
+	}
+	return 1, nil
+}
+
 func (m *MockClient) Close() error {
 	m.CloseCalled = true
 	if m.CloseFunc != nil {
@@ -134,14 +156,14 @@ func (m *MockClient) Status(ctx context.Context, endpoint string) (*clientv3.Sta
 	return &clientv3.StatusResponse{}, nil
 }
 
-// Reset clears all call history but preserves function hooks (PutFunc, GetFunc, etc.),
-// allowing test setup to be reused across multiple test cases.
 func (m *MockClient) Reset() {
 	m.PutCalls = make([]PutCall, 0)
 	m.PutAllCalls = make([][]*models.ConfigPair, 0)
 	m.PutAllWithProgressCalls = make([]PutAllWithProgressCall, 0)
 	m.GetCalls = make([]string, 0)
 	m.GetWithOptionsCalls = make([]GetWithOptionsCall, 0)
+	m.DeleteCalls = make([]string, 0)
+	m.DeletePrefixCalls = make([]string, 0)
 	m.StatusCalls = make([]string, 0)
 	m.CloseCalled = false
 }
