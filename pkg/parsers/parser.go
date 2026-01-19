@@ -99,6 +99,14 @@ func (r *Registry) detectByContent(path string) models.FormatType {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+	// Increase buffer size to handle long lines (default 64K may be too small)
+	// Use 1MB initial capacity, 10MB max token size
+	const (
+		initBufSize  = 1024 * 1024      // 1MB
+		maxTokenSize = 10 * 1024 * 1024 // 10MB
+	)
+	scanner.Buffer(make([]byte, initBufSize), maxTokenSize)
+
 	var firstNonEmptyLine string
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -106,11 +114,6 @@ func (r *Registry) detectByContent(path string) models.FormatType {
 			firstNonEmptyLine = line
 			break
 		}
-	}
-
-	// Check for scanner errors (e.g., line too long for buffer)
-	if err := scanner.Err(); err != nil {
-		return models.FormatAuto
 	}
 
 	if firstNonEmptyLine == "" {
