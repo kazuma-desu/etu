@@ -210,17 +210,26 @@ func TestCompleteContextNamesForArg(t *testing.T) {
 }
 
 func TestRegisterFileCompletion(t *testing.T) {
-	t.Run("registers completion function", func(_ *testing.T) {
+	t.Run("registers completion function", func(t *testing.T) {
 		testCmd := &cobra.Command{Use: "test"}
 		testCmd.Flags().String("file", "", "test file flag")
 
 		registerFileCompletion(testCmd, "file")
+
+		// Verify completion was registered by checking the flag
+		flag := testCmd.Flags().Lookup("file")
+		require.NotNil(t, flag)
+		// Note: Cobra doesn't expose a direct way to check if completion is registered,
+		// but we can at least verify the flag exists and the call succeeded
 	})
 
-	t.Run("handles non-existent flag gracefully", func(_ *testing.T) {
+	t.Run("handles non-existent flag gracefully", func(t *testing.T) {
 		testCmd := &cobra.Command{Use: "test"}
 
-		registerFileCompletion(testCmd, "nonexistent")
+		// Should not panic when flag doesn't exist
+		assert.NotPanics(t, func() {
+			registerFileCompletion(testCmd, "nonexistent")
+		})
 	})
 }
 
