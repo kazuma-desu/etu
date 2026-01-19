@@ -164,58 +164,49 @@ func TestDetectFormat_ByExtensionWithRegisteredParsers(t *testing.T) {
 
 func TestDetectFormat_ByContent(t *testing.T) {
 	tests := []struct {
-		name           string
-		content        string
-		registerFormat models.FormatType
-		expected       models.FormatType
+		name     string
+		content  string
+		expected models.FormatType
 	}{
 		{
-			name:           "json object",
-			content:        `{"key": "value"}`,
-			registerFormat: models.FormatJSON,
-			expected:       models.FormatJSON,
+			name:     "json object",
+			content:  `{"key": "value"}`,
+			expected: models.FormatJSON,
 		},
 		{
-			name:           "json array",
-			content:        `[{"key": "value"}]`,
-			registerFormat: models.FormatJSON,
-			expected:       models.FormatJSON,
+			name:     "json array",
+			content:  `[{"key": "value"}]`,
+			expected: models.FormatJSON,
 		},
 		{
-			name:           "json with leading whitespace",
-			content:        `   {"key": "value"}`,
-			registerFormat: models.FormatJSON,
-			expected:       models.FormatJSON,
+			name:     "json with leading whitespace",
+			content:  `   {"key": "value"}`,
+			expected: models.FormatJSON,
 		},
 		{
-			name:           "yaml document separator",
-			content:        "---\nkey: value",
-			registerFormat: models.FormatYAML,
-			expected:       models.FormatYAML,
+			name:     "yaml document separator",
+			content:  "---\nkey: value",
+			expected: models.FormatYAML,
 		},
 		{
-			name:           "yaml key-value",
-			content:        "key: value",
-			registerFormat: models.FormatYAML,
-			expected:       models.FormatYAML,
+			name:     "yaml key-value",
+			content:  "key: value",
+			expected: models.FormatYAML,
 		},
 		{
-			name:           "yaml nested structure",
-			content:        "database: config\n  host: localhost",
-			registerFormat: models.FormatYAML,
-			expected:       models.FormatYAML,
+			name:     "yaml nested structure",
+			content:  "database: config\n  host: localhost",
+			expected: models.FormatYAML,
 		},
 		{
-			name:           "etcdctl format",
-			content:        "/app/key\nvalue",
-			registerFormat: models.FormatEtcdctl,
-			expected:       models.FormatEtcdctl,
+			name:     "etcdctl format",
+			content:  "/app/key\nvalue",
+			expected: models.FormatEtcdctl,
 		},
 		{
-			name:           "etcdctl with comment",
-			content:        "# comment\n/app/key\nvalue",
-			registerFormat: models.FormatEtcdctl,
-			expected:       models.FormatEtcdctl,
+			name:     "etcdctl with comment",
+			content:  "# comment\n/app/key\nvalue",
+			expected: models.FormatEtcdctl,
 		},
 	}
 
@@ -227,10 +218,6 @@ func TestDetectFormat_ByContent(t *testing.T) {
 			require.NoError(t, err)
 
 			r := NewRegistry()
-			if tt.registerFormat == models.FormatJSON {
-				r.Register(tt.registerFormat, &mockParser{name: string(tt.registerFormat)})
-			}
-
 			format, err := r.DetectFormat(tmpFile)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, format)
@@ -276,6 +263,24 @@ func TestDetectFormat_FileNotFound(t *testing.T) {
 	format, err := r.DetectFormat("/nonexistent/path/config.txt")
 	assert.NoError(t, err)
 	assert.Equal(t, models.FormatEtcdctl, format)
+}
+
+func TestDetectFormat_ScannerError(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "longline")
+
+	// Create a line longer than bufio.Scanner's default 64KB buffer
+	longLine := make([]byte, 65*1024)
+	for i := range longLine {
+		longLine[i] = 'x'
+	}
+	err := os.WriteFile(tmpFile, longLine, 0644)
+	require.NoError(t, err)
+
+	r := NewRegistry()
+	format, err := r.DetectFormat(tmpFile)
+	assert.NoError(t, err)
+	assert.Equal(t, models.FormatEtcdctl, format, "Scanner error should fallback to etcdctl via FormatAuto")
 }
 
 func TestDetectFormat_EmptyFile(t *testing.T) {
