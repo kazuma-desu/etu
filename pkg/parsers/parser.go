@@ -33,6 +33,7 @@ func NewRegistry() *Registry {
 
 	r.Register(models.FormatEtcdctl, &EtcdctlParser{})
 	r.Register(models.FormatYAML, &YAMLParser{})
+	r.Register(models.FormatJSON, &JSONParser{})
 
 	return r
 }

@@ -25,6 +25,11 @@ func TestNewRegistry(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, yamlParser)
 	assert.Equal(t, "yaml", yamlParser.FormatName())
+
+	jsonParser, err := r.GetParser(models.FormatJSON)
+	assert.NoError(t, err)
+	assert.NotNil(t, jsonParser)
+	assert.Equal(t, "json", jsonParser.FormatName())
 }
 
 func TestRegistry_Register(t *testing.T) {
@@ -49,7 +54,7 @@ func TestRegistry_GetParser(t *testing.T) {
 	})
 
 	t.Run("unregistered parser", func(t *testing.T) {
-		_, err := r.GetParser(models.FormatJSON)
+		_, err := r.GetParser(models.FormatType("toml"))
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "no parser registered for format")
 	})
@@ -78,7 +83,7 @@ func TestDetectFormat_ByExtension(t *testing.T) {
 			name:     "json extension",
 			filename: "config.json",
 			content:  `{"key": "value"}`,
-			expected: models.FormatEtcdctl, // Falls back because JSON parser not registered
+			expected: models.FormatJSON,
 		},
 		{
 			name:     "txt extension",
@@ -238,10 +243,6 @@ func TestDetectFormat_FallbackToEtcdctl(t *testing.T) {
 		name    string
 		content string
 	}{
-		{
-			name:    "json without parser registered",
-			content: `{"key": "value"}`,
-		},
 		{
 			name:    "unknown content",
 			content: "some random text",
