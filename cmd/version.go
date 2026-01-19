@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/debug"
 
 	"github.com/spf13/cobra"
 )
@@ -42,6 +43,25 @@ func runVersion(_ *cobra.Command, _ []string) error {
 		BuildDate: BuildDate,
 		GoVersion: runtime.Version(),
 		Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+	}
+
+	// Fallback to Go module info if version is not set (e.g. go install)
+	if info.Version == "dev" {
+		if buildInfo, ok := debug.ReadBuildInfo(); ok {
+			// Prefer Main.Version if available and not (devel), otherwise keep "dev"
+			if buildInfo.Main.Version != "(devel)" {
+				info.Version = buildInfo.Main.Version
+			}
+			// Iterate over settings to find vcs info
+			for _, setting := range buildInfo.Settings {
+				switch setting.Key {
+				case "vcs.revision":
+					info.Commit = setting.Value
+				case "vcs.time":
+					info.BuildDate = setting.Value
+				}
+			}
+		}
 	}
 
 	if outputFormat == "json" {
