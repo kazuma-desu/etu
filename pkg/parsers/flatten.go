@@ -1,0 +1,106 @@
+package parsers
+
+import (
+	"encoding/json"
+	"math"
+
+	"github.com/kazuma-desu/etu/pkg/logger"
+	"github.com/kazuma-desu/etu/pkg/models"
+)
+
+// FlattenMap recursively flattens a nested map into etcd key-value pairs.
+// Keys are constructed as paths with "/" delimiter (e.g., /app/db/host).
+// Arrays are serialized as JSON strings.
+// Null values are skipped.
+func FlattenMap(data map[string]any) []*models.ConfigPair {
+	var pairs []*models.ConfigPair
+	flattenRecursive("", data, &pairs)
+	return pairs
+}
+
+func flattenRecursive(prefix string, data map[string]any, pairs *[]*models.ConfigPair) {
+	for key, value := range data {
+		fullKey := prefix + "/" + key
+		flattenValue(fullKey, value, pairs)
+	}
+}
+
+func flattenValue(key string, value any, pairs *[]*models.ConfigPair) {
+	if value == nil {
+		return
+	}
+
+	switch v := value.(type) {
+	case map[string]any:
+		flattenRecursive(key, v, pairs)
+
+	case []any:
+		if len(v) == 0 {
+			return
+		}
+		serialized, err := json.Marshal(v)
+		if err != nil {
+			logger.Log.Warnf("failed to marshal array at key %s: %v", key, err)
+			return
+		}
+		*pairs = append(*pairs, &models.ConfigPair{
+			Key:   key,
+			Value: string(serialized),
+		})
+
+	case string:
+		if v == "" {
+			return
+		}
+		*pairs = append(*pairs, &models.ConfigPair{
+			Key:   key,
+			Value: v,
+		})
+
+	case int:
+		*pairs = append(*pairs, &models.ConfigPair{
+			Key:   key,
+			Value: int64(v),
+		})
+
+	case int64:
+		*pairs = append(*pairs, &models.ConfigPair{
+			Key:   key,
+			Value: v,
+		})
+
+	case float64:
+		if isWholeNumber(v) {
+			*pairs = append(*pairs, &models.ConfigPair{
+				Key:   key,
+				Value: int64(v),
+			})
+		} else {
+			*pairs = append(*pairs, &models.ConfigPair{
+				Key:   key,
+				Value: v,
+			})
+		}
+
+	case bool:
+		*pairs = append(*pairs, &models.ConfigPair{
+			Key:   key,
+			Value: v,
+		})
+
+	default:
+		serialized, err := json.Marshal(v)
+		if err != nil {
+			logger.Log.Warnf("failed to marshal value at key %s: %v", key, err)
+			return
+		}
+		*pairs = append(*pairs, &models.ConfigPair{
+			Key:   key,
+			Value: string(serialized),
+		})
+	}
+}
+
+func isWholeNumber(f float64) bool {
+	return math.Trunc(f) == f && f >= math.MinInt64 && f <= math.MaxInt64
+}

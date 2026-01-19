@@ -19,13 +19,14 @@ type FormatType string
 const (
 	FormatAuto    FormatType = "auto"
 	FormatEtcdctl FormatType = "etcdctl"
-	// FormatHelmValues FormatType = "helm-values" // Reserved for future use
+	FormatYAML    FormatType = "yaml"
+	FormatJSON    FormatType = "json"
 )
 
 // IsValid checks if the format type is valid
 func (f FormatType) IsValid() bool {
 	switch f {
-	case FormatAuto, FormatEtcdctl:
+	case FormatAuto, FormatEtcdctl, FormatYAML, FormatJSON:
 		return true
 	default:
 		return false
