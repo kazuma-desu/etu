@@ -42,13 +42,14 @@ func (p *YAMLParser) Parse(path string) ([]*models.ConfigPair, error) {
 		}
 
 		docCount++
-		if docCount == 1 {
+		switch docCount {
+		case 1:
 			data, ok := raw.(map[string]any)
 			if !ok {
 				return nil, ErrRootNotMap
 			}
 			pairs = FlattenMap(data)
-		} else if docCount == 2 {
+		case 2:
 			fmt.Fprintf(os.Stderr, "Warning: YAML file contains multiple documents, only the first document is parsed\n")
 		}
 	}
