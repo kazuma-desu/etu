@@ -71,16 +71,18 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		resetDeleteFlags()
 
 		old := os.Stdout
+		defer func() { os.Stdout = old }()
+
 		r, w, _ := os.Pipe()
 		os.Stdout = w
 
 		err := runDelete(deleteCmd, []string{"/delete/nonexistent/key"})
 
 		w.Close()
-		os.Stdout = old
 
 		var buf bytes.Buffer
 		io.Copy(&buf, r)
+		r.Close()
 		output := buf.String()
 
 		require.NoError(t, err)
@@ -121,16 +123,18 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		deleteOpts.dryRun = true
 
 		old := os.Stdout
+		defer func() { os.Stdout = old }()
+
 		r, w, _ := os.Pipe()
 		os.Stdout = w
 
 		err = runDelete(deleteCmd, []string{"/delete/dryrun/"})
 
 		w.Close()
-		os.Stdout = old
 
 		var buf bytes.Buffer
 		io.Copy(&buf, r)
+		r.Close()
 		output := buf.String()
 
 		require.NoError(t, err)
@@ -157,16 +161,18 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		deleteOpts.force = true
 
 		old := os.Stdout
+		defer func() { os.Stdout = old }()
+
 		r, w, _ := os.Pipe()
 		os.Stdout = w
 
 		err := runDelete(deleteCmd, []string{"/nonexistent/prefix/"})
 
 		w.Close()
-		os.Stdout = old
 
 		var buf bytes.Buffer
 		io.Copy(&buf, r)
+		r.Close()
 		output := buf.String()
 
 		require.NoError(t, err)
@@ -181,7 +187,10 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		deleteOpts.prefix = true
 
 		oldStdin := os.Stdin
+		defer func() { os.Stdin = oldStdin }()
+
 		r, w, _ := os.Pipe()
+		defer r.Close()
 		os.Stdin = r
 
 		go func() {
@@ -189,18 +198,19 @@ func TestDeleteCommand_Integration(t *testing.T) {
 			w.Close()
 		}()
 
-		old := os.Stdout
+		oldStdout := os.Stdout
+		defer func() { os.Stdout = oldStdout }()
+
 		rOut, wOut, _ := os.Pipe()
 		os.Stdout = wOut
 
 		err = runDelete(deleteCmd, []string{"/delete/confirm/"})
 
 		wOut.Close()
-		os.Stdout = old
-		os.Stdin = oldStdin
 
 		var buf bytes.Buffer
 		io.Copy(&buf, rOut)
+		rOut.Close()
 
 		require.NoError(t, err)
 
@@ -216,7 +226,10 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		deleteOpts.prefix = true
 
 		oldStdin := os.Stdin
+		defer func() { os.Stdin = oldStdin }()
+
 		r, w, _ := os.Pipe()
+		defer r.Close()
 		os.Stdin = r
 
 		go func() {
@@ -224,18 +237,19 @@ func TestDeleteCommand_Integration(t *testing.T) {
 			w.Close()
 		}()
 
-		old := os.Stdout
+		oldStdout := os.Stdout
+		defer func() { os.Stdout = oldStdout }()
+
 		rOut, wOut, _ := os.Pipe()
 		os.Stdout = wOut
 
 		err = runDelete(deleteCmd, []string{"/delete/reject/"})
 
 		wOut.Close()
-		os.Stdout = old
-		os.Stdin = oldStdin
 
 		var buf bytes.Buffer
 		io.Copy(&buf, rOut)
+		rOut.Close()
 		output := buf.String()
 
 		require.NoError(t, err)

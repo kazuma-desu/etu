@@ -68,7 +68,10 @@ func TestPutCommand_Integration(t *testing.T) {
 		resetPutFlags()
 
 		oldStdin := os.Stdin
+		defer func() { os.Stdin = oldStdin }()
+
 		r, w, _ := os.Pipe()
+		defer r.Close()
 		os.Stdin = r
 
 		go func() {
@@ -77,7 +80,6 @@ func TestPutCommand_Integration(t *testing.T) {
 		}()
 
 		err := runPut(putCmd, []string{"/put/test/stdin", "-"})
-		os.Stdin = oldStdin
 
 		require.NoError(t, err)
 
@@ -90,7 +92,10 @@ func TestPutCommand_Integration(t *testing.T) {
 		resetPutFlags()
 
 		oldStdin := os.Stdin
+		defer func() { os.Stdin = oldStdin }()
+
 		r, w, _ := os.Pipe()
+		defer r.Close()
 		os.Stdin = r
 
 		go func() {
@@ -99,7 +104,6 @@ func TestPutCommand_Integration(t *testing.T) {
 		}()
 
 		err := runPut(putCmd, []string{"/put/test/multiline", "-"})
-		os.Stdin = oldStdin
 
 		require.NoError(t, err)
 
@@ -113,16 +117,18 @@ func TestPutCommand_Integration(t *testing.T) {
 		putOpts.dryRun = true
 
 		old := os.Stdout
+		defer func() { os.Stdout = old }()
+
 		r, w, _ := os.Pipe()
 		os.Stdout = w
 
 		err := runPut(putCmd, []string{"/put/test/dryrun", "should-not-exist"})
 
 		w.Close()
-		os.Stdout = old
 
 		var buf bytes.Buffer
 		io.Copy(&buf, r)
+		r.Close()
 		output := buf.String()
 
 		require.NoError(t, err)
