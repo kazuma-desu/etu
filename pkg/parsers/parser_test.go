@@ -16,11 +16,15 @@ func TestNewRegistry(t *testing.T) {
 	assert.NotNil(t, r)
 	assert.NotNil(t, r.parsers)
 
-	// Should have etcdctl parser registered by default
 	parser, err := r.GetParser(models.FormatEtcdctl)
 	assert.NoError(t, err)
 	assert.NotNil(t, parser)
 	assert.Equal(t, "etcdctl", parser.FormatName())
+
+	yamlParser, err := r.GetParser(models.FormatYAML)
+	assert.NoError(t, err)
+	assert.NotNil(t, yamlParser)
+	assert.Equal(t, "yaml", yamlParser.FormatName())
 }
 
 func TestRegistry_Register(t *testing.T) {
@@ -45,7 +49,7 @@ func TestRegistry_GetParser(t *testing.T) {
 	})
 
 	t.Run("unregistered parser", func(t *testing.T) {
-		_, err := r.GetParser(models.FormatYAML)
+		_, err := r.GetParser(models.FormatJSON)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "no parser registered for format")
 	})
@@ -62,13 +66,13 @@ func TestDetectFormat_ByExtension(t *testing.T) {
 			name:     "yaml extension",
 			filename: "config.yaml",
 			content:  "key: value",
-			expected: models.FormatEtcdctl, // Falls back because YAML parser not registered
+			expected: models.FormatYAML,
 		},
 		{
 			name:     "yml extension",
 			filename: "config.yml",
 			content:  "key: value",
-			expected: models.FormatEtcdctl, // Falls back because YAML parser not registered
+			expected: models.FormatYAML,
 		},
 		{
 			name:     "json extension",
@@ -213,13 +217,12 @@ func TestDetectFormat_ByContent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
-			// Use no extension to force content detection
 			tmpFile := filepath.Join(tmpDir, "config")
 			err := os.WriteFile(tmpFile, []byte(tt.content), 0644)
 			require.NoError(t, err)
 
 			r := NewRegistry()
-			if tt.registerFormat != models.FormatEtcdctl {
+			if tt.registerFormat == models.FormatJSON {
 				r.Register(tt.registerFormat, &mockParser{name: string(tt.registerFormat)})
 			}
 
@@ -235,10 +238,6 @@ func TestDetectFormat_FallbackToEtcdctl(t *testing.T) {
 		name    string
 		content string
 	}{
-		{
-			name:    "yaml without parser registered",
-			content: "key: value",
-		},
 		{
 			name:    "json without parser registered",
 			content: `{"key": "value"}`,
@@ -260,7 +259,6 @@ func TestDetectFormat_FallbackToEtcdctl(t *testing.T) {
 			err := os.WriteFile(tmpFile, []byte(tt.content), 0644)
 			require.NoError(t, err)
 
-			// Default registry only has etcdctl registered
 			r := NewRegistry()
 
 			format, err := r.DetectFormat(tmpFile)

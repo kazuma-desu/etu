@@ -31,8 +31,8 @@ func NewRegistry() *Registry {
 		parsers: make(map[models.FormatType]Parser),
 	}
 
-	// Register built-in parsers
 	r.Register(models.FormatEtcdctl, &EtcdctlParser{})
+	r.Register(models.FormatYAML, &YAMLParser{})
 
 	return r
 }
