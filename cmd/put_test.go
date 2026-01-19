@@ -110,4 +110,66 @@ func TestTruncateForDisplay(t *testing.T) {
 		result := truncateForDisplay("exact", 5)
 		assert.Equal(t, "exact", result)
 	})
+
+	t.Run("maxLen zero returns empty", func(t *testing.T) {
+		result := truncateForDisplay("hello", 0)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("negative maxLen returns empty", func(t *testing.T) {
+		result := truncateForDisplay("hello", -5)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("maxLen 1 returns first rune", func(t *testing.T) {
+		result := truncateForDisplay("hello", 1)
+		assert.Equal(t, "h", result)
+	})
+
+	t.Run("maxLen 2 returns first 2 runes", func(t *testing.T) {
+		result := truncateForDisplay("hello", 2)
+		assert.Equal(t, "he", result)
+	})
+
+	t.Run("maxLen 3 returns first 3 runes no ellipsis", func(t *testing.T) {
+		result := truncateForDisplay("hello", 3)
+		assert.Equal(t, "hel", result)
+	})
+
+	t.Run("maxLen 4 truncates with ellipsis", func(t *testing.T) {
+		result := truncateForDisplay("hello", 4)
+		assert.Equal(t, "h...", result)
+	})
+
+	t.Run("unicode string truncated correctly", func(t *testing.T) {
+		result := truncateForDisplay("Hello 世界 🌍!", 10)
+		assert.Equal(t, "Hello 世...", result)
+		assert.Equal(t, 10, len([]rune(result)))
+	})
+
+	t.Run("unicode preserved when under limit", func(t *testing.T) {
+		result := truncateForDisplay("世界", 50)
+		assert.Equal(t, "世界", result)
+	})
+
+	t.Run("unicode exact length preserved", func(t *testing.T) {
+		result := truncateForDisplay("Hello 世界 🌍", 10)
+		assert.Equal(t, "Hello 世界 🌍", result)
+	})
+
+	t.Run("emoji truncated correctly", func(t *testing.T) {
+		result := truncateForDisplay("🎉🎊🎁🎄🎅🎆", 5)
+		assert.Equal(t, "🎉🎊...", result)
+		assert.Equal(t, 5, len([]rune(result)))
+	})
+
+	t.Run("mixed content with newlines and unicode", func(t *testing.T) {
+		result := truncateForDisplay("Hello\n世界", 15)
+		assert.Equal(t, "Hello\\n世界", result)
+	})
+
+	t.Run("newline escaped then truncated", func(t *testing.T) {
+		result := truncateForDisplay("a\nb\nc\nd\ne", 8)
+		assert.Equal(t, "a\\nb\\...", result)
+	})
 }

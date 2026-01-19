@@ -150,10 +150,16 @@ func validateKeyValue(key, value string) error {
 }
 
 func truncateForDisplay(s string, maxLen int) string {
+	if maxLen <= 0 {
+		return ""
+	}
 	s = strings.ReplaceAll(s, "\n", "\\n")
 	runes := []rune(s)
 	if len(runes) <= maxLen {
 		return s
+	}
+	if maxLen <= 3 {
+		return string(runes[:maxLen])
 	}
 	return string(runes[:maxLen-3]) + "..."
 }
