@@ -2,6 +2,7 @@ package parsers
 
 import (
 	"encoding/json"
+	"math"
 
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
@@ -101,5 +102,5 @@ func flattenValue(key string, value any, pairs *[]*models.ConfigPair) {
 }
 
 func isWholeNumber(f float64) bool {
-	return f == float64(int64(f))
+	return math.Trunc(f) == f && f >= math.MinInt64 && f <= math.MaxInt64
 }
