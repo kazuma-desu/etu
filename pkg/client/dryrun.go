@@ -47,7 +47,11 @@ func (d *DryRunClient) PutAll(ctx context.Context, pairs []*models.ConfigPair) e
 	return err
 }
 
-func (d *DryRunClient) PutAllWithProgress(_ context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
+func (d *DryRunClient) PutAllWithProgress(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error) {
+	return d.PutAllWithOptions(ctx, pairs, onProgress, nil)
+}
+
+func (d *DryRunClient) PutAllWithOptions(_ context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, _ *BatchOptions) (*PutAllResult, error) {
 	result := &PutAllResult{Total: len(pairs)}
 
 	for i, pair := range pairs {
@@ -78,6 +82,22 @@ func (d *DryRunClient) GetWithOptions(ctx context.Context, key string, opts *Get
 		return d.reader.GetWithOptions(ctx, key, opts)
 	}
 	return nil, fmt.Errorf("dry-run mode: cannot read keys without connection")
+}
+
+func (d *DryRunClient) Delete(_ context.Context, key string) (int64, error) {
+	d.operations = append(d.operations, Operation{
+		Type: "DELETE",
+		Key:  key,
+	})
+	return 1, nil
+}
+
+func (d *DryRunClient) DeletePrefix(_ context.Context, prefix string) (int64, error) {
+	d.operations = append(d.operations, Operation{
+		Type: "DELETE_PREFIX",
+		Key:  prefix,
+	})
+	return 0, nil
 }
 
 func (d *DryRunClient) Close() error {

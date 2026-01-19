@@ -42,6 +42,8 @@ func init() {
 	if err := validateCmd.MarkFlagRequired("file"); err != nil {
 		panic(fmt.Sprintf("failed to mark flag as required: %v", err))
 	}
+
+	registerFileCompletion(validateCmd, "file")
 }
 
 func runValidate(cmd *cobra.Command, _ []string) error {

@@ -29,17 +29,19 @@ var currentContextCmd = &cobra.Command{
 }
 
 var useContextCmd = &cobra.Command{
-	Use:   "use-context <context-name>",
-	Short: "Switch to a different context",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runUseContext,
+	Use:               "use-context <context-name>",
+	Short:             "Switch to a different context",
+	Args:              cobra.ExactArgs(1),
+	RunE:              runUseContext,
+	ValidArgsFunction: CompleteContextNamesForArg,
 }
 
 var deleteContextCmd = &cobra.Command{
-	Use:   "delete-context <context-name>",
-	Short: "Delete a context",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runDeleteContext,
+	Use:               "delete-context <context-name>",
+	Short:             "Delete a context",
+	Args:              cobra.ExactArgs(1),
+	RunE:              runDeleteContext,
+	ValidArgsFunction: CompleteContextNamesForArg,
 }
 
 var viewConfigCmd = &cobra.Command{

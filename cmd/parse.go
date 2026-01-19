@@ -39,6 +39,8 @@ func init() {
 	if err := parseCmd.MarkFlagRequired("file"); err != nil {
 		panic(fmt.Sprintf("failed to mark flag as required: %v", err))
 	}
+
+	registerFileCompletion(parseCmd, "file")
 }
 
 func runParse(_ *cobra.Command, _ []string) error {
