@@ -108,6 +108,11 @@ func (r *Registry) detectByContent(path string) models.FormatType {
 		}
 	}
 
+	// Check for scanner errors (e.g., line too long for buffer)
+	if err := scanner.Err(); err != nil {
+		return models.FormatAuto
+	}
+
 	if firstNonEmptyLine == "" {
 		return models.FormatEtcdctl
 	}
