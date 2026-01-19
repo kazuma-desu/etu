@@ -50,9 +50,11 @@ func TestFormatType_IsValid(t *testing.T) {
 	}{
 		{"auto format", FormatAuto, true},
 		{"etcdctl format", FormatEtcdctl, true},
+		{"yaml format", FormatYAML, true},
+		{"json format", FormatJSON, true},
 		{"invalid format", FormatType("invalid"), false},
 		{"empty format", FormatType(""), false},
-		{"random string", FormatType("yaml"), false},
+		{"random string", FormatType("toml"), false},
 	}
 
 	for _, tt := range tests {
@@ -66,6 +68,8 @@ func TestFormatType_IsValid(t *testing.T) {
 func TestFormatType_Constants(t *testing.T) {
 	assert.Equal(t, FormatType("auto"), FormatAuto)
 	assert.Equal(t, FormatType("etcdctl"), FormatEtcdctl)
+	assert.Equal(t, FormatType("yaml"), FormatYAML)
+	assert.Equal(t, FormatType("json"), FormatJSON)
 }
 
 func TestApplyOptions(t *testing.T) {
