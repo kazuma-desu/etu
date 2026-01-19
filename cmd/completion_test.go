@@ -19,16 +19,20 @@ func TestRunCompletion(t *testing.T) {
 
 	t.Run("bash completion", func(t *testing.T) {
 		old := os.Stdout
-		r, w, _ := os.Pipe()
+		defer func() { os.Stdout = old }()
+
+		r, w, pipeErr := os.Pipe()
+		require.NoError(t, pipeErr)
+		defer r.Close()
 		os.Stdout = w
 
 		err := runCompletion(completionCmd, []string{"bash"})
 
-		w.Close()
-		os.Stdout = old
+		require.NoError(t, w.Close())
 
 		var buf bytes.Buffer
-		buf.ReadFrom(r)
+		_, copyErr := buf.ReadFrom(r)
+		require.NoError(t, copyErr)
 		output := buf.String()
 
 		require.NoError(t, err)
@@ -37,16 +41,20 @@ func TestRunCompletion(t *testing.T) {
 
 	t.Run("zsh completion", func(t *testing.T) {
 		old := os.Stdout
-		r, w, _ := os.Pipe()
+		defer func() { os.Stdout = old }()
+
+		r, w, pipeErr := os.Pipe()
+		require.NoError(t, pipeErr)
+		defer r.Close()
 		os.Stdout = w
 
 		err := runCompletion(completionCmd, []string{"zsh"})
 
-		w.Close()
-		os.Stdout = old
+		require.NoError(t, w.Close())
 
 		var buf bytes.Buffer
-		buf.ReadFrom(r)
+		_, copyErr := buf.ReadFrom(r)
+		require.NoError(t, copyErr)
 		output := buf.String()
 
 		require.NoError(t, err)
@@ -55,16 +63,20 @@ func TestRunCompletion(t *testing.T) {
 
 	t.Run("fish completion", func(t *testing.T) {
 		old := os.Stdout
-		r, w, _ := os.Pipe()
+		defer func() { os.Stdout = old }()
+
+		r, w, pipeErr := os.Pipe()
+		require.NoError(t, pipeErr)
+		defer r.Close()
 		os.Stdout = w
 
 		err := runCompletion(completionCmd, []string{"fish"})
 
-		w.Close()
-		os.Stdout = old
+		require.NoError(t, w.Close())
 
 		var buf bytes.Buffer
-		buf.ReadFrom(r)
+		_, copyErr := buf.ReadFrom(r)
+		require.NoError(t, copyErr)
 		output := buf.String()
 
 		require.NoError(t, err)
@@ -73,16 +85,20 @@ func TestRunCompletion(t *testing.T) {
 
 	t.Run("powershell completion", func(t *testing.T) {
 		old := os.Stdout
-		r, w, _ := os.Pipe()
+		defer func() { os.Stdout = old }()
+
+		r, w, pipeErr := os.Pipe()
+		require.NoError(t, pipeErr)
+		defer r.Close()
 		os.Stdout = w
 
 		err := runCompletion(completionCmd, []string{"powershell"})
 
-		w.Close()
-		os.Stdout = old
+		require.NoError(t, w.Close())
 
 		var buf bytes.Buffer
-		buf.ReadFrom(r)
+		_, copyErr := buf.ReadFrom(r)
+		require.NoError(t, copyErr)
 		output := buf.String()
 
 		require.NoError(t, err)
@@ -215,8 +231,11 @@ func TestCompleteContextNames_LoadError(t *testing.T) {
 	defer os.Setenv("HOME", oldHome)
 
 	configDir := tempDir + "/.config/etu"
-	os.MkdirAll(configDir, 0o755)
-	os.WriteFile(configDir+"/config.yaml", []byte("invalid: yaml: content: ["), 0o644)
+	err := os.MkdirAll(configDir, 0o755)
+	require.NoError(t, err, "failed to create config directory")
+
+	err = os.WriteFile(configDir+"/config.yaml", []byte("invalid: yaml: content: ["), 0o644)
+	require.NoError(t, err, "failed to write invalid config file")
 
 	contexts, directive := completeContextNames(nil, nil, "")
 

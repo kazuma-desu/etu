@@ -119,16 +119,18 @@ func TestPutCommand_Integration(t *testing.T) {
 		old := os.Stdout
 		defer func() { os.Stdout = old }()
 
-		r, w, _ := os.Pipe()
+		r, w, pipeErr := os.Pipe()
+		require.NoError(t, pipeErr)
+		defer r.Close()
 		os.Stdout = w
 
 		err := runPut(putCmd, []string{"/put/test/dryrun", "should-not-exist"})
 
-		w.Close()
+		require.NoError(t, w.Close())
 
 		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		r.Close()
+		_, copyErr := io.Copy(&buf, r)
+		require.NoError(t, copyErr)
 		output := buf.String()
 
 		require.NoError(t, err)
