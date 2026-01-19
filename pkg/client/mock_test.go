@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/kazuma-desu/etu/pkg/models"
 )
@@ -268,4 +269,169 @@ func TestMockClient_ImplementsInterface(_ *testing.T) {
 
 func TestMockClient_ImplementsOperationRecorder(_ *testing.T) {
 	var _ OperationRecorder = (*MockClient)(nil)
+}
+
+func TestMockClient_Delete(t *testing.T) {
+	t.Run("default behavior returns 1", func(t *testing.T) {
+		mock := NewMockClient()
+
+		deleted, err := mock.Delete(context.Background(), "/key")
+
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), deleted)
+		assert.Equal(t, []string{"/key"}, mock.DeleteCalls)
+	})
+
+	t.Run("custom function is called", func(t *testing.T) {
+		expectedErr := errors.New("delete failed")
+		mock := NewMockClient()
+		mock.DeleteFunc = func(_ context.Context, key string) (int64, error) {
+			if key == "/protected" {
+				return 0, expectedErr
+			}
+			return 1, nil
+		}
+
+		deleted, err := mock.Delete(context.Background(), "/protected")
+
+		assert.Equal(t, expectedErr, err)
+		assert.Equal(t, int64(0), deleted)
+		assert.Len(t, mock.DeleteCalls, 1)
+	})
+
+	t.Run("tracks multiple calls", func(t *testing.T) {
+		mock := NewMockClient()
+
+		mock.Delete(context.Background(), "/key1")
+		mock.Delete(context.Background(), "/key2")
+		mock.Delete(context.Background(), "/key3")
+
+		assert.Equal(t, []string{"/key1", "/key2", "/key3"}, mock.DeleteCalls)
+	})
+}
+
+func TestMockClient_DeletePrefix(t *testing.T) {
+	t.Run("default behavior returns 1", func(t *testing.T) {
+		mock := NewMockClient()
+
+		deleted, err := mock.DeletePrefix(context.Background(), "/prefix/")
+
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), deleted)
+		assert.Equal(t, []string{"/prefix/"}, mock.DeletePrefixCalls)
+	})
+
+	t.Run("custom function is called", func(t *testing.T) {
+		mock := NewMockClient()
+		mock.DeletePrefixFunc = func(_ context.Context, prefix string) (int64, error) {
+			if prefix == "/config/" {
+				return 5, nil
+			}
+			return 0, nil
+		}
+
+		deleted, err := mock.DeletePrefix(context.Background(), "/config/")
+
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), deleted)
+		assert.Len(t, mock.DeletePrefixCalls, 1)
+	})
+
+	t.Run("custom function returns error", func(t *testing.T) {
+		expectedErr := errors.New("prefix delete failed")
+		mock := NewMockClient()
+		mock.DeletePrefixFunc = func(_ context.Context, _ string) (int64, error) {
+			return 0, expectedErr
+		}
+
+		deleted, err := mock.DeletePrefix(context.Background(), "/any/")
+
+		assert.Equal(t, expectedErr, err)
+		assert.Equal(t, int64(0), deleted)
+	})
+
+	t.Run("tracks multiple calls", func(t *testing.T) {
+		mock := NewMockClient()
+
+		mock.DeletePrefix(context.Background(), "/prefix1/")
+		mock.DeletePrefix(context.Background(), "/prefix2/")
+
+		assert.Equal(t, []string{"/prefix1/", "/prefix2/"}, mock.DeletePrefixCalls)
+	})
+}
+
+func TestMockClient_PutAllWithOptions(t *testing.T) {
+	t.Run("custom PutAllWithOptionsFunc is called", func(t *testing.T) {
+		mock := NewMockClient()
+		mock.PutAllWithOptionsFunc = func(_ context.Context, pairs []*models.ConfigPair, _ ProgressFunc, _ *BatchOptions) (*PutAllResult, error) {
+			return &PutAllResult{
+				Total:     len(pairs),
+				Succeeded: len(pairs),
+			}, nil
+		}
+
+		pairs := []*models.ConfigPair{{Key: "/key", Value: "val"}}
+		opts := &BatchOptions{MaxRetries: 5}
+		result, err := mock.PutAllWithOptions(context.Background(), pairs, nil, opts)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, result.Succeeded)
+	})
+
+	t.Run("falls back to PutAllWithProgressFunc when PutAllWithOptionsFunc is nil", func(t *testing.T) {
+		mock := NewMockClient()
+		var calledWithPairs []*models.ConfigPair
+		mock.PutAllWithProgressFunc = func(_ context.Context, pairs []*models.ConfigPair, _ ProgressFunc) (*PutAllResult, error) {
+			calledWithPairs = pairs
+			return &PutAllResult{Total: len(pairs), Succeeded: len(pairs)}, nil
+		}
+
+		pairs := []*models.ConfigPair{{Key: "/key", Value: "val"}}
+		result, err := mock.PutAllWithOptions(context.Background(), pairs, nil, nil)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, result.Succeeded)
+		assert.Equal(t, pairs, calledWithPairs)
+	})
+}
+
+func TestMockClient_CloseWithCustomFunc(t *testing.T) {
+	expectedErr := errors.New("close failed")
+	mock := NewMockClient()
+	mock.CloseFunc = func() error {
+		return expectedErr
+	}
+
+	err := mock.Close()
+
+	assert.Equal(t, expectedErr, err)
+	assert.True(t, mock.CloseCalled)
+}
+
+func TestMockClient_StatusWithCustomFunc(t *testing.T) {
+	expectedErr := errors.New("status check failed")
+	mock := NewMockClient()
+	mock.StatusFunc = func(_ context.Context, _ string) (*clientv3.StatusResponse, error) {
+		return nil, expectedErr
+	}
+
+	resp, err := mock.Status(context.Background(), "http://localhost:2379")
+
+	assert.Equal(t, expectedErr, err)
+	assert.Nil(t, resp)
+	assert.Len(t, mock.StatusCalls, 1)
+}
+
+func TestMockClient_PutAllWithCustomFunc(t *testing.T) {
+	expectedErr := errors.New("batch put failed")
+	mock := NewMockClient()
+	mock.PutAllFunc = func(_ context.Context, _ []*models.ConfigPair) error {
+		return expectedErr
+	}
+
+	pairs := []*models.ConfigPair{{Key: "/key", Value: "val"}}
+	err := mock.PutAll(context.Background(), pairs)
+
+	assert.Equal(t, expectedErr, err)
+	assert.Len(t, mock.PutAllCalls, 1)
 }

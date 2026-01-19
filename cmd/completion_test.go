@@ -207,3 +207,19 @@ func TestRegisterFileCompletion(t *testing.T) {
 		registerFileCompletion(testCmd, "nonexistent")
 	})
 }
+
+func TestCompleteContextNames_LoadError(t *testing.T) {
+	tempDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tempDir)
+	defer os.Setenv("HOME", oldHome)
+
+	configDir := tempDir + "/.config/etu"
+	os.MkdirAll(configDir, 0o755)
+	os.WriteFile(configDir+"/config.yaml", []byte("invalid: yaml: content: ["), 0o644)
+
+	contexts, directive := completeContextNames(nil, nil, "")
+
+	assert.Nil(t, contexts)
+	assert.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive)
+}
