@@ -49,7 +49,7 @@ func runVersion(_ *cobra.Command, _ []string) error {
 	if info.Version == "dev" {
 		if buildInfo, ok := debug.ReadBuildInfo(); ok {
 			// Prefer Main.Version if available and not (devel), otherwise keep "dev"
-			if buildInfo.Main.Version != "(devel)" {
+			if len(buildInfo.Main.Version) > 0 && buildInfo.Main.Version != "(devel)" {
 				info.Version = buildInfo.Main.Version
 			}
 			// Iterate over settings to find vcs info
