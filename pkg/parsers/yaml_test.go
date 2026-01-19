@@ -205,14 +205,15 @@ second: doc2
 	var stderr bytes.Buffer
 	oldStderr := os.Stderr
 
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err, "failed to create pipe")
+
 	os.Stderr = w
+	t.Cleanup(func() { os.Stderr = oldStderr })
 
 	pairs := parseYAML(t, content)
 
 	w.Close()
-	os.Stderr = oldStderr
-
 	stderr.ReadFrom(r)
 
 	assert.Len(t, pairs, 1)
