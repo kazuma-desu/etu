@@ -28,32 +28,29 @@ func (p *YAMLParser) Parse(path string) ([]*models.ConfigPair, error) {
 
 	decoder := yaml.NewDecoder(file)
 
-	var data map[string]any
 	var pairs []*models.ConfigPair
 	docCount := 0
 
 	for {
-		err := decoder.Decode(&data)
+		var raw any
+		err := decoder.Decode(&raw)
 		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
-			var typeErr *yaml.TypeError
-			if errors.As(err, &typeErr) {
-				return nil, ErrRootNotMap
-			}
 			return nil, fmt.Errorf("failed to parse YAML: %w", err)
 		}
 
 		docCount++
-		switch docCount {
-		case 1:
+		if docCount == 1 {
+			data, ok := raw.(map[string]any)
+			if !ok {
+				return nil, ErrRootNotMap
+			}
 			pairs = FlattenMap(data)
-		case 2:
+		} else if docCount == 2 {
 			fmt.Fprintf(os.Stderr, "Warning: YAML file contains multiple documents, only the first document is parsed\n")
 		}
-
-		data = nil
 	}
 
 	return pairs, nil
