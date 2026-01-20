@@ -36,6 +36,8 @@ func captureStdout(f func() error) (string, error) {
 	return buf.String(), err
 }
 
+// TestDiffCommand_Integration tests the diff command against a real etcd instance.
+// Note: This test mutates package-level diffOpts and cannot be run in parallel.
 func TestDiffCommand_Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -44,7 +46,7 @@ func TestDiffCommand_Integration(t *testing.T) {
 	endpoint, cleanup := setupEtcdContainerForCmd(t)
 	defer cleanup()
 
-	// Wait for etcd
+	// Wait for etcd to be ready
 	time.Sleep(2 * time.Second)
 
 	// Setup etcd client
@@ -89,14 +91,9 @@ added_value
 		require.NoError(t, err)
 
 		// Isolate config to prevent loading user's config
-		oldHome := os.Getenv("HOME")
-		os.Setenv("HOME", tempDir)
-		defer os.Setenv("HOME", oldHome)
-
+		t.Setenv("HOME", tempDir)
 		// Setup env
-		oldEndpoints := os.Getenv("ETCD_ENDPOINTS")
-		os.Setenv("ETCD_ENDPOINTS", endpoint)
-		defer os.Setenv("ETCD_ENDPOINTS", oldEndpoints)
+		t.Setenv("ETCD_ENDPOINTS", endpoint)
 
 		// Setup options
 		diffOpts.FilePath = configFile
@@ -130,13 +127,9 @@ unchanged
 		require.NoError(t, err)
 
 		// Isolate config
-		oldHome := os.Getenv("HOME")
-		os.Setenv("HOME", tempDir)
-		defer os.Setenv("HOME", oldHome)
-
-		oldEndpoints := os.Getenv("ETCD_ENDPOINTS")
-		os.Setenv("ETCD_ENDPOINTS", endpoint)
-		defer os.Setenv("ETCD_ENDPOINTS", oldEndpoints)
+		// Isolate config
+		t.Setenv("HOME", tempDir)
+		t.Setenv("ETCD_ENDPOINTS", endpoint)
 
 		diffOpts.FilePath = configFile
 		diffOpts.Format = "simple"
@@ -150,5 +143,93 @@ unchanged
 
 		assert.Contains(t, output, "=")
 		assert.Contains(t, output, "/app/config/key3")
+	})
+
+	t.Run("Diff with JSON output", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configFile := filepath.Join(tempDir, "diff_json.txt")
+
+		content := `/app/config/key1
+new_value
+`
+		err := os.WriteFile(configFile, []byte(content), 0644)
+		require.NoError(t, err)
+
+		t.Setenv("HOME", tempDir)
+		t.Setenv("ETCD_ENDPOINTS", endpoint)
+
+		diffOpts.FilePath = configFile
+		diffOpts.Format = "json"
+		diffOpts.ShowUnchanged = false
+		diffOpts.Prefix = ""
+
+		output, err := captureStdout(func() error {
+			return runDiff(diffCmd, []string{})
+		})
+		require.NoError(t, err)
+
+		// Verify JSON structure
+		assert.Contains(t, output, "\"added\"")
+		assert.Contains(t, output, "\"modified\"")
+		assert.Contains(t, output, "\"deleted\"")
+	})
+
+	t.Run("Diff with table output", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configFile := filepath.Join(tempDir, "diff_table.txt")
+
+		content := `/app/config/key1
+new_value
+`
+		err := os.WriteFile(configFile, []byte(content), 0644)
+		require.NoError(t, err)
+
+		t.Setenv("HOME", tempDir)
+		t.Setenv("ETCD_ENDPOINTS", endpoint)
+
+		diffOpts.FilePath = configFile
+		diffOpts.Format = "table"
+		diffOpts.ShowUnchanged = false
+		diffOpts.Prefix = ""
+
+		output, err := captureStdout(func() error {
+			return runDiff(diffCmd, []string{})
+		})
+		require.NoError(t, err)
+
+		// Verify table headers
+		assert.Contains(t, output, "STATUS")
+		assert.Contains(t, output, "KEY")
+	})
+
+	t.Run("Diff with prefix filter", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configFile := filepath.Join(tempDir, "diff_prefix.txt")
+
+		content := `/app/config/key1
+new_value
+
+/other/key
+other_value
+`
+		err := os.WriteFile(configFile, []byte(content), 0644)
+		require.NoError(t, err)
+
+		t.Setenv("HOME", tempDir)
+		t.Setenv("ETCD_ENDPOINTS", endpoint)
+
+		diffOpts.FilePath = configFile
+		diffOpts.Format = "simple"
+		diffOpts.ShowUnchanged = false
+		diffOpts.Prefix = "/app/config"
+
+		output, err := captureStdout(func() error {
+			return runDiff(diffCmd, []string{})
+		})
+		require.NoError(t, err)
+
+		// Should only show /app/config keys
+		assert.Contains(t, output, "/app/config/key1")
+		assert.NotContains(t, output, "/other/key")
 	})
 }

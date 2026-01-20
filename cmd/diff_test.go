@@ -80,6 +80,16 @@ func TestFormatValue(t *testing.T) {
 			input:    true,
 			expected: "true",
 		},
+		{
+			name:     "float",
+			input:    3.14,
+			expected: "3.14",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
 	}
 
 	for _, tt := range tests {

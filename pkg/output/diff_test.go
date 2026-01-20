@@ -1,6 +1,7 @@
 package output
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -167,10 +168,17 @@ func TestDiffEntry_JSON(t *testing.T) {
 		NewValue: "new",
 	}
 
-	assert.Equal(t, "/app/config/test", entry.Key)
-	assert.Equal(t, DiffStatusModified, entry.Status)
-	assert.Equal(t, "old", entry.OldValue)
-	assert.Equal(t, "new", entry.NewValue)
+	data, err := json.Marshal(entry)
+	assert.NoError(t, err)
+
+	var decoded DiffEntry
+	err = json.Unmarshal(data, &decoded)
+	assert.NoError(t, err)
+
+	assert.Equal(t, entry.Key, decoded.Key)
+	assert.Equal(t, entry.Status, decoded.Status)
+	assert.Equal(t, entry.OldValue, decoded.OldValue)
+	assert.Equal(t, entry.NewValue, decoded.NewValue)
 }
 
 func TestDiffStatus_Constants(t *testing.T) {
