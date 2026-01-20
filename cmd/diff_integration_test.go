@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,7 +20,10 @@ import (
 // CaptureStdout captures stdout functionality within a function
 func captureStdout(f func() error) (string, error) {
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		return "", fmt.Errorf("captureStdout: failed to create pipe: %w", pipeErr)
+	}
 	os.Stdout = w
 
 	err := f()

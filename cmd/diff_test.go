@@ -42,7 +42,7 @@ func TestExtractPrefixes(t *testing.T) {
 			pairs: []*models.ConfigPair{
 				{Key: "/key1", Value: "val1"},
 			},
-			expected: []string{},
+			expected: []string{"/key1"},
 		},
 	}
 

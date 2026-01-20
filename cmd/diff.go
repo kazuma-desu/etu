@@ -161,7 +161,7 @@ func extractPrefixes(pairs []*models.ConfigPair) []string {
 	prefixSet := make(map[string]bool)
 	for _, p := range pairs {
 		parts := strings.Split(strings.Trim(p.Key, "/"), "/")
-		if len(parts) > 1 {
+		if len(parts) >= 1 {
 			prefix := "/" + parts[0]
 			prefixSet[prefix] = true
 		}
