@@ -1,0 +1,26 @@
+# YAML Configuration Example for etu
+# Nested maps are flattened to /path/segments format
+
+database:
+  host: db.example.com
+  port: 5432
+  driver: postgres
+  max_connections: 100
+  ssl_enabled: true
+
+features:
+  max_retries: 5
+  timeout_seconds: 30
+  beta_enabled: false
+
+api:
+  base_url: https://api.example.com
+  version: v2
+  rate_limit: 1000
+
+i18n:
+  welcome_message:
+    en: Welcome
+    es: Bienvenido
+    fr: Bienvenue
+    ja: ようこそ

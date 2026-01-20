@@ -89,3 +89,27 @@ var (
 	tableBorderStyle = lipgloss.NewStyle().
 				Foreground(colorPrimary)
 )
+
+// Diff styles
+var (
+	addedStyle = lipgloss.NewStyle().
+			Foreground(colorSuccess).
+			Bold(true)
+
+	modifiedStyle = lipgloss.NewStyle().
+			Foreground(colorWarning).
+			Bold(true)
+
+	deletedStyle = lipgloss.NewStyle().
+			Foreground(colorError).
+			Bold(true)
+
+	unchangedStyle = lipgloss.NewStyle().
+			Foreground(colorMuted)
+
+	oldValueStyle = lipgloss.NewStyle().
+			Foreground(colorError)
+
+	newValueStyle = lipgloss.NewStyle().
+			Foreground(colorSuccess)
+)
