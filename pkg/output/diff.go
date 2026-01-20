@@ -55,26 +55,9 @@ func printDiffSimple(result *DiffResult, showUnchanged bool) error {
 	Info(fmt.Sprintf("Diff result: +%d ~%d -%d", result.Added, result.Modified, result.Deleted))
 	fmt.Println()
 
-	// Filter entries based on showUnchanged
-	var filtered []*DiffEntry
-	if showUnchanged {
-		filtered = result.Entries
-	} else {
-		for _, e := range result.Entries {
-			if e.Status != DiffStatusUnchanged {
-				filtered = append(filtered, e)
-			}
-		}
-	}
-
-	if len(filtered) == 0 {
-		Success("No changes detected")
-		return nil
-	}
-
 	// Group by status
-	var added, modified, deleted []*DiffEntry
-	for _, e := range filtered {
+	var added, modified, deleted, unchanged []*DiffEntry
+	for _, e := range result.Entries {
 		switch e.Status {
 		case DiffStatusAdded:
 			added = append(added, e)
@@ -82,6 +65,19 @@ func printDiffSimple(result *DiffResult, showUnchanged bool) error {
 			modified = append(modified, e)
 		case DiffStatusDeleted:
 			deleted = append(deleted, e)
+		case DiffStatusUnchanged:
+			if showUnchanged {
+				unchanged = append(unchanged, e)
+			}
+		}
+	}
+
+	if len(added) == 0 && len(modified) == 0 && len(deleted) == 0 {
+		Success("No changes detected")
+		// If we only have unchanged items and showUnchanged is false, we might want to return here.
+		// But if showUnchanged is true, we proceed to print them.
+		if !showUnchanged {
+			return nil
 		}
 	}
 
@@ -117,12 +113,10 @@ func printDiffSimple(result *DiffResult, showUnchanged bool) error {
 	}
 
 	// Print unchanged if requested
-	if showUnchanged && result.Unchanged > 0 {
-		fmt.Println(unchangedStyle.Render(fmt.Sprintf("Unchanged (%d):", result.Unchanged)))
-		for _, e := range result.Entries {
-			if e.Status == DiffStatusUnchanged {
-				fmt.Printf("  %s %s\n", unchangedStyle.Render("="), keyStyle.Render(e.Key))
-			}
+	if len(unchanged) > 0 {
+		fmt.Println(unchangedStyle.Render(fmt.Sprintf("Unchanged (%d):", len(unchanged))))
+		for _, e := range unchanged {
+			fmt.Printf("  %s %s\n", unchangedStyle.Render("="), keyStyle.Render(e.Key))
 		}
 		fmt.Println()
 	}
