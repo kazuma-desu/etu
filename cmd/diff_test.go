@@ -44,6 +44,28 @@ func TestExtractPrefixes(t *testing.T) {
 			},
 			expected: []string{"/key1"},
 		},
+		{
+			name:     "empty input",
+			pairs:    []*models.ConfigPair{},
+			expected: []string{},
+		},
+		{
+			name: "mixed root and nested",
+			pairs: []*models.ConfigPair{
+				{Key: "/root", Value: "val1"},
+				{Key: "/app/nested", Value: "val2"},
+			},
+			expected: []string{"/root", "/app"},
+		},
+		{
+			name: "different top-level prefixes",
+			pairs: []*models.ConfigPair{
+				{Key: "/app/config", Value: "val1"},
+				{Key: "/db/config", Value: "val2"},
+				{Key: "/cache/config", Value: "val3"},
+			},
+			expected: []string{"/app", "/db", "/cache"},
+		},
 	}
 
 	for _, tt := range tests {
