@@ -3,8 +3,9 @@ package cmd
 import (
 	"testing"
 
-	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kazuma-desu/etu/pkg/models"
 )
 
 func TestExtractPrefixes(t *testing.T) {
@@ -87,10 +88,4 @@ func TestFormatValue(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
-}
-
-func TestFilterByPrefix(t *testing.T) {
-	// Since the prefix filtering logic is inside runDiff and not a separate helper to test,
-	// we usually test it via integration tests or by refactoring runDiff.
-	// For now, we tested the helpers that were extracted.
 }
