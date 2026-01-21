@@ -127,7 +127,6 @@ unchanged
 		require.NoError(t, err)
 
 		// Isolate config
-		// Isolate config
 		t.Setenv("HOME", tempDir)
 		t.Setenv("ETCD_ENDPOINTS", endpoint)
 
