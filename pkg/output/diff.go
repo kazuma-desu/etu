@@ -148,7 +148,7 @@ func printDiffJSON(result *DiffResult, showUnchanged bool) error {
 		Unchanged int         `json:"unchanged,omitempty"`
 	}
 
-	var entries []jsonEntry
+	entries := make([]jsonEntry, 0)
 	if showUnchanged {
 		for _, e := range result.Entries {
 			entries = append(entries, jsonEntry{
