@@ -37,17 +37,16 @@ func captureStdout(f func() error) (string, error) {
 	var fErr error
 	func() {
 		defer func() {
-			if r := recover(); r != nil {
-				fErr = fmt.Errorf("captureStdout: f() panicked: %v", r)
+			if rec := recover(); rec != nil {
+				fErr = fmt.Errorf("captureStdout: f() panicked: %v", rec)
 			}
 		}()
 		fErr = f()
 	}()
 
-	w.Close()
-
 	var buf strings.Builder
 	_, _ = io.Copy(&buf, r)
+	r.Close()
 
 	return buf.String(), fErr
 }
