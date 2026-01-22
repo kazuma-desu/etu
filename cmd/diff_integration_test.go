@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -224,9 +225,36 @@ new_value
 		})
 		require.NoError(t, err)
 
-		assert.Contains(t, output, "\"added\"")
-		assert.Contains(t, output, "\"modified\"")
-		assert.Contains(t, output, "\"deleted\"")
+		// Parse JSON output for stronger assertions
+		type jsonEntry struct {
+			Key      string `json:"key"`
+			Status   string `json:"status"`
+			OldValue string `json:"old_value,omitempty"`
+			NewValue string `json:"new_value,omitempty"`
+		}
+		type jsonOutput struct {
+			Entries   []jsonEntry `json:"entries"`
+			Added     int         `json:"added"`
+			Modified  int         `json:"modified"`
+			Deleted   int         `json:"deleted"`
+			Unchanged int         `json:"unchanged,omitempty"`
+		}
+
+		var result jsonOutput
+		err = json.Unmarshal([]byte(output), &result)
+		require.NoError(t, err, "JSON output should be valid")
+
+		assert.Equal(t, 0, result.Added, "added count should be 0 (file only has key1 which is modified)")
+		assert.Equal(t, 1, result.Modified, "modified count should be 1 (key1 differs between file and etcd)")
+		assert.Equal(t, 0, result.Deleted, "deleted count should be 0 (file-scoped diff doesn't show etcd-only keys)")
+		require.Len(t, result.Entries, 1, "should have 1 entry (only key1 is in file)")
+
+		// Verify the modified entry
+		modifiedEntry := result.Entries[0]
+		assert.Equal(t, "/app/config/key1", modifiedEntry.Key, "modified entry key should match")
+		assert.Equal(t, "modified", modifiedEntry.Status, "modified entry status should be 'modified'")
+		assert.Equal(t, "old_value", modifiedEntry.OldValue, "modified entry old_value should match etcd")
+		assert.Equal(t, "new_value", modifiedEntry.NewValue, "modified entry new_value should match file")
 	})
 
 	t.Run("Diff with table output", func(t *testing.T) {
