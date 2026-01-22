@@ -17,31 +17,49 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// CaptureStdout captures stdout functionality within a function
+// captureStdout captures stdout functionality within a function.
+// It ensures proper cleanup even if f() panics by using deferred restoration
+// of os.Stdout and closing of the pipe ends.
 func captureStdout(f func() error) (string, error) {
 	old := os.Stdout
 	r, w, pipeErr := os.Pipe()
 	if pipeErr != nil {
 		return "", fmt.Errorf("captureStdout: failed to create pipe: %w", pipeErr)
 	}
+
+	defer func() {
+		w.Close()
+		os.Stdout = old
+	}()
+
 	os.Stdout = w
 
-	err := f()
+	var fErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fErr = fmt.Errorf("captureStdout: f() panicked: %v", r)
+			}
+		}()
+		fErr = f()
+	}()
 
 	w.Close()
-	os.Stdout = old
 
 	var buf strings.Builder
 	_, _ = io.Copy(&buf, r)
-	return buf.String(), err
+
+	return buf.String(), fErr
 }
 
 // TestDiffCommand_Integration tests the diff command against a real etcd instance.
-// Note: This test mutates package-level diffOpts and cannot be run in parallel.
 func TestDiffCommand_Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	originalOpts := diffOpts
+	defer func() { diffOpts = originalOpts }()
 
 	endpoint, cleanup := setupEtcdContainerForCmd(t)
 	defer cleanup()
