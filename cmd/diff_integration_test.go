@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,10 +19,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// stdoutMu protects os.Stdout from race conditions during testing
+var stdoutMu sync.RWMutex
+
 // captureStdout captures stdout functionality within a function.
 // It ensures proper cleanup even if f() panics by using deferred restoration
 // of os.Stdout and closing of the pipe ends.
 func captureStdout(f func() error) (string, error) {
+	stdoutMu.Lock()
+	defer stdoutMu.Unlock()
+
 	old := os.Stdout
 	r, w, pipeErr := os.Pipe()
 	if pipeErr != nil {
