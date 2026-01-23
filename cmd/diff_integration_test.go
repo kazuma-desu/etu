@@ -3,14 +3,13 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -19,25 +18,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// stdoutMu protects os.Stdout from race conditions during testing
-var stdoutMu sync.RWMutex
-
-// captureStdout captures stdout functionality within a function.
-// It ensures proper cleanup even if f() panics by using deferred restoration
-// of os.Stdout and closing of the pipe ends.
+// captureStdout captures stdout from f() without blocking.
+// Uses a goroutine for io.Copy to avoid holding redirected stdout while blocked.
 func captureStdout(f func() error) (string, error) {
-	stdoutMu.Lock()
-	defer stdoutMu.Unlock()
-
 	old := os.Stdout
 	r, w, pipeErr := os.Pipe()
 	if pipeErr != nil {
 		return "", fmt.Errorf("captureStdout: failed to create pipe: %w", pipeErr)
 	}
 
-	defer func() {
-		w.Close()
-		os.Stdout = old
+	// Read from pipe in goroutine to avoid blocking
+	outCh := make(chan string)
+	go func() {
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+		r.Close()
+		outCh <- buf.String()
 	}()
 
 	os.Stdout = w
@@ -52,11 +48,14 @@ func captureStdout(f func() error) (string, error) {
 		fErr = f()
 	}()
 
-	var buf strings.Builder
-	_, _ = io.Copy(&buf, r)
-	r.Close()
+	// Close writer to signal EOF to goroutine, then restore stdout
+	w.Close()
+	os.Stdout = old
 
-	return buf.String(), fErr
+	// Wait for goroutine to finish reading
+	output := <-outCh
+
+	return output, fErr
 }
 
 // TestDiffCommand_Integration tests the diff command against a real etcd instance.
