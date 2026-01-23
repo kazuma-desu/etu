@@ -45,9 +45,9 @@ var (
 type loginForm struct {
 	ContextName  string
 	Endpoints    string
-	RequiresAuth bool
 	Username     string
 	Password     string
+	RequiresAuth bool
 }
 
 func init() {
@@ -277,8 +277,11 @@ func validateContextName(s string) error {
 		return fmt.Errorf("spaces not allowed, use dashes")
 	}
 	for _, r := range s {
-		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
-			(r >= '0' && r <= '9') || r == '-' || r == '_') {
+		isLower := r >= 'a' && r <= 'z'
+		isUpper := r >= 'A' && r <= 'Z'
+		isDigit := r >= '0' && r <= '9'
+		isSpecial := r == '-' || r == '_'
+		if !isLower && !isUpper && !isDigit && !isSpecial {
 			return fmt.Errorf("invalid character '%c' — use letters, numbers, dash, underscore", r)
 		}
 	}
@@ -318,11 +321,11 @@ func validateEndpoints(s string) error {
 	return nil
 }
 
-func truncate(s string, max int) string {
-	if len(s) <= max {
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
 		return s
 	}
-	return s[:max] + "..."
+	return s[:maxLen] + "..."
 }
 
 func parseEndpoints(s string) []string {

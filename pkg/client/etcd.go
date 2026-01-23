@@ -8,6 +8,7 @@ import (
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/grpclog"
 
 	"github.com/kazuma-desu/etu/pkg/models"
@@ -49,6 +50,7 @@ func NewClient(cfg *Config) (*Client, error) {
 		Endpoints:           cfg.Endpoints,
 		DialTimeout:         cfg.DialTimeout,
 		PermitWithoutStream: true,
+		Logger:              zap.NewNop(),
 	}
 
 	if cfg.Username != "" {
