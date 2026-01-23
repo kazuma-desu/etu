@@ -8,9 +8,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-permissions:
-  contents: read
-
 env:
   GO_VERSION: "1.24"
   GOLANGCI_LINT_VERSION: "v2.6"
@@ -19,6 +16,8 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,6 +37,8 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,6 +67,8 @@ jobs:
     name: Test
     needs: [lint]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -98,6 +101,8 @@ jobs:
     name: Build
     needs: [security, lint, test]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         goos: [linux, darwin, windows]
