@@ -17,7 +17,10 @@
 - Tree view visualization for hierarchical configuration paths
 - Comprehensive validation (keys, values, JSON/YAML, URLs)
 - Dry run mode to preview changes
+- Diff command to compare local files with etcd state
+- JSON/YAML input file support
 - JSON output for automation
+- Shell completion (bash, zsh, fish, PowerShell)
 - Flexible configuration (file, env vars, CLI flags)
 
 ## Installation
@@ -91,6 +94,10 @@ etu config delete-context <context>
 etu parse -f <file> [--json|--tree]   # Parse and display
 etu validate -f <file> [--strict]     # Validate configuration
 etu apply -f <file> [--dry-run]       # Apply to etcd
+etu diff -f <file>                    # Compare file with etcd state
+etu put <key> <value>                 # Put single key-value
+etu get <key> [--prefix]              # Get keys
+etu delete <key> [--prefix]           # Delete keys
 ```
 
 #### Parse Output Formats
@@ -236,13 +243,55 @@ docker run -d --name etcd-test -p 2379:2379 \
 ./etu apply -f examples/sample.txt --dry-run
 ```
 
+## Shell Completion
+
+etu supports shell completion for bash, zsh, fish, and PowerShell.
+
+### Bash
+
+```bash
+# Linux
+etu completion bash > /etc/bash_completion.d/etu
+
+# macOS (Homebrew)
+etu completion bash > $(brew --prefix)/etc/bash_completion.d/etu
+```
+
+### Zsh
+
+```bash
+# Enable completion if not already
+echo "autoload -U compinit; compinit" >> ~/.zshrc
+
+# Add etu completions
+etu completion zsh > "${fpath[1]}/_etu"
+
+# Restart shell or source
+source ~/.zshrc
+```
+
+### Fish
+
+```bash
+etu completion fish > ~/.config/fish/completions/etu.fish
+```
+
+### PowerShell
+
+```powershell
+# Add to current session
+etu completion powershell | Out-String | Invoke-Expression
+
+# Add to profile for persistence
+etu completion powershell >> $PROFILE
+```
+
 ## Roadmap
 
-- Additional parsers (Helm, TOML, JSON, YAML)
-- Get/watch operations
-- Diff operations
+- Additional parsers (Helm, TOML)
+- Watch operations
 - TLS support
-- Shell completion
+- Backup/restore commands
 
 ## Contributing
 
