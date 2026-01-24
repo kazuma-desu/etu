@@ -53,35 +53,38 @@ func TestLoginCommand_Integration(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	t.Run("Login with valid endpoint", func(t *testing.T) {
+		loginContextName = "test-context"
 		loginEndpoints = []string{fullEndpoint}
 		loginUsername = ""
 		loginPassword = ""
 		loginNoAuth = true
 		loginNoTest = false
 
-		err := runLogin(loginCmd, []string{"test-context"})
+		err := runLogin(loginCmd, []string{})
 		assert.NoError(t, err)
 	})
 
 	t.Run("Login with no-test flag", func(t *testing.T) {
+		loginContextName = "notest-context"
 		loginEndpoints = []string{fullEndpoint}
 		loginUsername = ""
 		loginPassword = ""
 		loginNoAuth = true
 		loginNoTest = true
 
-		err := runLogin(loginCmd, []string{"notest-context"})
+		err := runLogin(loginCmd, []string{})
 		assert.NoError(t, err)
 	})
 
 	t.Run("Login with multiple endpoints", func(t *testing.T) {
+		loginContextName = "multi-context"
 		loginEndpoints = []string{fullEndpoint, fullEndpoint}
 		loginUsername = ""
 		loginPassword = ""
 		loginNoAuth = true
 		loginNoTest = true
 
-		err := runLogin(loginCmd, []string{"multi-context"})
+		err := runLogin(loginCmd, []string{})
 		assert.NoError(t, err)
 	})
 }
