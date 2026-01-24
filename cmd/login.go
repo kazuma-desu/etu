@@ -124,6 +124,7 @@ func runLoginInteractive() error {
 		return err
 	}
 
+	ctxName := strings.TrimSpace(form.ContextName)
 	endpoints := parseEndpoints(form.Endpoints)
 	username, password := "", ""
 	if form.RequiresAuth {
@@ -150,7 +151,7 @@ func runLoginInteractive() error {
 		Password:  password,
 	}
 
-	if err := config.SetContext(form.ContextName, ctxConfig, true); err != nil {
+	if err := config.SetContext(ctxName, ctxConfig, true); err != nil {
 		return fmt.Errorf("failed to save: %w", err)
 	}
 
@@ -160,7 +161,7 @@ func runLoginInteractive() error {
 		output.Success("Connection verified")
 	}
 	output.Success(fmt.Sprintf("Saved to %s", configPath))
-	output.Success(fmt.Sprintf("Context '%s' is now active", form.ContextName))
+	output.Success(fmt.Sprintf("Context '%s' is now active", ctxName))
 
 	return nil
 }

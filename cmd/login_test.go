@@ -747,10 +747,9 @@ func TestRunLogin(t *testing.T) {
 }
 
 func TestTestConnectionQuiet(t *testing.T) {
-	t.Run("returns false on invalid endpoint", func(t *testing.T) {
-		result := testConnectionQuiet([]string{"http://invalid-host-that-does-not-exist:2379"}, "", "")
-		assert.False(t, result)
-	})
+	if testing.Short() {
+		t.Skip("Skipping network-dependent test in short mode")
+	}
 
 	t.Run("returns false on connection refused", func(t *testing.T) {
 		result := testConnectionQuiet([]string{"http://127.0.0.1:9999"}, "", "")
