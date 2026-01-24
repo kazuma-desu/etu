@@ -175,6 +175,11 @@ func runLoginAutomated() error {
 		return fmt.Errorf("invalid context name: %w", err)
 	}
 
+	cfg, err := config.LoadConfig()
+	if err == nil && cfg.Contexts[ctxName] != nil {
+		return fmt.Errorf("context '%s' already exists", ctxName)
+	}
+
 	endpoints := loginEndpoints
 	if len(endpoints) == 0 {
 		return fmt.Errorf("--endpoints is required")

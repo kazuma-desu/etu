@@ -652,6 +652,24 @@ func TestRunLoginAutomated(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "--endpoints cannot be empty")
 	})
+
+	t.Run("errors on duplicate context name", func(t *testing.T) {
+		resetLoginFlags()
+
+		ctx := &config.ContextConfig{
+			Endpoints: []string{"http://localhost:2379"},
+		}
+		err := config.SetContext("existing-context", ctx, false)
+		require.NoError(t, err)
+
+		loginContextName = "existing-context"
+		loginEndpoints = []string{"http://localhost:2379"}
+		loginNoTest = true
+
+		err = runLoginAutomated()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "already exists")
+	})
 }
 
 func TestValidateContextName_DuplicateCheck(t *testing.T) {
