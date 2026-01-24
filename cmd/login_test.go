@@ -249,6 +249,113 @@ func TestValidateEndpoints(t *testing.T) {
 	}
 }
 
+func TestValidateContextNameFormat(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "empty string",
+			input:   "",
+			wantErr: true,
+			errMsg:  "enter a context name",
+		},
+		{
+			name:    "too short",
+			input:   "a",
+			wantErr: true,
+			errMsg:  "at least 2 characters",
+		},
+		{
+			name:    "too long",
+			input:   strings.Repeat("a", 64),
+			wantErr: true,
+			errMsg:  "max 63 characters",
+		},
+		{
+			name:    "contains space",
+			input:   "my context",
+			wantErr: true,
+			errMsg:  "spaces not allowed",
+		},
+		{
+			name:    "invalid character",
+			input:   "my@context",
+			wantErr: true,
+			errMsg:  "invalid character",
+		},
+		{
+			name:    "valid name",
+			input:   "production",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateContextNameFormat(tt.input)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateEndpointFormat(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "empty string",
+			input:   "",
+			wantErr: true,
+			errMsg:  "empty endpoint",
+		},
+		{
+			name:    "missing scheme",
+			input:   "localhost:2379",
+			wantErr: true,
+			errMsg:  "must start with http://",
+		},
+		{
+			name:    "missing host",
+			input:   "http://",
+			wantErr: true,
+			errMsg:  "missing hostname",
+		},
+		{
+			name:    "valid http",
+			input:   "http://localhost:2379",
+			wantErr: false,
+		},
+		{
+			name:    "valid https",
+			input:   "https://etcd.example.com:2379",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateEndpointFormat(tt.input)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestTruncate(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -427,6 +534,54 @@ func TestRunLoginAutomated(t *testing.T) {
 		err := runLoginAutomated()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "--endpoints is required")
+	})
+
+	t.Run("invalid context name format", func(t *testing.T) {
+		resetLoginFlags()
+		loginContextName = "a"
+		loginEndpoints = []string{"http://localhost:2379"}
+		loginNoTest = true
+
+		err := runLoginAutomated()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid context name")
+		assert.Contains(t, err.Error(), "at least 2 characters")
+	})
+
+	t.Run("invalid context name characters", func(t *testing.T) {
+		resetLoginFlags()
+		loginContextName = "my@context"
+		loginEndpoints = []string{"http://localhost:2379"}
+		loginNoTest = true
+
+		err := runLoginAutomated()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid context name")
+		assert.Contains(t, err.Error(), "invalid character")
+	})
+
+	t.Run("invalid endpoint format", func(t *testing.T) {
+		resetLoginFlags()
+		loginContextName = "test-context"
+		loginEndpoints = []string{"localhost:2379"}
+		loginNoTest = true
+
+		err := runLoginAutomated()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid endpoint")
+		assert.Contains(t, err.Error(), "must start with http://")
+	})
+
+	t.Run("invalid endpoint missing host", func(t *testing.T) {
+		resetLoginFlags()
+		loginContextName = "test-context"
+		loginEndpoints = []string{"http://"}
+		loginNoTest = true
+
+		err := runLoginAutomated()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid endpoint")
+		assert.Contains(t, err.Error(), "missing hostname")
 	})
 
 	t.Run("successful save with no-test", func(t *testing.T) {

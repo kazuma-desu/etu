@@ -171,9 +171,19 @@ func runLoginAutomated() error {
 		return fmt.Errorf("--context-name is required")
 	}
 
+	if err := validateContextNameFormat(ctxName); err != nil {
+		return fmt.Errorf("invalid context name: %w", err)
+	}
+
 	endpoints := loginEndpoints
 	if len(endpoints) == 0 {
 		return fmt.Errorf("--endpoints is required")
+	}
+
+	for _, ep := range endpoints {
+		if err := validateEndpointFormat(ep); err != nil {
+			return fmt.Errorf("invalid endpoint: %w", err)
+		}
 	}
 
 	username, password := loginUsername, loginPassword
@@ -262,7 +272,7 @@ func testConnectionQuiet(endpoints []string, username, password string) bool {
 	return err == nil
 }
 
-func validateContextName(s string) error {
+func validateContextNameFormat(s string) error {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return fmt.Errorf("enter a context name")
@@ -285,10 +295,39 @@ func validateContextName(s string) error {
 			return fmt.Errorf("invalid character '%c' — use letters, numbers, dash, underscore", r)
 		}
 	}
-	cfg, err := config.LoadConfig()
-	if err == nil && cfg.Contexts[s] != nil {
-		return fmt.Errorf("context '%s' already exists", s)
+	return nil
+}
+
+func validateContextName(s string) error {
+	if err := validateContextNameFormat(s); err != nil {
+		return err
 	}
+	cfg, err := config.LoadConfig()
+	if err == nil && cfg.Contexts[strings.TrimSpace(s)] != nil {
+		return fmt.Errorf("context '%s' already exists", strings.TrimSpace(s))
+	}
+	return nil
+}
+
+func validateEndpointFormat(endpoint string) error {
+	endpoint = strings.TrimSpace(endpoint)
+	if endpoint == "" {
+		return fmt.Errorf("empty endpoint")
+	}
+
+	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
+		return fmt.Errorf("'%s' — must start with http:// or https://", truncate(endpoint, 20))
+	}
+
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return fmt.Errorf("'%s' — invalid URL", truncate(endpoint, 20))
+	}
+
+	if parsed.Host == "" {
+		return fmt.Errorf("'%s' — missing hostname", truncate(endpoint, 20))
+	}
+
 	return nil
 }
 
@@ -307,17 +346,8 @@ func validateEndpoints(s string) error {
 
 		validCount++
 
-		if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
-			return fmt.Errorf("'%s' — must start with http:// or https://", truncate(endpoint, 20))
-		}
-
-		parsed, err := url.Parse(endpoint)
-		if err != nil {
-			return fmt.Errorf("'%s' — invalid URL", truncate(endpoint, 20))
-		}
-
-		if parsed.Host == "" {
-			return fmt.Errorf("'%s' — missing hostname", truncate(endpoint, 20))
+		if err := validateEndpointFormat(endpoint); err != nil {
+			return err
 		}
 	}
 
