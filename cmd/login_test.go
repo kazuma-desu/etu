@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kazuma-desu/etu/pkg/config"
 )
 
 func TestLoginCommand_ErrorReturns(t *testing.T) {
@@ -606,5 +608,48 @@ func TestRunLoginAutomated(t *testing.T) {
 
 		err := runLoginAutomated()
 		assert.NoError(t, err)
+	})
+
+	t.Run("normalizes endpoints by trimming whitespace", func(t *testing.T) {
+		resetLoginFlags()
+		loginContextName = "trim-test"
+		loginEndpoints = []string{"  http://localhost:2379  ", " http://example.com:2379"}
+		loginNoTest = true
+
+		err := runLoginAutomated()
+		require.NoError(t, err)
+
+		cfg, err := config.LoadConfig()
+		require.NoError(t, err)
+		ctx := cfg.Contexts["trim-test"]
+		require.NotNil(t, ctx)
+		assert.Equal(t, []string{"http://localhost:2379", "http://example.com:2379"}, ctx.Endpoints)
+	})
+
+	t.Run("filters out empty endpoints after trimming", func(t *testing.T) {
+		resetLoginFlags()
+		loginContextName = "filter-test"
+		loginEndpoints = []string{"http://localhost:2379", "  ", "", "http://example.com:2379"}
+		loginNoTest = true
+
+		err := runLoginAutomated()
+		require.NoError(t, err)
+
+		cfg, err := config.LoadConfig()
+		require.NoError(t, err)
+		ctx := cfg.Contexts["filter-test"]
+		require.NotNil(t, ctx)
+		assert.Equal(t, []string{"http://localhost:2379", "http://example.com:2379"}, ctx.Endpoints)
+	})
+
+	t.Run("errors when all endpoints are empty after normalization", func(t *testing.T) {
+		resetLoginFlags()
+		loginContextName = "empty-test"
+		loginEndpoints = []string{"  ", "", "   "}
+		loginNoTest = true
+
+		err := runLoginAutomated()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "--endpoints cannot be empty")
 	})
 }

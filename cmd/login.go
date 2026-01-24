@@ -180,7 +180,20 @@ func runLoginAutomated() error {
 		return fmt.Errorf("--endpoints is required")
 	}
 
+	// Normalize endpoints: trim whitespace and filter out empty strings
+	endpointsNormalized := make([]string, 0, len(endpoints))
 	for _, ep := range endpoints {
+		trimmed := strings.TrimSpace(ep)
+		if trimmed != "" {
+			endpointsNormalized = append(endpointsNormalized, trimmed)
+		}
+	}
+
+	if len(endpointsNormalized) == 0 {
+		return fmt.Errorf("--endpoints cannot be empty")
+	}
+
+	for _, ep := range endpointsNormalized {
 		if err := validateEndpointFormat(ep); err != nil {
 			return fmt.Errorf("invalid endpoint: %w", err)
 		}
@@ -193,13 +206,13 @@ func runLoginAutomated() error {
 
 	if !loginNoTest {
 		output.Info("Testing connection...")
-		if !testConnectionQuiet(endpoints, username, password) {
+		if !testConnectionQuiet(endpointsNormalized, username, password) {
 			return fmt.Errorf("connection failed - use --no-test to skip")
 		}
 	}
 
 	ctxConfig := &config.ContextConfig{
-		Endpoints: endpoints,
+		Endpoints: endpointsNormalized,
 		Username:  username,
 		Password:  password,
 	}
