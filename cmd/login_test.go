@@ -164,6 +164,18 @@ func TestValidateEndpoints(t *testing.T) {
 			errMsg:  "enter at least one endpoint",
 		},
 		{
+			name:    "only commas and spaces",
+			input:   " , , , ",
+			wantErr: true,
+			errMsg:  "enter at least one endpoint",
+		},
+		{
+			name:    "only empty entries",
+			input:   ",,,",
+			wantErr: true,
+			errMsg:  "enter at least one endpoint",
+		},
+		{
 			name:    "missing scheme",
 			input:   "localhost:2379",
 			wantErr: true,

@@ -298,11 +298,14 @@ func validateEndpoints(s string) error {
 		return fmt.Errorf("enter at least one endpoint")
 	}
 
+	validCount := 0
 	for _, endpoint := range strings.Split(s, ",") {
 		endpoint = strings.TrimSpace(endpoint)
 		if endpoint == "" {
 			continue
 		}
+
+		validCount++
 
 		if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
 			return fmt.Errorf("'%s' — must start with http:// or https://", truncate(endpoint, 20))
@@ -316,6 +319,10 @@ func validateEndpoints(s string) error {
 		if parsed.Host == "" {
 			return fmt.Errorf("'%s' — missing hostname", truncate(endpoint, 20))
 		}
+	}
+
+	if validCount == 0 {
+		return fmt.Errorf("enter at least one endpoint")
 	}
 
 	return nil
