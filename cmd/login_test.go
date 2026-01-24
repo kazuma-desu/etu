@@ -653,3 +653,89 @@ func TestRunLoginAutomated(t *testing.T) {
 		assert.Contains(t, err.Error(), "--endpoints cannot be empty")
 	})
 }
+
+func TestValidateContextName_DuplicateCheck(t *testing.T) {
+	tempDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tempDir)
+	defer os.Setenv("HOME", oldHome)
+
+	t.Run("duplicate context name", func(t *testing.T) {
+		ctx := &config.ContextConfig{
+			Endpoints: []string{"http://localhost:2379"},
+		}
+		err := config.SetContext("existing", ctx, false)
+		require.NoError(t, err)
+
+		err = validateContextName("existing")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "already exists")
+	})
+}
+
+func TestValidateEndpointFormat_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "url parse error - invalid characters",
+			input:   "http://host name:2379",
+			wantErr: true,
+			errMsg:  "invalid URL",
+		},
+		{
+			name:    "missing host after scheme",
+			input:   "http://",
+			wantErr: true,
+			errMsg:  "missing hostname",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateEndpointFormat(tt.input)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestRunLogin(t *testing.T) {
+	tempDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tempDir)
+	defer os.Setenv("HOME", oldHome)
+
+	t.Run("uses automated mode when flags are set", func(t *testing.T) {
+		loginContextName = "test-ctx"
+		loginEndpoints = []string{"http://localhost:2379"}
+		loginNoTest = true
+		defer func() {
+			loginContextName = ""
+			loginEndpoints = nil
+			loginNoTest = false
+		}()
+
+		err := runLogin(loginCmd, []string{})
+		assert.NoError(t, err)
+	})
+}
+
+func TestTestConnectionQuiet(t *testing.T) {
+	t.Run("returns false on invalid endpoint", func(t *testing.T) {
+		result := testConnectionQuiet([]string{"http://invalid-host-that-does-not-exist:2379"}, "", "")
+		assert.False(t, result)
+	})
+
+	t.Run("returns false on connection refused", func(t *testing.T) {
+		result := testConnectionQuiet([]string{"http://127.0.0.1:9999"}, "", "")
+		assert.False(t, result)
+	})
+}
