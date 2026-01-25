@@ -51,9 +51,6 @@ func setupEtcdContainerForCmd(t *testing.T) string {
 	endpoint, err := container.Endpoint(ctx, "")
 	require.NoError(t, err)
 
-	// Wait for etcd to be fully ready
-	time.Sleep(2 * time.Second)
-
 	return "http://" + endpoint
 }
 
