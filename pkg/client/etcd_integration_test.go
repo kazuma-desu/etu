@@ -58,8 +58,6 @@ func setupEtcdContainer(t *testing.T) string {
 	endpoint, err := container.Endpoint(ctx, "")
 	require.NoError(t, err, "failed to get container endpoint")
 
-	time.Sleep(2 * time.Second)
-
 	return "http://" + endpoint
 }
 
@@ -822,7 +820,7 @@ func BenchmarkFormatValue(b *testing.B) {
 	}
 }
 
-func setupTLSEtcdContainer(t *testing.T, requireClientCert bool) (endpoint string, certDir string, cleanup func()) {
+func setupTLSEtcdContainer(t *testing.T, requireClientCert bool) (endpoint string, certDir string) {
 	t.Helper()
 
 	certDir = generateTLSTestCerts(t)
@@ -861,18 +859,16 @@ func setupTLSEtcdContainer(t *testing.T, requireClientCert bool) (endpoint strin
 	})
 	require.NoError(t, err, "failed to start TLS etcd container")
 
-	ep, err := container.Endpoint(ctx, "")
-	require.NoError(t, err, "failed to get container endpoint")
-
-	cleanup = func() {
+	t.Cleanup(func() {
 		if err := container.Terminate(ctx); err != nil {
 			t.Logf("failed to terminate container: %s", err)
 		}
-	}
+	})
 
-	time.Sleep(2 * time.Second)
+	ep, err := container.Endpoint(ctx, "")
+	require.NoError(t, err, "failed to get container endpoint")
 
-	return "https://" + ep, certDir, cleanup
+	return "https://" + ep, certDir
 }
 
 func generateTLSTestCerts(t *testing.T) string {
@@ -957,9 +953,8 @@ func TestClient_TLS_Integration(t *testing.T) {
 		t.Skip("Skipping TLS integration test in short mode")
 	}
 
-	t.Run("TLS with CA cert and client cert (no mTLS required)", func(t *testing.T) {
-		endpoint, certDir, cleanup := setupTLSEtcdContainer(t, false)
-		defer cleanup()
+	t.Run("TLS with CA verification", func(t *testing.T) {
+		endpoint, certDir := setupTLSEtcdContainer(t, false)
 
 		cfg := &Config{
 			Endpoints:             []string{endpoint},
@@ -967,7 +962,7 @@ func TestClient_TLS_Integration(t *testing.T) {
 			CACert:                filepath.Join(certDir, "ca.crt"),
 			Cert:                  filepath.Join(certDir, "client.crt"),
 			Key:                   filepath.Join(certDir, "client.key"),
-			InsecureSkipTLSVerify: true,
+			InsecureSkipTLSVerify: false,
 		}
 
 		client, err := NewClient(cfg)
@@ -984,8 +979,7 @@ func TestClient_TLS_Integration(t *testing.T) {
 	})
 
 	t.Run("TLS with insecure skip verify", func(t *testing.T) {
-		endpoint, certDir, cleanup := setupTLSEtcdContainer(t, false)
-		defer cleanup()
+		endpoint, certDir := setupTLSEtcdContainer(t, false)
 
 		cfg := &Config{
 			Endpoints:             []string{endpoint},
@@ -1009,8 +1003,7 @@ func TestClient_TLS_Integration(t *testing.T) {
 	})
 
 	t.Run("mTLS with client cert", func(t *testing.T) {
-		endpoint, certDir, cleanup := setupTLSEtcdContainer(t, true)
-		defer cleanup()
+		endpoint, certDir := setupTLSEtcdContainer(t, true)
 
 		cfg := &Config{
 			Endpoints:   []string{endpoint},
@@ -1034,8 +1027,7 @@ func TestClient_TLS_Integration(t *testing.T) {
 	})
 
 	t.Run("TLS fails with wrong CA cert", func(t *testing.T) {
-		endpoint, _, cleanup := setupTLSEtcdContainer(t, false)
-		defer cleanup()
+		endpoint, _ := setupTLSEtcdContainer(t, false)
 
 		wrongCertDir := generateTLSTestCerts(t)
 
@@ -1057,8 +1049,7 @@ func TestClient_TLS_Integration(t *testing.T) {
 	})
 
 	t.Run("mTLS fails without client cert when required", func(t *testing.T) {
-		endpoint, certDir, cleanup := setupTLSEtcdContainer(t, true)
-		defer cleanup()
+		endpoint, certDir := setupTLSEtcdContainer(t, true)
 
 		cfg := &Config{
 			Endpoints:   []string{endpoint},
