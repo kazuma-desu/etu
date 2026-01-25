@@ -38,14 +38,14 @@ type Client struct {
 }
 
 type Config struct {
-	Endpoints             []string
 	Username              string
 	Password              string
-	CACert                string // path to CA certificate file
-	Cert                  string // path to client certificate file
-	Key                   string // path to client key file
+	CACert                string
+	Cert                  string
+	Key                   string
+	Endpoints             []string
 	DialTimeout           time.Duration
-	InsecureSkipTLSVerify bool // skip server certificate verification
+	InsecureSkipTLSVerify bool
 }
 
 func NewClient(cfg *Config) (*Client, error) {
