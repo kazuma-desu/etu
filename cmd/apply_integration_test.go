@@ -17,7 +17,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func setupEtcdContainerForCmd(t *testing.T) (string, func()) {
+func setupEtcdContainerForCmd(t *testing.T) string {
+	t.Helper()
 	ctx := context.Background()
 
 	req := testcontainers.ContainerRequest{
@@ -40,16 +41,17 @@ func setupEtcdContainerForCmd(t *testing.T) (string, func()) {
 	})
 	require.NoError(t, err)
 
-	endpoint, err := container.Endpoint(ctx, "")
-	require.NoError(t, err)
-
-	cleanup := func() {
+	// Use t.Cleanup for proper test lifecycle integration
+	t.Cleanup(func() {
 		if err := container.Terminate(ctx); err != nil {
 			t.Logf("failed to terminate container: %s", err)
 		}
-	}
+	})
 
-	return "http://" + endpoint, cleanup
+	endpoint, err := container.Endpoint(ctx, "")
+	require.NoError(t, err)
+
+	return "http://" + endpoint
 }
 
 func TestApplyCommand_Integration(t *testing.T) {
@@ -57,11 +59,7 @@ func TestApplyCommand_Integration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	endpoint, cleanup := setupEtcdContainerForCmd(t)
-	defer cleanup()
-
-	// Wait for etcd to be ready
-	time.Sleep(2 * time.Second)
+	endpoint := setupEtcdContainerForCmd(t)
 
 	t.Run("Apply with valid etcdctl format", func(t *testing.T) {
 		// Create a temporary config file

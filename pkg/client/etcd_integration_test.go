@@ -4,6 +4,16 @@ package client
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
+	"net"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -15,8 +25,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// setupEtcdContainer creates an isolated etcd container for testing
-func setupEtcdContainer(t *testing.T) (string, func()) {
+func setupEtcdContainer(t *testing.T) string {
 	t.Helper()
 	ctx := context.Background()
 
@@ -40,19 +49,16 @@ func setupEtcdContainer(t *testing.T) (string, func()) {
 	})
 	require.NoError(t, err, "failed to start etcd container")
 
-	endpoint, err := container.Endpoint(ctx, "")
-	require.NoError(t, err, "failed to get container endpoint")
-
-	cleanup := func() {
+	t.Cleanup(func() {
 		if err := container.Terminate(ctx); err != nil {
 			t.Logf("failed to terminate container: %s", err)
 		}
-	}
+	})
 
-	// Wait for etcd to be fully ready
-	time.Sleep(2 * time.Second)
+	endpoint, err := container.Endpoint(ctx, "")
+	require.NoError(t, err, "failed to get container endpoint")
 
-	return "http://" + endpoint, cleanup
+	return "http://" + endpoint
 }
 
 // newTestClient creates a test client with proper cleanup
@@ -90,16 +96,14 @@ func TestClient_Integration(t *testing.T) {
 	}
 
 	t.Run("NewClient", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		assert.NotNil(t, client, "client should not be nil")
 	})
 
 	t.Run("Put and Get", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -115,8 +119,7 @@ func TestClient_Integration(t *testing.T) {
 	})
 
 	t.Run("Put integer value", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -132,8 +135,7 @@ func TestClient_Integration(t *testing.T) {
 	})
 
 	t.Run("PutAll multiple pairs", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -162,8 +164,7 @@ func TestClient_Integration(t *testing.T) {
 	})
 
 	t.Run("Get non-existent key", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -174,8 +175,7 @@ func TestClient_Integration(t *testing.T) {
 	})
 
 	t.Run("Status check", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -186,8 +186,7 @@ func TestClient_Integration(t *testing.T) {
 	})
 
 	t.Run("Put map value via PutAll", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -215,8 +214,7 @@ func TestClient_Integration(t *testing.T) {
 	})
 
 	t.Run("PutAll with different value types", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -250,8 +248,7 @@ func TestClient_Integration(t *testing.T) {
 	})
 
 	t.Run("Close client", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		cfg := &Config{
 			Endpoints:   []string{endpoint},
@@ -267,8 +264,7 @@ func TestClient_Integration(t *testing.T) {
 	})
 
 	t.Run("Client with authentication (no auth server)", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		cfg := &Config{
 			Endpoints:   []string{endpoint},
@@ -300,8 +296,7 @@ func TestGetWithOptions_Integration(t *testing.T) {
 	}
 
 	t.Run("Prefix returns matching keys", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -326,8 +321,7 @@ func TestGetWithOptions_Integration(t *testing.T) {
 	})
 
 	t.Run("Limit restricts result count", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -350,8 +344,7 @@ func TestGetWithOptions_Integration(t *testing.T) {
 	})
 
 	t.Run("Sort order ASCEND by KEY", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -376,8 +369,7 @@ func TestGetWithOptions_Integration(t *testing.T) {
 	})
 
 	t.Run("Sort order DESCEND by KEY", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -402,8 +394,7 @@ func TestGetWithOptions_Integration(t *testing.T) {
 	})
 
 	t.Run("KeysOnly returns empty values", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -427,8 +418,7 @@ func TestGetWithOptions_Integration(t *testing.T) {
 	})
 
 	t.Run("CountOnly returns count without values", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -451,8 +441,7 @@ func TestGetWithOptions_Integration(t *testing.T) {
 	})
 
 	t.Run("FromKey returns keys greater than or equal", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -484,8 +473,7 @@ func TestGetWithOptions_Integration(t *testing.T) {
 	})
 
 	t.Run("RangeEnd limits key range", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -512,8 +500,7 @@ func TestGetWithOptions_Integration(t *testing.T) {
 	})
 
 	t.Run("Combined options: Prefix + Limit + Sort", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -548,8 +535,7 @@ func TestPutAllWithProgress_BatchOperations_Integration(t *testing.T) {
 	}
 
 	t.Run("empty batch", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -564,8 +550,7 @@ func TestPutAllWithProgress_BatchOperations_Integration(t *testing.T) {
 	})
 
 	t.Run("small batch within single transaction", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -586,8 +571,7 @@ func TestPutAllWithProgress_BatchOperations_Integration(t *testing.T) {
 	})
 
 	t.Run("exact limit batch (128 items)", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -610,8 +594,7 @@ func TestPutAllWithProgress_BatchOperations_Integration(t *testing.T) {
 	})
 
 	t.Run("over limit batch (129 items - 2 transactions)", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -634,8 +617,7 @@ func TestPutAllWithProgress_BatchOperations_Integration(t *testing.T) {
 	})
 
 	t.Run("large batch (300 items - 3 transactions)", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -662,8 +644,7 @@ func TestPutAllWithProgress_BatchOperations_Integration(t *testing.T) {
 	})
 
 	t.Run("progress callback is called correctly", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -697,8 +678,7 @@ func TestPutAllWithProgress_BatchOperations_Integration(t *testing.T) {
 	})
 
 	t.Run("progress callback across multiple chunks", func(t *testing.T) {
-		endpoint, cleanup := setupEtcdContainer(t)
-		defer cleanup()
+		endpoint := setupEtcdContainer(t)
 
 		client := newTestClient(t, endpoint)
 		ctx := testContext(t)
@@ -838,4 +818,253 @@ func BenchmarkFormatValue(b *testing.B) {
 			}
 		})
 	}
+}
+
+func setupTLSEtcdContainer(t *testing.T, requireClientCert bool) (endpoint string, certDir string) {
+	t.Helper()
+
+	certDir = generateTLSTestCerts(t)
+
+	ctx := context.Background()
+
+	clientCertAuth := "false"
+	if requireClientCert {
+		clientCertAuth = "true"
+	}
+
+	req := testcontainers.ContainerRequest{
+		Image:        "quay.io/coreos/etcd:v3.5.9",
+		ExposedPorts: []string{"2379/tcp"},
+		Env: map[string]string{
+			"ETCD_NAME":                        "test-etcd-tls",
+			"ETCD_ADVERTISE_CLIENT_URLS":       "https://0.0.0.0:2379",
+			"ETCD_LISTEN_CLIENT_URLS":          "https://0.0.0.0:2379",
+			"ETCD_CERT_FILE":                   "/certs/server.crt",
+			"ETCD_KEY_FILE":                    "/certs/server.key",
+			"ETCD_TRUSTED_CA_FILE":             "/certs/ca.crt",
+			"ETCD_CLIENT_CERT_AUTH":            clientCertAuth,
+			"ETCD_INITIAL_ADVERTISE_PEER_URLS": "http://0.0.0.0:2380",
+			"ETCD_LISTEN_PEER_URLS":            "http://0.0.0.0:2380",
+			"ETCD_INITIAL_CLUSTER":             "test-etcd-tls=http://0.0.0.0:2380",
+		},
+		Mounts: testcontainers.Mounts(
+			testcontainers.BindMount(certDir, "/certs"),
+		),
+		WaitingFor: wait.ForLog("ready to serve client requests").WithStartupTimeout(60 * time.Second),
+	}
+
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	require.NoError(t, err, "failed to start TLS etcd container")
+
+	t.Cleanup(func() {
+		if err := container.Terminate(ctx); err != nil {
+			t.Logf("failed to terminate container: %s", err)
+		}
+	})
+
+	ep, err := container.Endpoint(ctx, "")
+	require.NoError(t, err, "failed to get container endpoint")
+
+	return "https://" + ep, certDir
+}
+
+func generateTLSTestCerts(t *testing.T) string {
+	t.Helper()
+	certDir := t.TempDir()
+
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	caTemplate := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Test CA"},
+		NotBefore:             time.Now().Add(-5 * time.Minute),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+	}
+
+	caCertDER, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caKey.PublicKey, caKey)
+	require.NoError(t, err)
+
+	caCert, err := x509.ParseCertificate(caCertDER)
+	require.NoError(t, err)
+
+	caCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCertDER})
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "ca.crt"), caCertPEM, 0644))
+
+	serverKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	serverTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject:      pkix.Name{CommonName: "etcd-server"},
+		NotBefore:    time.Now().Add(-5 * time.Minute),
+		NotAfter:     time.Now().Add(24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		DNSNames:     []string{"localhost", "etcd-server"},
+		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("0.0.0.0")},
+	}
+
+	serverCertDER, err := x509.CreateCertificate(rand.Reader, serverTemplate, caCert, &serverKey.PublicKey, caKey)
+	require.NoError(t, err)
+
+	serverCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverCertDER})
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "server.crt"), serverCertPEM, 0644))
+
+	serverKeyDER, err := x509.MarshalECPrivateKey(serverKey)
+	require.NoError(t, err)
+	serverKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: serverKeyDER})
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "server.key"), serverKeyPEM, 0600))
+
+	clientKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	clientTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(3),
+		Subject:      pkix.Name{CommonName: "etcd-client"},
+		NotBefore:    time.Now().Add(-5 * time.Minute),
+		NotAfter:     time.Now().Add(24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+
+	clientCertDER, err := x509.CreateCertificate(rand.Reader, clientTemplate, caCert, &clientKey.PublicKey, caKey)
+	require.NoError(t, err)
+
+	clientCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientCertDER})
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "client.crt"), clientCertPEM, 0644))
+
+	clientKeyDER, err := x509.MarshalECPrivateKey(clientKey)
+	require.NoError(t, err)
+	clientKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: clientKeyDER})
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "client.key"), clientKeyPEM, 0600))
+
+	return certDir
+}
+
+func TestClient_TLS_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping TLS integration test in short mode")
+	}
+
+	t.Run("TLS with CA verification", func(t *testing.T) {
+		endpoint, certDir := setupTLSEtcdContainer(t, false)
+
+		cfg := &Config{
+			Endpoints:             []string{endpoint},
+			DialTimeout:           10 * time.Second,
+			CACert:                filepath.Join(certDir, "ca.crt"),
+			Cert:                  filepath.Join(certDir, "client.crt"),
+			Key:                   filepath.Join(certDir, "client.key"),
+			InsecureSkipTLSVerify: false,
+		}
+
+		client, err := NewClient(cfg)
+		require.NoError(t, err)
+		defer client.Close()
+
+		ctx := testContext(t)
+		err = client.Put(ctx, "/tls-test/key1", "value1")
+		require.NoError(t, err)
+
+		value, err := client.Get(ctx, "/tls-test/key1")
+		require.NoError(t, err)
+		assert.Equal(t, "value1", value)
+	})
+
+	t.Run("TLS with insecure skip verify", func(t *testing.T) {
+		endpoint, certDir := setupTLSEtcdContainer(t, false)
+
+		cfg := &Config{
+			Endpoints:             []string{endpoint},
+			DialTimeout:           10 * time.Second,
+			Cert:                  filepath.Join(certDir, "client.crt"),
+			Key:                   filepath.Join(certDir, "client.key"),
+			InsecureSkipTLSVerify: true,
+		}
+
+		client, err := NewClient(cfg)
+		require.NoError(t, err)
+		defer client.Close()
+
+		ctx := testContext(t)
+		err = client.Put(ctx, "/tls-insecure-test/key1", "value1")
+		require.NoError(t, err)
+
+		value, err := client.Get(ctx, "/tls-insecure-test/key1")
+		require.NoError(t, err)
+		assert.Equal(t, "value1", value)
+	})
+
+	t.Run("mTLS with client cert", func(t *testing.T) {
+		endpoint, certDir := setupTLSEtcdContainer(t, true)
+
+		cfg := &Config{
+			Endpoints:   []string{endpoint},
+			DialTimeout: 10 * time.Second,
+			CACert:      filepath.Join(certDir, "ca.crt"),
+			Cert:        filepath.Join(certDir, "client.crt"),
+			Key:         filepath.Join(certDir, "client.key"),
+		}
+
+		client, err := NewClient(cfg)
+		require.NoError(t, err)
+		defer client.Close()
+
+		ctx := testContext(t)
+		err = client.Put(ctx, "/mtls-test/key1", "value1")
+		require.NoError(t, err)
+
+		value, err := client.Get(ctx, "/mtls-test/key1")
+		require.NoError(t, err)
+		assert.Equal(t, "value1", value)
+	})
+
+	t.Run("TLS fails with wrong CA cert", func(t *testing.T) {
+		endpoint, _ := setupTLSEtcdContainer(t, false)
+
+		wrongCertDir := generateTLSTestCerts(t)
+
+		cfg := &Config{
+			Endpoints:   []string{endpoint},
+			DialTimeout: 5 * time.Second,
+			CACert:      filepath.Join(wrongCertDir, "ca.crt"),
+		}
+
+		client, err := NewClient(cfg)
+		require.NoError(t, err)
+		defer client.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		err = client.Put(ctx, "/wrong-ca-test/key1", "value1")
+		assert.Error(t, err)
+	})
+
+	t.Run("mTLS fails without client cert when required", func(t *testing.T) {
+		endpoint, certDir := setupTLSEtcdContainer(t, true)
+
+		cfg := &Config{
+			Endpoints:   []string{endpoint},
+			DialTimeout: 5 * time.Second,
+			CACert:      filepath.Join(certDir, "ca.crt"),
+		}
+
+		client, err := NewClient(cfg)
+		require.NoError(t, err)
+		defer client.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		err = client.Put(ctx, "/no-client-cert-test/key1", "value1")
+		assert.Error(t, err)
+	})
 }

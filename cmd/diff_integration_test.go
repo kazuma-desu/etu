@@ -67,11 +67,7 @@ func TestDiffCommand_Integration(t *testing.T) {
 	originalOpts := diffOpts
 	defer func() { diffOpts = originalOpts }()
 
-	endpoint, cleanup := setupEtcdContainerForCmd(t)
-	defer cleanup()
-
-	// Wait for etcd to be ready
-	time.Sleep(2 * time.Second)
+	endpoint := setupEtcdContainerForCmd(t)
 
 	// Setup etcd client
 	cfg := &client.Config{

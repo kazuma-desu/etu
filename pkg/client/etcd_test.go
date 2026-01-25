@@ -1,11 +1,21 @@
 package client
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"math/big"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kazuma-desu/etu/pkg/models"
 )
@@ -387,4 +397,147 @@ func TestLoggerInterface(t *testing.T) {
 	assert.Equal(t, []string{"info message"}, tl.infoMsgs)
 	assert.Equal(t, []string{"warn message"}, tl.warnMsgs)
 	assert.Equal(t, []string{"error message"}, tl.errorMsgs)
+}
+
+func TestBuildTLSConfig(t *testing.T) {
+	t.Run("no TLS config returns nil", func(t *testing.T) {
+		cfg := &Config{}
+		tlsConfig, err := buildTLSConfig(cfg)
+		assert.NoError(t, err)
+		assert.Nil(t, tlsConfig)
+	})
+
+	t.Run("insecure skip only", func(t *testing.T) {
+		cfg := &Config{InsecureSkipTLSVerify: true}
+		tlsConfig, err := buildTLSConfig(cfg)
+		assert.NoError(t, err)
+		require.NotNil(t, tlsConfig)
+		assert.True(t, tlsConfig.InsecureSkipVerify)
+	})
+
+	t.Run("missing key with cert", func(t *testing.T) {
+		cfg := &Config{Cert: "/path/to/cert.crt"}
+		tlsConfig, err := buildTLSConfig(cfg)
+		assert.Error(t, err)
+		assert.Nil(t, tlsConfig)
+		assert.Contains(t, err.Error(), "both --cert and --key must be provided for mTLS")
+	})
+
+	t.Run("missing cert with key", func(t *testing.T) {
+		cfg := &Config{Key: "/path/to/key.key"}
+		tlsConfig, err := buildTLSConfig(cfg)
+		assert.Error(t, err)
+		assert.Nil(t, tlsConfig)
+		assert.Contains(t, err.Error(), "both --cert and --key must be provided for mTLS")
+	})
+
+	t.Run("invalid CA path", func(t *testing.T) {
+		cfg := &Config{CACert: "/nonexistent/ca.crt"}
+		tlsConfig, err := buildTLSConfig(cfg)
+		assert.Error(t, err)
+		assert.Nil(t, tlsConfig)
+		assert.Contains(t, err.Error(), "failed to read CA certificate")
+	})
+
+	t.Run("invalid CA content", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		invalidCAFile := filepath.Join(tmpDir, "invalid-ca.crt")
+		require.NoError(t, os.WriteFile(invalidCAFile, []byte("not a valid PEM"), 0644))
+
+		cfg := &Config{CACert: invalidCAFile}
+		tlsConfig, err := buildTLSConfig(cfg)
+		assert.Error(t, err)
+		assert.Nil(t, tlsConfig)
+		assert.Contains(t, err.Error(), "failed to parse CA certificate")
+	})
+
+	t.Run("valid CA cert", func(t *testing.T) {
+		certDir := createTestCerts(t)
+		cfg := &Config{CACert: filepath.Join(certDir, "ca.crt")}
+		tlsConfig, err := buildTLSConfig(cfg)
+		assert.NoError(t, err)
+		require.NotNil(t, tlsConfig)
+		assert.NotNil(t, tlsConfig.RootCAs)
+	})
+
+	t.Run("valid mTLS config", func(t *testing.T) {
+		certDir := createTestCerts(t)
+		cfg := &Config{
+			CACert: filepath.Join(certDir, "ca.crt"),
+			Cert:   filepath.Join(certDir, "client.crt"),
+			Key:    filepath.Join(certDir, "client.key"),
+		}
+		tlsConfig, err := buildTLSConfig(cfg)
+		assert.NoError(t, err)
+		require.NotNil(t, tlsConfig)
+		assert.NotNil(t, tlsConfig.RootCAs)
+		assert.Len(t, tlsConfig.Certificates, 1)
+	})
+
+	t.Run("invalid cert/key pair", func(t *testing.T) {
+		certDir := createTestCerts(t)
+		wrongKeyFile := filepath.Join(certDir, "wrong.key")
+		require.NoError(t, os.WriteFile(wrongKeyFile, []byte("not a valid key"), 0600))
+
+		cfg := &Config{
+			Cert: filepath.Join(certDir, "client.crt"),
+			Key:  wrongKeyFile,
+		}
+		tlsConfig, err := buildTLSConfig(cfg)
+		assert.Error(t, err)
+		assert.Nil(t, tlsConfig)
+		assert.Contains(t, err.Error(), "failed to load client certificate")
+	})
+}
+
+func createTestCerts(t *testing.T) string {
+	t.Helper()
+	certDir := t.TempDir()
+
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	caTemplate := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Test CA"},
+		NotBefore:             time.Now().Add(-5 * time.Minute),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+	}
+
+	caCertDER, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caKey.PublicKey, caKey)
+	require.NoError(t, err)
+
+	caCert, err := x509.ParseCertificate(caCertDER)
+	require.NoError(t, err)
+
+	caCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCertDER})
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "ca.crt"), caCertPEM, 0644))
+
+	clientKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	clientTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject:      pkix.Name{CommonName: "Test Client"},
+		NotBefore:    time.Now().Add(-5 * time.Minute),
+		NotAfter:     time.Now().Add(24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+
+	clientCertDER, err := x509.CreateCertificate(rand.Reader, clientTemplate, caCert, &clientKey.PublicKey, caKey)
+	require.NoError(t, err)
+
+	clientCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientCertDER})
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "client.crt"), clientCertPEM, 0644))
+
+	clientKeyDER, err := x509.MarshalECPrivateKey(clientKey)
+	require.NoError(t, err)
+	clientKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: clientKeyDER})
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "client.key"), clientKeyPEM, 0600))
+
+	return certDir
 }

@@ -2,8 +2,11 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -35,10 +38,14 @@ type Client struct {
 }
 
 type Config struct {
-	Username    string
-	Password    string
-	Endpoints   []string
-	DialTimeout time.Duration
+	Username              string
+	Password              string
+	CACert                string
+	Cert                  string
+	Key                   string
+	Endpoints             []string
+	DialTimeout           time.Duration
+	InsecureSkipTLSVerify bool
 }
 
 func NewClient(cfg *Config) (*Client, error) {
@@ -51,6 +58,14 @@ func NewClient(cfg *Config) (*Client, error) {
 		DialTimeout:         cfg.DialTimeout,
 		PermitWithoutStream: true,
 		Logger:              zap.NewNop(),
+	}
+
+	tlsConfig, err := buildTLSConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	if tlsConfig != nil {
+		clientConfig.TLS = tlsConfig
 	}
 
 	if cfg.Username != "" {
@@ -67,6 +82,40 @@ func NewClient(cfg *Config) (*Client, error) {
 		client: cli,
 		config: cfg,
 	}, nil
+}
+
+func buildTLSConfig(cfg *Config) (*tls.Config, error) {
+	if cfg.CACert == "" && cfg.Cert == "" && cfg.Key == "" && !cfg.InsecureSkipTLSVerify {
+		return nil, nil
+	}
+
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: cfg.InsecureSkipTLSVerify,
+	}
+
+	if cfg.CACert != "" {
+		caCert, err := os.ReadFile(cfg.CACert)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA certificate: %w", err)
+		}
+		caCertPool := x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM(caCert) {
+			return nil, fmt.Errorf("failed to parse CA certificate")
+		}
+		tlsConfig.RootCAs = caCertPool
+	}
+
+	if cfg.Cert != "" && cfg.Key != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.Cert, cfg.Key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load client certificate: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	} else if cfg.Cert != "" || cfg.Key != "" {
+		return nil, fmt.Errorf("both --cert and --key must be provided for mTLS")
+	}
+
+	return tlsConfig, nil
 }
 
 func validateAndPrepareConfig(cfg *Config) error {

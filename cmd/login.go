@@ -26,20 +26,38 @@ var loginCmd = &cobra.Command{
 Configuration is saved to ~/.config/etu/config.yaml.
 
 For automation, use flags:
-  etu login --context-name prod --endpoints http://etcd:2379`,
-	Example: `  etu login
-  etu login --context-name prod --endpoints http://etcd:2379 --username admin --password secret`,
+  etu login --context-name prod --endpoints http://etcd:2379
+
+TLS/mTLS requires flag-based configuration (not supported in interactive mode):
+  etu login --context-name prod --endpoints https://etcd:2379 \
+    --cacert /path/to/ca.crt --cert /path/to/client.crt --key /path/to/client.key`,
+	Example: `  # Interactive mode (no TLS)
+  etu login
+
+  # Automated mode with auth
+  etu login --context-name prod --endpoints http://etcd:2379 --username admin --password secret
+
+  # TLS with CA verification
+  etu login --context-name prod --endpoints https://etcd:2379 --cacert /path/to/ca.crt
+
+  # mTLS (mutual TLS)
+  etu login --context-name prod --endpoints https://etcd:2379 \
+    --cacert /path/to/ca.crt --cert /path/to/client.crt --key /path/to/client.key`,
 	Args: cobra.NoArgs,
 	RunE: runLogin,
 }
 
 var (
-	loginContextName string
-	loginEndpoints   []string
-	loginUsername    string
-	loginPassword    string
-	loginNoTest      bool
-	loginNoAuth      bool
+	loginContextName           string
+	loginEndpoints             []string
+	loginUsername              string
+	loginPassword              string
+	loginNoTest                bool
+	loginNoAuth                bool
+	loginCACert                string
+	loginCert                  string
+	loginKey                   string
+	loginInsecureSkipTLSVerify bool
 )
 
 type loginForm struct {
@@ -58,6 +76,10 @@ func init() {
 	loginCmd.Flags().StringVar(&loginPassword, "password", "", "Etcd password")
 	loginCmd.Flags().BoolVar(&loginNoAuth, "no-auth", false, "Skip authentication")
 	loginCmd.Flags().BoolVar(&loginNoTest, "no-test", false, "Skip connection test")
+	loginCmd.Flags().StringVar(&loginCACert, "cacert", "", "Path to CA certificate for server verification")
+	loginCmd.Flags().StringVar(&loginCert, "cert", "", "Path to client certificate for mTLS")
+	loginCmd.Flags().StringVar(&loginKey, "key", "", "Path to client key for mTLS")
+	loginCmd.Flags().BoolVar(&loginInsecureSkipTLSVerify, "insecure-skip-tls-verify", false, "Skip server certificate verification (INSECURE)")
 }
 
 func runLogin(_ *cobra.Command, _ []string) error {
@@ -69,7 +91,8 @@ func runLogin(_ *cobra.Command, _ []string) error {
 
 func hasLoginFlags() bool {
 	return loginContextName != "" || len(loginEndpoints) > 0 ||
-		loginUsername != "" || loginPassword != "" || loginNoAuth || loginNoTest
+		loginUsername != "" || loginPassword != "" || loginNoAuth || loginNoTest ||
+		loginCACert != "" || loginCert != "" || loginKey != "" || loginInsecureSkipTLSVerify
 }
 
 func runLoginInteractive() error {
@@ -212,15 +235,19 @@ func runLoginAutomated() error {
 
 	if !loginNoTest {
 		output.Info("Testing connection...")
-		if !testConnectionQuiet(endpointsNormalized, username, password) {
+		if !testConnectionQuiet(endpointsNormalized, username, password, loginCACert, loginCert, loginKey, loginInsecureSkipTLSVerify) {
 			return fmt.Errorf("connection failed - use --no-test to skip")
 		}
 	}
 
 	ctxConfig := &config.ContextConfig{
-		Endpoints: endpointsNormalized,
-		Username:  username,
-		Password:  password,
+		Endpoints:             endpointsNormalized,
+		Username:              username,
+		Password:              password,
+		CACert:                loginCACert,
+		Cert:                  loginCert,
+		Key:                   loginKey,
+		InsecureSkipTLSVerify: loginInsecureSkipTLSVerify,
 	}
 
 	if err := config.SetContext(ctxName, ctxConfig, true); err != nil {
@@ -270,12 +297,16 @@ func testConnection(endpoints []string, username, password string) bool {
 	return result
 }
 
-func testConnectionQuiet(endpoints []string, username, password string) bool {
+func testConnectionQuiet(endpoints []string, username, password, caCert, cert, key string, insecureSkipTLSVerify bool) bool {
 	cfg := &client.Config{
-		Endpoints:   endpoints,
-		Username:    username,
-		Password:    password,
-		DialTimeout: 5 * time.Second,
+		Endpoints:             endpoints,
+		Username:              username,
+		Password:              password,
+		DialTimeout:           5 * time.Second,
+		CACert:                caCert,
+		Cert:                  cert,
+		Key:                   key,
+		InsecureSkipTLSVerify: insecureSkipTLSVerify,
 	}
 
 	etcdClient, err := client.NewClient(cfg)

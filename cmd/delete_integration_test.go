@@ -23,10 +23,7 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	endpoint, cleanup := setupEtcdContainerForCmd(t)
-	defer cleanup()
-
-	time.Sleep(2 * time.Second)
+	endpoint := setupEtcdContainerForCmd(t)
 
 	tempDir := t.TempDir()
 	oldHome := os.Getenv("HOME")

@@ -10,9 +10,13 @@ import (
 
 // ContextConfig represents configuration for a single context
 type ContextConfig struct {
-	Username  string   `yaml:"username,omitempty"`
-	Password  string   `yaml:"password,omitempty"`
-	Endpoints []string `yaml:"endpoints"`
+	Username              string   `yaml:"username,omitempty"`
+	Password              string   `yaml:"password,omitempty"`
+	CACert                string   `yaml:"cacert,omitempty"`
+	Cert                  string   `yaml:"cert,omitempty"`
+	Key                   string   `yaml:"key,omitempty"`
+	Endpoints             []string `yaml:"endpoints"`
+	InsecureSkipTLSVerify bool     `yaml:"insecure-skip-tls-verify,omitempty"`
 }
 
 // Config represents the entire configuration file

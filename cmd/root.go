@@ -14,10 +14,14 @@ import (
 const defaultOperationTimeout = 30 * time.Second
 
 var (
-	logLevel         string
-	contextName      string
-	outputFormat     string
-	operationTimeout time.Duration
+	logLevel                    string
+	contextName                 string
+	outputFormat                string
+	operationTimeout            time.Duration
+	globalCACert                string
+	globalCert                  string
+	globalKey                   string
+	globalInsecureSkipTLSVerify bool
 
 	rootCmd = &cobra.Command{
 		Use:   "etu",
@@ -38,6 +42,14 @@ func init() {
 		"output format (simple, json, table, tree)")
 	rootCmd.PersistentFlags().DurationVar(&operationTimeout, "timeout", defaultOperationTimeout,
 		"timeout for etcd operations (e.g., 30s, 1m, 2m30s)")
+	rootCmd.PersistentFlags().StringVar(&globalCACert, "cacert", "",
+		"path to CA certificate (overrides context)")
+	rootCmd.PersistentFlags().StringVar(&globalCert, "cert", "",
+		"path to client certificate (overrides context)")
+	rootCmd.PersistentFlags().StringVar(&globalKey, "key", "",
+		"path to client key (overrides context)")
+	rootCmd.PersistentFlags().BoolVar(&globalInsecureSkipTLSVerify, "insecure-skip-tls-verify", false,
+		"skip TLS verification (overrides context)")
 }
 
 // Execute runs the root command
