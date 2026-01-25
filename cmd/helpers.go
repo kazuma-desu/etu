@@ -88,6 +88,8 @@ func newEtcdClient() (client.EtcdClient, func(), error) {
 		return nil, nil, fmt.Errorf("failed to get etcd config: %w", err)
 	}
 
+	applyGlobalTLSFlags(cfg)
+
 	etcdClient, err := client.NewClient(cfg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create etcd client: %w", err)
@@ -98,6 +100,21 @@ func newEtcdClient() (client.EtcdClient, func(), error) {
 	}
 
 	return etcdClient, cleanup, nil
+}
+
+func applyGlobalTLSFlags(cfg *client.Config) {
+	if globalCACert != "" {
+		cfg.CACert = globalCACert
+	}
+	if globalCert != "" {
+		cfg.Cert = globalCert
+	}
+	if globalKey != "" {
+		cfg.Key = globalKey
+	}
+	if globalInsecureSkipTLSVerify {
+		cfg.InsecureSkipTLSVerify = true
+	}
 }
 
 func newEtcdClientOrDryRun(dryRun bool) (client.EtcdClient, func(), error) {

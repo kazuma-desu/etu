@@ -20,24 +20,32 @@ func GetEtcdConfig() (*client.Config, error) {
 func GetEtcdConfigWithContext(contextName string) (*client.Config, error) {
 	var endpoints []string
 	var username, password string
+	var caCert, cert, key string
+	var insecureSkipTLSVerify bool
 
 	// Try to load from context first
 	if contextName != "" {
-		// Use explicit context
 		cfg, err := LoadConfig()
 		if err == nil && cfg.Contexts[contextName] != nil {
 			ctx := cfg.Contexts[contextName]
 			endpoints = ctx.Endpoints
 			username = ctx.Username
 			password = ctx.Password
+			caCert = ctx.CACert
+			cert = ctx.Cert
+			key = ctx.Key
+			insecureSkipTLSVerify = ctx.InsecureSkipTLSVerify
 		}
 	} else {
-		// Try current context
 		ctxConfig, _, err := GetCurrentContext()
 		if err == nil && ctxConfig != nil {
 			endpoints = ctxConfig.Endpoints
 			username = ctxConfig.Username
 			password = ctxConfig.Password
+			caCert = ctxConfig.CACert
+			cert = ctxConfig.Cert
+			key = ctxConfig.Key
+			insecureSkipTLSVerify = ctxConfig.InsecureSkipTLSVerify
 		}
 	}
 
@@ -50,6 +58,15 @@ func GetEtcdConfigWithContext(contextName string) (*client.Config, error) {
 	}
 	if password == "" {
 		password = os.Getenv("ETCD_PASSWORD")
+	}
+	if caCert == "" {
+		caCert = os.Getenv("ETCD_CACERT")
+	}
+	if cert == "" {
+		cert = os.Getenv("ETCD_CERT")
+	}
+	if key == "" {
+		key = os.Getenv("ETCD_KEY")
 	}
 
 	// Parse userpass format (user:pass) for backwards compatibility
@@ -69,10 +86,14 @@ func GetEtcdConfigWithContext(contextName string) (*client.Config, error) {
 	}
 
 	return &client.Config{
-		Endpoints:   endpoints,
-		Username:    username,
-		Password:    password,
-		DialTimeout: 5 * time.Second,
+		Endpoints:             endpoints,
+		Username:              username,
+		Password:              password,
+		DialTimeout:           5 * time.Second,
+		CACert:                caCert,
+		Cert:                  cert,
+		Key:                   key,
+		InsecureSkipTLSVerify: insecureSkipTLSVerify,
 	}, nil
 }
 

@@ -752,7 +752,7 @@ func TestTestConnectionQuiet(t *testing.T) {
 	}
 
 	t.Run("returns false on connection refused", func(t *testing.T) {
-		result := testConnectionQuiet([]string{"http://127.0.0.1:9999"}, "", "")
+		result := testConnectionQuiet([]string{"http://127.0.0.1:9999"}, "", "", "", "", "", false)
 		assert.False(t, result)
 	})
 }
