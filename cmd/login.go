@@ -26,9 +26,23 @@ var loginCmd = &cobra.Command{
 Configuration is saved to ~/.config/etu/config.yaml.
 
 For automation, use flags:
-  etu login --context-name prod --endpoints http://etcd:2379`,
-	Example: `  etu login
-  etu login --context-name prod --endpoints http://etcd:2379 --username admin --password secret`,
+  etu login --context-name prod --endpoints http://etcd:2379
+
+TLS/mTLS requires flag-based configuration (not supported in interactive mode):
+  etu login --context-name prod --endpoints https://etcd:2379 \
+    --cacert /path/to/ca.crt --cert /path/to/client.crt --key /path/to/client.key`,
+	Example: `  # Interactive mode (no TLS)
+  etu login
+
+  # Automated mode with auth
+  etu login --context-name prod --endpoints http://etcd:2379 --username admin --password secret
+
+  # TLS with CA verification
+  etu login --context-name prod --endpoints https://etcd:2379 --cacert /path/to/ca.crt
+
+  # mTLS (mutual TLS)
+  etu login --context-name prod --endpoints https://etcd:2379 \
+    --cacert /path/to/ca.crt --cert /path/to/client.crt --key /path/to/client.key`,
 	Args: cobra.NoArgs,
 	RunE: runLogin,
 }
