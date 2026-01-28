@@ -591,7 +591,7 @@ func PrintSecurityWarning() {
 	fmt.Println("  Your password is stored in plain text in the config file.")
 	fmt.Println("  For better security:")
 	fmt.Println("    - Use --password flag at runtime instead of storing it")
-	fmt.Println("    - Use ETCD_PASSWORD environment variable")
+	fmt.Println("    - Use --password-stdin for CI/CD pipelines")
 	fmt.Println("    - Ensure config file permissions are restrictive (0600)")
 }
 

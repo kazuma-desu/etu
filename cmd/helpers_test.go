@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/models"
 )
@@ -325,5 +326,98 @@ func TestNormalizeOutputFormat(t *testing.T) {
 				t.Errorf("normalizeOutputFormat() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestApplyGlobalOverrides_MutuallyExclusivePasswordFlags(t *testing.T) {
+	original := struct {
+		password      string
+		passwordStdin bool
+	}{globalPassword, globalPasswordStdin}
+	defer func() {
+		globalPassword = original.password
+		globalPasswordStdin = original.passwordStdin
+	}()
+
+	globalPassword = "secret"
+	globalPasswordStdin = true
+
+	cfg := &client.Config{}
+	err := applyGlobalOverrides(cfg)
+
+	if err == nil {
+		t.Error("applyGlobalOverrides() should error when both --password and --password-stdin are set")
+	}
+	if !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Errorf("applyGlobalOverrides() error = %v, want error containing 'mutually exclusive'", err)
+	}
+}
+
+func TestApplyGlobalOverrides_PasswordFlag(t *testing.T) {
+	original := struct {
+		password      string
+		passwordStdin bool
+		username      string
+	}{globalPassword, globalPasswordStdin, globalUsername}
+	defer func() {
+		globalPassword = original.password
+		globalPasswordStdin = original.passwordStdin
+		globalUsername = original.username
+	}()
+
+	globalPassword = "secret123"
+	globalPasswordStdin = false
+	globalUsername = "admin"
+
+	cfg := &client.Config{}
+	err := applyGlobalOverrides(cfg)
+
+	if err != nil {
+		t.Errorf("applyGlobalOverrides() error = %v, want nil", err)
+	}
+	if cfg.Password != "secret123" {
+		t.Errorf("cfg.Password = %v, want 'secret123'", cfg.Password)
+	}
+	if cfg.Username != "admin" {
+		t.Errorf("cfg.Username = %v, want 'admin'", cfg.Username)
+	}
+}
+
+func TestApplyGlobalOverrides_TLSFlags(t *testing.T) {
+	original := struct {
+		cacert                string
+		cert                  string
+		key                   string
+		insecureSkipTLSVerify bool
+	}{globalCACert, globalCert, globalKey, globalInsecureSkipTLSVerify}
+	defer func() {
+		globalCACert = original.cacert
+		globalCert = original.cert
+		globalKey = original.key
+		globalInsecureSkipTLSVerify = original.insecureSkipTLSVerify
+	}()
+
+	globalCACert = "/path/to/ca.crt"
+	globalCert = "/path/to/client.crt"
+	globalKey = "/path/to/client.key"
+	globalInsecureSkipTLSVerify = true
+
+	cfg := &client.Config{}
+	err := applyGlobalOverrides(cfg)
+
+	if err != nil {
+		t.Errorf("applyGlobalOverrides() error = %v, want nil", err)
+	}
+	if cfg.CACert != "/path/to/ca.crt" {
+		t.Errorf("cfg.CACert = %v, want '/path/to/ca.crt'", cfg.CACert)
+	}
+	if cfg.Cert != "/path/to/client.crt" {
+		t.Errorf("cfg.Cert = %v, want '/path/to/client.crt'", cfg.Cert)
+	}
+	if cfg.Key != "/path/to/client.key" {
+		t.Errorf("cfg.Key = %v, want '/path/to/client.key'", cfg.Key)
+	}
+	if !cfg.InsecureSkipTLSVerify {
+		t.Error("cfg.InsecureSkipTLSVerify = false, want true")
 	}
 }
