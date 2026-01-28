@@ -22,31 +22,39 @@ func GetEtcdConfigWithContext(contextName string) (*client.Config, error) {
 
 	if contextName != "" {
 		cfg, err := LoadConfig()
-		if err == nil && cfg.Contexts[contextName] != nil {
-			ctx := cfg.Contexts[contextName]
-			endpoints = ctx.Endpoints
-			username = ctx.Username
-			password = ctx.Password
-			caCert = ctx.CACert
-			cert = ctx.Cert
-			key = ctx.Key
-			insecureSkipTLSVerify = ctx.InsecureSkipTLSVerify
+		if err != nil {
+			return nil, fmt.Errorf("failed to load config: %w", err)
 		}
+		if cfg.Contexts[contextName] == nil {
+			return nil, fmt.Errorf("context %q not found in config - use 'etu login' to add it", contextName)
+		}
+		ctx := cfg.Contexts[contextName]
+		endpoints = ctx.Endpoints
+		username = ctx.Username
+		password = ctx.Password
+		caCert = ctx.CACert
+		cert = ctx.Cert
+		key = ctx.Key
+		insecureSkipTLSVerify = ctx.InsecureSkipTLSVerify
 	} else {
 		ctxConfig, _, err := GetCurrentContext()
-		if err == nil && ctxConfig != nil {
-			endpoints = ctxConfig.Endpoints
-			username = ctxConfig.Username
-			password = ctxConfig.Password
-			caCert = ctxConfig.CACert
-			cert = ctxConfig.Cert
-			key = ctxConfig.Key
-			insecureSkipTLSVerify = ctxConfig.InsecureSkipTLSVerify
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current context: %w", err)
 		}
+		if ctxConfig == nil {
+			return nil, fmt.Errorf("no current context set - use 'etu login' to configure a context or 'etu config use-context <name>'")
+		}
+		endpoints = ctxConfig.Endpoints
+		username = ctxConfig.Username
+		password = ctxConfig.Password
+		caCert = ctxConfig.CACert
+		cert = ctxConfig.Cert
+		key = ctxConfig.Key
+		insecureSkipTLSVerify = ctxConfig.InsecureSkipTLSVerify
 	}
 
 	if len(endpoints) == 0 {
-		return nil, fmt.Errorf("no etcd configuration found - use 'etu login' to configure a context")
+		return nil, fmt.Errorf("no etcd endpoints configured - use 'etu login' to add a context")
 	}
 
 	return &client.Config{
