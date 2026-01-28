@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -154,7 +155,7 @@ func readPasswordFromStdin() (string, error) {
 
 	reader := bufio.NewReader(os.Stdin)
 	password, err := reader.ReadString('\n')
-	if err != nil && err.Error() != "EOF" {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return "", err
 	}
 

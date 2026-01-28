@@ -421,3 +421,157 @@ func TestApplyGlobalOverrides_TLSFlags(t *testing.T) {
 		t.Error("cfg.InsecureSkipTLSVerify = false, want true")
 	}
 }
+
+func TestLoadAppConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("ETUCONFIG", tmpDir+"/config.yaml")
+
+	// Test when config doesn't exist - should return nil without error
+	cfg := loadAppConfig()
+	if cfg != nil && len(cfg.Contexts) > 0 {
+		t.Error("loadAppConfig() returned non-empty config for missing file")
+	}
+}
+
+func TestLoadAppConfig_WithValidConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := tmpDir + "/config.yaml"
+	t.Setenv("ETUCONFIG", configPath)
+
+	// Create a valid config
+	testCfg := &config.Config{
+		DefaultFormat: "etcdctl",
+		Strict:        true,
+		Contexts:      map[string]*config.ContextConfig{},
+	}
+	if err := config.SaveConfig(testCfg); err != nil {
+		t.Fatalf("failed to save test config: %v", err)
+	}
+
+	cfg := loadAppConfig()
+	if cfg == nil {
+		t.Fatal("loadAppConfig() returned nil for valid config")
+	}
+	if cfg.DefaultFormat != "etcdctl" {
+		t.Errorf("loadAppConfig().DefaultFormat = %v, want 'etcdctl'", cfg.DefaultFormat)
+	}
+	if !cfg.Strict {
+		t.Error("loadAppConfig().Strict = false, want true")
+	}
+}
+
+func TestGetParserForFile(t *testing.T) {
+	tests := []struct {
+		name       string
+		filePath   string
+		format     models.FormatType
+		wantFormat models.FormatType
+		wantErr    bool
+	}{
+		{
+			name:       "explicit yaml format",
+			filePath:   "test.yaml",
+			format:     models.FormatYAML,
+			wantFormat: models.FormatYAML,
+		},
+		{
+			name:       "explicit json format",
+			filePath:   "test.json",
+			format:     models.FormatJSON,
+			wantFormat: models.FormatJSON,
+		},
+		{
+			name:       "explicit etcdctl format",
+			filePath:   "test.txt",
+			format:     models.FormatEtcdctl,
+			wantFormat: models.FormatEtcdctl,
+		},
+		{
+			name:     "invalid format",
+			filePath: "test.txt",
+			format:   models.FormatType("invalid"),
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser, format, err := getParserForFile(tt.filePath, tt.format)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("getParserForFile() error = nil, want error")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("getParserForFile() error = %v, want nil", err)
+				return
+			}
+			if parser == nil {
+				t.Error("getParserForFile() parser = nil, want non-nil")
+			}
+			if format != tt.wantFormat {
+				t.Errorf("getParserForFile() format = %v, want %v", format, tt.wantFormat)
+			}
+		})
+	}
+}
+
+func TestLogVerbose(t *testing.T) {
+	tests := []struct {
+		name   string
+		format string
+	}{
+		{"quiet with json format", "json"},
+		{"verbose with simple format", "simple"},
+		{"verbose with table format", "table"},
+		{"verbose with empty format", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(_ *testing.T) {
+			original := outputFormat
+			defer func() { outputFormat = original }()
+
+			outputFormat = tt.format
+			// Should not panic
+			logVerbose("test message", "key", "value")
+		})
+	}
+}
+
+func TestLogVerboseInfo(t *testing.T) {
+	tests := []struct {
+		name   string
+		format string
+	}{
+		{"quiet with json format", "json"},
+		{"verbose with simple format", "simple"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(_ *testing.T) {
+			original := outputFormat
+			defer func() { outputFormat = original }()
+
+			outputFormat = tt.format
+			// Should not panic
+			logVerboseInfo("test message")
+		})
+	}
+}
+
+func TestNewEtcdClientOrDryRun_DryRun(t *testing.T) {
+	client, cleanup, err := newEtcdClientOrDryRun(true)
+	if err != nil {
+		t.Fatalf("newEtcdClientOrDryRun(true) error = %v, want nil", err)
+	}
+	if client == nil {
+		t.Error("newEtcdClientOrDryRun(true) client = nil, want non-nil")
+	}
+	if cleanup == nil {
+		t.Error("newEtcdClientOrDryRun(true) cleanup = nil, want non-nil")
+	}
+	// Should not panic
+	cleanup()
+}

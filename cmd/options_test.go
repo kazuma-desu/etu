@@ -10,7 +10,12 @@ import (
 func TestOptionsCommand_Output(t *testing.T) {
 	// Save current rootCmd output to avoid test leakage (cross-test isolation)
 	oldOut := rootCmd.OutOrStderr()
-	defer rootCmd.SetOut(oldOut)
+	oldErr := rootCmd.ErrOrStderr()
+	defer func() {
+		rootCmd.SetOut(oldOut)
+		rootCmd.SetErr(oldErr)
+		rootCmd.SetArgs(nil)
+	}()
 
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
