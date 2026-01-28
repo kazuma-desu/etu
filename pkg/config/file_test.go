@@ -16,6 +16,23 @@ func TestGetConfigPath(t *testing.T) {
 	assert.Contains(t, path, ".config/etu/config.yaml")
 }
 
+func TestGetConfigPath_ETUCONFIG(t *testing.T) {
+	customPath := "/custom/path/to/config.yaml"
+	t.Setenv("ETUCONFIG", customPath)
+
+	path, err := GetConfigPath()
+	require.NoError(t, err)
+	assert.Equal(t, customPath, path)
+}
+
+func TestGetConfigPath_ETUCONFIG_Empty(t *testing.T) {
+	t.Setenv("ETUCONFIG", "")
+
+	path, err := GetConfigPath()
+	require.NoError(t, err)
+	assert.Contains(t, path, ".config/etu/config.yaml")
+}
+
 func TestLoadConfig_NonExistent(t *testing.T) {
 	// Create temp directory and override config path for testing
 	tmpDir := t.TempDir()
