@@ -60,51 +60,61 @@ cd etu && go build -o etu .
 ## Quick Start
 
 ```bash
-# Login to cluster
-etu login dev --endpoints http://localhost:2379 --no-auth
+# Login to cluster (interactive)
+etu login
 
-# Parse and preview configuration
-etu parse -f config.txt
+# Or with flags
+etu login --context-name dev --endpoints http://localhost:2379 --no-auth
 
-# View configuration as a tree
-etu parse -f config.txt --tree
+# Basic operations
+etu get /app/config --prefix              # Get keys
+etu put /app/config/host "localhost"      # Put key-value
+etu delete /app/config/old --prefix       # Delete keys
 
-# Validate before applying
-etu validate -f config.txt
+# Apply configuration from file
+etu apply -f config.txt --dry-run         # Preview first
+etu apply -f config.txt                   # Then apply
 
-# Apply to etcd
-etu apply -f config.txt --dry-run  # preview first
-etu apply -f config.txt            # then apply
+# Compare local file with etcd state
+etu diff -f config.txt
 ```
 
 ## Commands
 
+Run `etu --help` for full command list. Key commands:
+
 ### Context Management
 
 ```bash
-etu login <context> --endpoints <url> [--username <user>] [--password <pass>]
+etu login                                 # Interactive setup
+etu login --context-name prod --endpoints http://etcd:2379 --username admin --password secret
+
+# TLS/mTLS
+etu login --context-name prod --endpoints https://etcd:2379 \
+  --cacert /path/to/ca.crt --cert /path/to/client.crt --key /path/to/client.key
+
 etu config use-context <context>
 etu config get-contexts
+etu config current-context
 etu config delete-context <context>
 ```
 
-### Configuration Operations
+### Key Operations
 
 ```bash
-etu parse -f <file> [--json|--tree]   # Parse and display
-etu validate -f <file> [--strict]     # Validate configuration
-etu apply -f <file> [--dry-run]       # Apply to etcd
-etu diff -f <file>                    # Compare file with etcd state
-etu put <key> <value>                 # Put single key-value
-etu get <key> [--prefix]              # Get keys
-etu delete <key> [--prefix]           # Delete keys
+etu get <key> [--prefix] [--keys-only]    # Get keys
+etu put <key> <value> [--dry-run]         # Put key-value
+etu put <key> - < file.txt                # Put from stdin
+etu delete <key> [--prefix] [--force]     # Delete keys
+etu edit <key>                            # Edit in $EDITOR
 ```
 
-#### Parse Output Formats
+### Configuration Files
 
-- **Default**: List view showing all key-value pairs
-- **Tree view** (`--tree`): Hierarchical visualization of configuration paths
-- **JSON** (`--json`): Machine-readable output for automation
+```bash
+etu apply -f <file> [--dry-run] [--strict]   # Apply to etcd
+etu diff -f <file> [--prefix <p>] [--full]   # Compare with etcd
+```
 
 ### Settings
 
@@ -137,6 +147,7 @@ contexts:
 | Variable | Description |
 |----------|-------------|
 | `ETUCONFIG` | Custom path to config file (default: `~/.config/etu/config.yaml`) |
+
 
 ### Global Flags
 
@@ -172,10 +183,10 @@ Features: Auto type inference, multi-line values, dictionary parsing.
 
 ### Visualizing Configuration
 
-Use the `--tree` flag to view your configuration hierarchically:
+Use `-o tree` flag to view your configuration hierarchically:
 
 ```bash
-etu parse -f config.txt --tree
+etu apply -f config.txt --dry-run -o tree
 ```
 
 Output:
@@ -246,7 +257,7 @@ docker run -d --name etcd-test -p 2379:2379 \
   --listen-client-urls http://0.0.0.0:2379 \
   --advertise-client-urls http://0.0.0.0:2379
 
-./etu login dev --endpoints http://localhost:2379 --no-auth
+etu login --context-name dev --endpoints http://localhost:2379 --no-auth
 ./etu apply -f examples/sample.txt --dry-run
 ```
 
@@ -297,7 +308,6 @@ etu completion powershell >> $PROFILE
 
 - Additional parsers (Helm, TOML)
 - Watch operations
-- TLS support
 - Backup/restore commands
 
 ## Contributing
@@ -312,3 +322,4 @@ MIT License - see [LICENSE](LICENSE).
 ## Acknowledgments
 
 Built with [Charm](https://charm.sh/) and etcd's [Go client](https://github.com/etcd-io/etcd/tree/main/client/v3).
+
