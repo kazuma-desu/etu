@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"strings"
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
@@ -88,7 +92,9 @@ func newEtcdClient() (client.EtcdClient, func(), error) {
 		return nil, nil, fmt.Errorf("failed to get etcd config: %w", err)
 	}
 
-	applyGlobalTLSFlags(cfg)
+	if overrideErr := applyGlobalOverrides(cfg); overrideErr != nil {
+		return nil, nil, overrideErr
+	}
 
 	etcdClient, err := client.NewClient(cfg)
 	if err != nil {
@@ -102,7 +108,7 @@ func newEtcdClient() (client.EtcdClient, func(), error) {
 	return etcdClient, cleanup, nil
 }
 
-func applyGlobalTLSFlags(cfg *client.Config) {
+func applyGlobalOverrides(cfg *client.Config) error {
 	if globalCACert != "" {
 		cfg.CACert = globalCACert
 	}
@@ -115,6 +121,45 @@ func applyGlobalTLSFlags(cfg *client.Config) {
 	if globalInsecureSkipTLSVerify {
 		cfg.InsecureSkipTLSVerify = true
 	}
+
+	if globalPassword != "" && globalPasswordStdin {
+		return fmt.Errorf("--password and --password-stdin are mutually exclusive")
+	}
+
+	if globalPasswordStdin {
+		password, err := readPasswordFromStdin()
+		if err != nil {
+			return fmt.Errorf("failed to read password from stdin: %w", err)
+		}
+		cfg.Password = password
+	} else if globalPassword != "" {
+		cfg.Password = globalPassword
+	}
+
+	if globalUsername != "" {
+		cfg.Username = globalUsername
+	}
+
+	return nil
+}
+
+func readPasswordFromStdin() (string, error) {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return "", err
+	}
+
+	if (stat.Mode() & os.ModeCharDevice) != 0 {
+		return "", fmt.Errorf("stdin is a terminal; use a pipe or redirect")
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	password, err := reader.ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", err
+	}
+
+	return strings.TrimSpace(password), nil
 }
 
 func newEtcdClientOrDryRun(dryRun bool) (client.EtcdClient, func(), error) {

@@ -62,8 +62,8 @@ func TestApplyCommand_Integration(t *testing.T) {
 	endpoint := setupEtcdContainerForCmd(t)
 
 	t.Run("Apply with valid etcdctl format", func(t *testing.T) {
-		// Create a temporary config file
-		tempDir := t.TempDir()
+		// Create a temporary config file and setup etu context
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "config.txt")
 
 		content := `/test/app/name
@@ -82,11 +82,6 @@ integration-test
 		oldHome := os.Getenv("HOME")
 		os.Setenv("HOME", tempDir)
 		defer os.Setenv("HOME", oldHome)
-
-		// Use environment variable for etcd endpoint
-		oldEndpoints := os.Getenv("ETCD_ENDPOINTS")
-		os.Setenv("ETCD_ENDPOINTS", endpoint)
-		defer os.Setenv("ETCD_ENDPOINTS", oldEndpoints)
 
 		// Run apply command
 		applyOpts.FilePath = configFile
@@ -122,7 +117,7 @@ integration-test
 	})
 
 	t.Run("Apply with dry-run", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "dryrun.txt")
 
 		content := `/dryrun/key
@@ -130,10 +125,6 @@ should-not-be-written
 `
 		err := os.WriteFile(configFile, []byte(content), 0644)
 		require.NoError(t, err)
-
-		oldEndpoints := os.Getenv("ETCD_ENDPOINTS")
-		os.Setenv("ETCD_ENDPOINTS", endpoint)
-		defer os.Setenv("ETCD_ENDPOINTS", oldEndpoints)
 
 		// Run with dry-run
 		applyOpts.FilePath = configFile
@@ -160,9 +151,7 @@ should-not-be-written
 	})
 
 	t.Run("Apply with invalid file", func(t *testing.T) {
-		oldEndpoints := os.Getenv("ETCD_ENDPOINTS")
-		os.Setenv("ETCD_ENDPOINTS", endpoint)
-		defer os.Setenv("ETCD_ENDPOINTS", oldEndpoints)
+		setupTestContext(t, endpoint)
 
 		applyOpts.FilePath = "/nonexistent/file.txt"
 		applyOpts.Format = "etcdctl"
@@ -175,7 +164,7 @@ should-not-be-written
 	})
 
 	t.Run("Apply with auto-detect format", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "auto.txt")
 
 		content := `/auto/detect/key
@@ -188,10 +177,6 @@ value
 		oldHome := os.Getenv("HOME")
 		os.Setenv("HOME", tempDir)
 		defer os.Setenv("HOME", oldHome)
-
-		oldEndpoints := os.Getenv("ETCD_ENDPOINTS")
-		os.Setenv("ETCD_ENDPOINTS", endpoint)
-		defer os.Setenv("ETCD_ENDPOINTS", oldEndpoints)
 
 		// Run with auto format detection
 		applyOpts.FilePath = configFile
@@ -219,7 +204,7 @@ value
 	})
 
 	t.Run("Apply with no-validate flag", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "novalidate.txt")
 
 		content := `/novalidate/key
@@ -232,10 +217,6 @@ value
 		oldHome := os.Getenv("HOME")
 		os.Setenv("HOME", tempDir)
 		defer os.Setenv("HOME", oldHome)
-
-		oldEndpoints := os.Getenv("ETCD_ENDPOINTS")
-		os.Setenv("ETCD_ENDPOINTS", endpoint)
-		defer os.Setenv("ETCD_ENDPOINTS", oldEndpoints)
 
 		applyOpts.FilePath = configFile
 		applyOpts.Format = "etcdctl"

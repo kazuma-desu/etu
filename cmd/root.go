@@ -22,6 +22,9 @@ var (
 	globalCert                  string
 	globalKey                   string
 	globalInsecureSkipTLSVerify bool
+	globalUsername              string
+	globalPassword              string
+	globalPasswordStdin         bool
 
 	rootCmd = &cobra.Command{
 		Use:   "etu",
@@ -42,6 +45,8 @@ func init() {
 		"output format (simple, json, table, tree)")
 	rootCmd.PersistentFlags().DurationVar(&operationTimeout, "timeout", defaultOperationTimeout,
 		"timeout for etcd operations (e.g., 30s, 1m, 2m30s)")
+
+	// Auth/TLS flags - hidden from main help, visible via 'etu options'
 	rootCmd.PersistentFlags().StringVar(&globalCACert, "cacert", "",
 		"path to CA certificate (overrides context)")
 	rootCmd.PersistentFlags().StringVar(&globalCert, "cert", "",
@@ -50,6 +55,21 @@ func init() {
 		"path to client key (overrides context)")
 	rootCmd.PersistentFlags().BoolVar(&globalInsecureSkipTLSVerify, "insecure-skip-tls-verify", false,
 		"skip TLS verification (overrides context)")
+	rootCmd.PersistentFlags().StringVar(&globalUsername, "username", "",
+		"username for etcd authentication (overrides context)")
+	rootCmd.PersistentFlags().StringVar(&globalPassword, "password", "",
+		"password for etcd authentication (overrides context)")
+	rootCmd.PersistentFlags().BoolVar(&globalPasswordStdin, "password-stdin", false,
+		"read password from stdin (mutually exclusive with --password)")
+
+	// Hide auth/TLS flags from main help - use 'etu options' to see them
+	_ = rootCmd.PersistentFlags().MarkHidden("cacert")
+	_ = rootCmd.PersistentFlags().MarkHidden("cert")
+	_ = rootCmd.PersistentFlags().MarkHidden("key")
+	_ = rootCmd.PersistentFlags().MarkHidden("insecure-skip-tls-verify")
+	_ = rootCmd.PersistentFlags().MarkHidden("username")
+	_ = rootCmd.PersistentFlags().MarkHidden("password")
+	_ = rootCmd.PersistentFlags().MarkHidden("password-stdin")
 }
 
 // Execute runs the root command

@@ -147,9 +147,7 @@ contexts:
 | Variable | Description |
 |----------|-------------|
 | `ETUCONFIG` | Custom path to config file (default: `~/.config/etu/config.yaml`) |
-| `ETCD_ENDPOINTS` | Comma-separated endpoints |
-| `ETCD_USERNAME` | Username for auth |
-| `ETCD_PASSWORD` | Password for auth |
+
 
 ### Global Flags
 
