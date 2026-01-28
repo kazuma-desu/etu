@@ -2,87 +2,59 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/kazuma-desu/etu/pkg/client"
 )
 
-// GetEtcdConfig retrieves etcd configuration from context, flags, or environment variables
-// Priority: context (if contextName provided) > environment variables
+// GetEtcdConfig retrieves etcd configuration from context
 func GetEtcdConfig() (*client.Config, error) {
 	return GetEtcdConfigWithContext("")
 }
 
 // GetEtcdConfigWithContext retrieves etcd configuration with optional context override
-// Priority: explicit context > current context > environment variables
+// Priority: explicit context > current context
 func GetEtcdConfigWithContext(contextName string) (*client.Config, error) {
 	var endpoints []string
 	var username, password string
 	var caCert, cert, key string
 	var insecureSkipTLSVerify bool
 
-	// Try to load from context first
 	if contextName != "" {
 		cfg, err := LoadConfig()
-		if err == nil && cfg.Contexts[contextName] != nil {
-			ctx := cfg.Contexts[contextName]
-			endpoints = ctx.Endpoints
-			username = ctx.Username
-			password = ctx.Password
-			caCert = ctx.CACert
-			cert = ctx.Cert
-			key = ctx.Key
-			insecureSkipTLSVerify = ctx.InsecureSkipTLSVerify
+		if err != nil {
+			return nil, fmt.Errorf("failed to load config: %w", err)
 		}
+		if cfg.Contexts[contextName] == nil {
+			return nil, fmt.Errorf("context %q not found in config - use 'etu login' to add it", contextName)
+		}
+		ctx := cfg.Contexts[contextName]
+		endpoints = ctx.Endpoints
+		username = ctx.Username
+		password = ctx.Password
+		caCert = ctx.CACert
+		cert = ctx.Cert
+		key = ctx.Key
+		insecureSkipTLSVerify = ctx.InsecureSkipTLSVerify
 	} else {
 		ctxConfig, _, err := GetCurrentContext()
-		if err == nil && ctxConfig != nil {
-			endpoints = ctxConfig.Endpoints
-			username = ctxConfig.Username
-			password = ctxConfig.Password
-			caCert = ctxConfig.CACert
-			cert = ctxConfig.Cert
-			key = ctxConfig.Key
-			insecureSkipTLSVerify = ctxConfig.InsecureSkipTLSVerify
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current context: %w", err)
 		}
-	}
-
-	// Fallback to environment variables
-	if len(endpoints) == 0 {
-		endpoints = getEndpoints()
-	}
-	if username == "" {
-		username = os.Getenv("ETCD_USERNAME")
-	}
-	if password == "" {
-		password = os.Getenv("ETCD_PASSWORD")
-	}
-	if caCert == "" {
-		caCert = os.Getenv("ETCD_CACERT")
-	}
-	if cert == "" {
-		cert = os.Getenv("ETCD_CERT")
-	}
-	if key == "" {
-		key = os.Getenv("ETCD_KEY")
-	}
-
-	// Parse userpass format (user:pass) for backwards compatibility
-	if password == "" {
-		if userpass := os.Getenv("ETCD_USERPASS"); userpass != "" {
-			parts := strings.SplitN(userpass, ":", 2)
-			if len(parts) == 2 {
-				username = parts[0]
-				password = parts[1]
-			}
+		if ctxConfig == nil {
+			return nil, fmt.Errorf("no current context set - use 'etu login' to configure a context or 'etu config use-context <name>'")
 		}
+		endpoints = ctxConfig.Endpoints
+		username = ctxConfig.Username
+		password = ctxConfig.Password
+		caCert = ctxConfig.CACert
+		cert = ctxConfig.Cert
+		key = ctxConfig.Key
+		insecureSkipTLSVerify = ctxConfig.InsecureSkipTLSVerify
 	}
 
-	// Validate we have at least endpoints
 	if len(endpoints) == 0 {
-		return nil, fmt.Errorf("no etcd configuration found - use 'etu login' or set ETCD_ENDPOINTS environment variable")
+		return nil, fmt.Errorf("no etcd endpoints configured - use 'etu login' to add a context")
 	}
 
 	return &client.Config{
@@ -95,31 +67,4 @@ func GetEtcdConfigWithContext(contextName string) (*client.Config, error) {
 		Key:                   key,
 		InsecureSkipTLSVerify: insecureSkipTLSVerify,
 	}, nil
-}
-
-// getEndpoints parses etcd endpoints from environment
-func getEndpoints() []string {
-	// Try ETCD_ENDPOINTS first (comma-separated)
-	if endpoints := os.Getenv("ETCD_ENDPOINTS"); endpoints != "" {
-		return parseEndpoints(endpoints)
-	}
-
-	// Fallback to ETCD_HOST for single endpoint (backwards compatibility)
-	if host := os.Getenv("ETCD_HOST"); host != "" {
-		return []string{host}
-	}
-
-	return nil
-}
-
-// parseEndpoints splits a comma-separated list of endpoints
-func parseEndpoints(s string) []string {
-	parts := strings.Split(s, ",")
-	var endpoints []string
-	for _, p := range parts {
-		if trimmed := strings.TrimSpace(p); trimmed != "" {
-			endpoints = append(endpoints, trimmed)
-		}
-	}
-	return endpoints
 }

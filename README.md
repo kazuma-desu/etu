@@ -136,16 +136,23 @@ contexts:
 
 | Variable | Description |
 |----------|-------------|
-| `ETCD_ENDPOINTS` | Comma-separated endpoints |
-| `ETCD_USERNAME` | Username for auth |
-| `ETCD_PASSWORD` | Password for auth |
+| `ETUCONFIG` | Custom path to config file (default: `~/.config/etu/config.yaml`) |
 
 ### Global Flags
 
+Use `etu options` to see all global flags. Common flags visible in `--help`:
+
 - `--context <name>`: Use specific context
+- `--output <format>`: Output format (simple, json, table, tree)
+- `--timeout <duration>`: Timeout for operations (default: 30s)
 - `--log-level <level>`: Set log level (debug, info, warn, error)
-- `--dry-run`: Preview without applying
-- `--json`: JSON output
+
+Additional flags available via `etu options`:
+
+- `--username`, `--password`: Override context credentials
+- `--password-stdin`: Read password from stdin (for CI/CD)
+- `--cacert`, `--cert`, `--key`: Override TLS certificates
+- `--insecure-skip-tls-verify`: Skip TLS verification
 
 ## File Format (etcdctl)
 

@@ -13,7 +13,28 @@ func TestGetConfigPath(t *testing.T) {
 	path, err := GetConfigPath()
 	require.NoError(t, err)
 	assert.NotEmpty(t, path)
-	assert.Contains(t, path, ".config/etu/config.yaml")
+
+	normalizedPath := filepath.ToSlash(path)
+	assert.Contains(t, normalizedPath, ".config/etu/config.yaml")
+}
+
+func TestGetConfigPath_ETUCONFIG(t *testing.T) {
+	customPath := "/custom/path/to/config.yaml"
+	t.Setenv("ETUCONFIG", customPath)
+
+	path, err := GetConfigPath()
+	require.NoError(t, err)
+	assert.Equal(t, customPath, path)
+}
+
+func TestGetConfigPath_ETUCONFIG_Empty(t *testing.T) {
+	t.Setenv("ETUCONFIG", "")
+
+	path, err := GetConfigPath()
+	require.NoError(t, err)
+
+	normalizedPath := filepath.ToSlash(path)
+	assert.Contains(t, normalizedPath, ".config/etu/config.yaml")
 }
 
 func TestLoadConfig_NonExistent(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/models"
 )
@@ -326,4 +327,251 @@ func TestNormalizeOutputFormat(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestApplyGlobalOverrides_MutuallyExclusivePasswordFlags(t *testing.T) {
+	original := struct {
+		password      string
+		passwordStdin bool
+	}{globalPassword, globalPasswordStdin}
+	defer func() {
+		globalPassword = original.password
+		globalPasswordStdin = original.passwordStdin
+	}()
+
+	globalPassword = "secret"
+	globalPasswordStdin = true
+
+	cfg := &client.Config{}
+	err := applyGlobalOverrides(cfg)
+
+	if err == nil {
+		t.Fatalf("applyGlobalOverrides() should error when both --password and --password-stdin are set")
+	}
+	if !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Errorf("applyGlobalOverrides() error = %v, want error containing 'mutually exclusive'", err)
+	}
+}
+
+func TestApplyGlobalOverrides_PasswordFlag(t *testing.T) {
+	original := struct {
+		password      string
+		passwordStdin bool
+		username      string
+	}{globalPassword, globalPasswordStdin, globalUsername}
+	defer func() {
+		globalPassword = original.password
+		globalPasswordStdin = original.passwordStdin
+		globalUsername = original.username
+	}()
+
+	globalPassword = "secret123"
+	globalPasswordStdin = false
+	globalUsername = "admin"
+
+	cfg := &client.Config{}
+	err := applyGlobalOverrides(cfg)
+
+	if err != nil {
+		t.Errorf("applyGlobalOverrides() error = %v, want nil", err)
+	}
+	if cfg.Password != "secret123" {
+		t.Errorf("cfg.Password = %v, want 'secret123'", cfg.Password)
+	}
+	if cfg.Username != "admin" {
+		t.Errorf("cfg.Username = %v, want 'admin'", cfg.Username)
+	}
+}
+
+func TestApplyGlobalOverrides_TLSFlags(t *testing.T) {
+	original := struct {
+		cacert                string
+		cert                  string
+		key                   string
+		insecureSkipTLSVerify bool
+	}{globalCACert, globalCert, globalKey, globalInsecureSkipTLSVerify}
+	defer func() {
+		globalCACert = original.cacert
+		globalCert = original.cert
+		globalKey = original.key
+		globalInsecureSkipTLSVerify = original.insecureSkipTLSVerify
+	}()
+
+	globalCACert = "/path/to/ca.crt"
+	globalCert = "/path/to/client.crt"
+	globalKey = "/path/to/client.key"
+	globalInsecureSkipTLSVerify = true
+
+	cfg := &client.Config{}
+	err := applyGlobalOverrides(cfg)
+
+	if err != nil {
+		t.Errorf("applyGlobalOverrides() error = %v, want nil", err)
+	}
+	if cfg.CACert != "/path/to/ca.crt" {
+		t.Errorf("cfg.CACert = %v, want '/path/to/ca.crt'", cfg.CACert)
+	}
+	if cfg.Cert != "/path/to/client.crt" {
+		t.Errorf("cfg.Cert = %v, want '/path/to/client.crt'", cfg.Cert)
+	}
+	if cfg.Key != "/path/to/client.key" {
+		t.Errorf("cfg.Key = %v, want '/path/to/client.key'", cfg.Key)
+	}
+	if !cfg.InsecureSkipTLSVerify {
+		t.Error("cfg.InsecureSkipTLSVerify = false, want true")
+	}
+}
+
+func TestLoadAppConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("ETUCONFIG", tmpDir+"/config.yaml")
+
+	// Test when config doesn't exist - should return nil without error
+	cfg := loadAppConfig()
+	if cfg != nil && len(cfg.Contexts) > 0 {
+		t.Error("loadAppConfig() returned non-empty config for missing file")
+	}
+}
+
+func TestLoadAppConfig_WithValidConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := tmpDir + "/config.yaml"
+	t.Setenv("ETUCONFIG", configPath)
+
+	// Create a valid config
+	testCfg := &config.Config{
+		DefaultFormat: "etcdctl",
+		Strict:        true,
+		Contexts:      map[string]*config.ContextConfig{},
+	}
+	if err := config.SaveConfig(testCfg); err != nil {
+		t.Fatalf("failed to save test config: %v", err)
+	}
+
+	cfg := loadAppConfig()
+	if cfg == nil {
+		t.Fatal("loadAppConfig() returned nil for valid config")
+	}
+	if cfg.DefaultFormat != "etcdctl" {
+		t.Errorf("loadAppConfig().DefaultFormat = %v, want 'etcdctl'", cfg.DefaultFormat)
+	}
+	if !cfg.Strict {
+		t.Error("loadAppConfig().Strict = false, want true")
+	}
+}
+
+func TestGetParserForFile(t *testing.T) {
+	tests := []struct {
+		name       string
+		filePath   string
+		format     models.FormatType
+		wantFormat models.FormatType
+		wantErr    bool
+	}{
+		{
+			name:       "explicit yaml format",
+			filePath:   "test.yaml",
+			format:     models.FormatYAML,
+			wantFormat: models.FormatYAML,
+		},
+		{
+			name:       "explicit json format",
+			filePath:   "test.json",
+			format:     models.FormatJSON,
+			wantFormat: models.FormatJSON,
+		},
+		{
+			name:       "explicit etcdctl format",
+			filePath:   "test.txt",
+			format:     models.FormatEtcdctl,
+			wantFormat: models.FormatEtcdctl,
+		},
+		{
+			name:     "invalid format",
+			filePath: "test.txt",
+			format:   models.FormatType("invalid"),
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser, format, err := getParserForFile(tt.filePath, tt.format)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("getParserForFile() error = nil, want error")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("getParserForFile() error = %v, want nil", err)
+				return
+			}
+			if parser == nil {
+				t.Error("getParserForFile() parser = nil, want non-nil")
+			}
+			if format != tt.wantFormat {
+				t.Errorf("getParserForFile() format = %v, want %v", format, tt.wantFormat)
+			}
+		})
+	}
+}
+
+func TestLogVerbose(t *testing.T) {
+	tests := []struct {
+		name   string
+		format string
+	}{
+		{"quiet with json format", "json"},
+		{"verbose with simple format", "simple"},
+		{"verbose with table format", "table"},
+		{"verbose with empty format", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(_ *testing.T) {
+			original := outputFormat
+			defer func() { outputFormat = original }()
+
+			outputFormat = tt.format
+			// Should not panic
+			logVerbose("test message", "key", "value")
+		})
+	}
+}
+
+func TestLogVerboseInfo(t *testing.T) {
+	tests := []struct {
+		name   string
+		format string
+	}{
+		{"quiet with json format", "json"},
+		{"verbose with simple format", "simple"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(_ *testing.T) {
+			original := outputFormat
+			defer func() { outputFormat = original }()
+
+			outputFormat = tt.format
+			// Should not panic
+			logVerboseInfo("test message")
+		})
+	}
+}
+
+func TestNewEtcdClientOrDryRun_DryRun(t *testing.T) {
+	client, cleanup, err := newEtcdClientOrDryRun(true)
+	if err != nil {
+		t.Fatalf("newEtcdClientOrDryRun(true) error = %v, want nil", err)
+	}
+	if client == nil {
+		t.Error("newEtcdClientOrDryRun(true) client = nil, want non-nil")
+	}
+	if cleanup == nil {
+		t.Error("newEtcdClientOrDryRun(true) cleanup = nil, want non-nil")
+	}
+	// Should not panic
+	cleanup()
 }

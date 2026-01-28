@@ -91,7 +91,7 @@ func TestDiffCommand_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Diff file-scoped (default)", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "diff.txt")
 
 		// File content:
@@ -113,7 +113,6 @@ added_value
 		require.NoError(t, err)
 
 		t.Setenv("HOME", tempDir)
-		t.Setenv("ETCD_ENDPOINTS", endpoint)
 
 		diffOpts.FilePath = configFile
 		diffOpts.Format = "simple"
@@ -139,7 +138,7 @@ added_value
 	})
 
 	t.Run("Diff with --full shows etcd-only keys as deleted", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "diff_full.txt")
 
 		// File only has key1 and key3
@@ -154,7 +153,6 @@ unchanged
 		require.NoError(t, err)
 
 		t.Setenv("HOME", tempDir)
-		t.Setenv("ETCD_ENDPOINTS", endpoint)
 
 		diffOpts.FilePath = configFile
 		diffOpts.Format = "simple"
@@ -176,7 +174,7 @@ unchanged
 	})
 
 	t.Run("Diff show unchanged", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "diff_unchanged.txt")
 
 		content := `/app/config/key3
@@ -186,7 +184,6 @@ unchanged
 		require.NoError(t, err)
 
 		t.Setenv("HOME", tempDir)
-		t.Setenv("ETCD_ENDPOINTS", endpoint)
 
 		diffOpts.FilePath = configFile
 		diffOpts.Format = "simple"
@@ -204,7 +201,7 @@ unchanged
 	})
 
 	t.Run("Diff with JSON output", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "diff_json.txt")
 
 		content := `/app/config/key1
@@ -214,7 +211,6 @@ new_value
 		require.NoError(t, err)
 
 		t.Setenv("HOME", tempDir)
-		t.Setenv("ETCD_ENDPOINTS", endpoint)
 
 		diffOpts.FilePath = configFile
 		diffOpts.Format = "json"
@@ -260,7 +256,7 @@ new_value
 	})
 
 	t.Run("Diff with table output", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "diff_table.txt")
 
 		content := `/app/config/key1
@@ -270,7 +266,6 @@ new_value
 		require.NoError(t, err)
 
 		t.Setenv("HOME", tempDir)
-		t.Setenv("ETCD_ENDPOINTS", endpoint)
 
 		diffOpts.FilePath = configFile
 		diffOpts.Format = "table"
@@ -288,7 +283,7 @@ new_value
 	})
 
 	t.Run("Diff with prefix filter", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "diff_prefix.txt")
 
 		content := `/app/config/key1
@@ -301,7 +296,6 @@ other_value
 		require.NoError(t, err)
 
 		t.Setenv("HOME", tempDir)
-		t.Setenv("ETCD_ENDPOINTS", endpoint)
 
 		diffOpts.FilePath = configFile
 		diffOpts.Format = "simple"
@@ -319,7 +313,7 @@ other_value
 	})
 
 	t.Run("Full flag requires prefix", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := setupTestContext(t, endpoint)
 		configFile := filepath.Join(tempDir, "diff_full_no_prefix.txt")
 
 		content := `/app/config/key1
@@ -329,7 +323,6 @@ value
 		require.NoError(t, err)
 
 		t.Setenv("HOME", tempDir)
-		t.Setenv("ETCD_ENDPOINTS", endpoint)
 
 		diffOpts.FilePath = configFile
 		diffOpts.Format = "simple"
