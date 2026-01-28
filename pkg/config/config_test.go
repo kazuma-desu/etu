@@ -187,3 +187,27 @@ func TestGetEtcdConfigWithContext_AllTLSFields(t *testing.T) {
 	assert.Equal(t, "/client.key", etcdCfg.Key)
 	assert.False(t, etcdCfg.InsecureSkipTLSVerify)
 }
+
+// Test error path when GetCurrentContext returns error (line 42)
+func TestGetEtcdConfigWithContext_GetCurrentContextError(t *testing.T) {
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, ".config", "etu")
+	require.NoError(t, os.MkdirAll(configDir, 0700))
+
+	t.Setenv("ETUCONFIG", filepath.Join(configDir, "config.yaml"))
+
+	// Create config with current context pointing to non-existent context
+	cfg := &Config{
+		CurrentContext: "missing",
+		Contexts: map[string]*ContextConfig{
+			"dev": {
+				Endpoints: []string{"http://dev:2379"},
+			},
+		},
+	}
+	require.NoError(t, SaveConfig(cfg))
+
+	_, err := GetEtcdConfigWithContext("")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get current context")
+}
