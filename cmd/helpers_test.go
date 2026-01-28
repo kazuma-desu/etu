@@ -346,7 +346,7 @@ func TestApplyGlobalOverrides_MutuallyExclusivePasswordFlags(t *testing.T) {
 	err := applyGlobalOverrides(cfg)
 
 	if err == nil {
-		t.Error("applyGlobalOverrides() should error when both --password and --password-stdin are set")
+		t.Fatalf("applyGlobalOverrides() should error when both --password and --password-stdin are set")
 	}
 	if !strings.Contains(err.Error(), "mutually exclusive") {
 		t.Errorf("applyGlobalOverrides() error = %v, want error containing 'mutually exclusive'", err)
