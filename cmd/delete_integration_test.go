@@ -5,7 +5,6 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -14,49 +13,11 @@ import (
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/testutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// captureStdout captures stdout from f() with panic recovery.
-func captureStdout(f func() error) (string, error) {
-	old := os.Stdout
-	r, w, pipeErr := os.Pipe()
-	if pipeErr != nil {
-		return "", fmt.Errorf("captureStdout: failed to create pipe: %w", pipeErr)
-	}
-
-	// Read from pipe in goroutine to avoid blocking
-	outCh := make(chan string)
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		r.Close()
-		outCh <- buf.String()
-	}()
-
-	os.Stdout = w
-
-	var fErr error
-	func() {
-		defer func() {
-			if rec := recover(); rec != nil {
-				fErr = fmt.Errorf("captureStdout: f() panicked: %v", rec)
-			}
-		}()
-		fErr = f()
-	}()
-
-	// Close writer to signal EOF to goroutine, then restore stdout
-	w.Close()
-	os.Stdout = old
-
-	// Wait for goroutine to finish reading
-	output := <-outCh
-
-	return output, fErr
-}
 
 func TestDeleteCommand_Integration(t *testing.T) {
 	if testing.Short() {
@@ -107,7 +68,7 @@ func TestDeleteCommand_Integration(t *testing.T) {
 	t.Run("Delete non-existent key shows warning", func(t *testing.T) {
 		resetDeleteFlags()
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runDelete(deleteCmd, []string{"/delete/nonexistent/key"})
 		})
 		require.NoError(t, err)
@@ -147,7 +108,7 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		deleteOpts.prefix = true
 		deleteOpts.dryRun = true
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runDelete(deleteCmd, []string{"/delete/dryrun/"})
 		})
 		require.NoError(t, err)
@@ -173,7 +134,7 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		deleteOpts.prefix = true
 		deleteOpts.force = true
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runDelete(deleteCmd, []string{"/nonexistent/prefix/"})
 		})
 		require.NoError(t, err)

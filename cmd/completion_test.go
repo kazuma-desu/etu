@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"bytes"
-	"fmt"
-	"io"
 	"os"
 	"testing"
 
@@ -12,46 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/testutil"
 )
-
-// captureStdout captures stdout from f() with panic recovery.
-func captureStdout(f func() error) (string, error) {
-	old := os.Stdout
-	r, w, pipeErr := os.Pipe()
-	if pipeErr != nil {
-		return "", fmt.Errorf("captureStdout: failed to create pipe: %w", pipeErr)
-	}
-
-	// Read from pipe in goroutine to avoid blocking
-	outCh := make(chan string)
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		r.Close()
-		outCh <- buf.String()
-	}()
-
-	os.Stdout = w
-
-	var fErr error
-	func() {
-		defer func() {
-			if rec := recover(); rec != nil {
-				fErr = fmt.Errorf("captureStdout: f() panicked: %v", rec)
-			}
-		}()
-		fErr = f()
-	}()
-
-	// Close writer to signal EOF to goroutine, then restore stdout
-	w.Close()
-	os.Stdout = old
-
-	// Wait for goroutine to finish reading
-	output := <-outCh
-
-	return output, fErr
-}
 
 func TestRunCompletion(t *testing.T) {
 	testCmd := &cobra.Command{Use: "test"}
@@ -59,7 +18,7 @@ func TestRunCompletion(t *testing.T) {
 	defer rootCmd.RemoveCommand(testCmd)
 
 	t.Run("bash completion", func(t *testing.T) {
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runCompletion(completionCmd, []string{"bash"})
 		})
 		require.NoError(t, err)
@@ -67,7 +26,7 @@ func TestRunCompletion(t *testing.T) {
 	})
 
 	t.Run("zsh completion", func(t *testing.T) {
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runCompletion(completionCmd, []string{"zsh"})
 		})
 		require.NoError(t, err)
@@ -75,7 +34,7 @@ func TestRunCompletion(t *testing.T) {
 	})
 
 	t.Run("fish completion", func(t *testing.T) {
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runCompletion(completionCmd, []string{"fish"})
 		})
 		require.NoError(t, err)
@@ -83,7 +42,7 @@ func TestRunCompletion(t *testing.T) {
 	})
 
 	t.Run("powershell completion", func(t *testing.T) {
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runCompletion(completionCmd, []string{"powershell"})
 		})
 		require.NoError(t, err)

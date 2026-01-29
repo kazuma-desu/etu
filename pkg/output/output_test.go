@@ -1,54 +1,16 @@
 package output
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/kazuma-desu/etu/pkg/models"
+	"github.com/kazuma-desu/etu/pkg/testutil"
 	"github.com/kazuma-desu/etu/pkg/validator"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func captureOutput(f func()) (string, error) {
-	old := os.Stdout
-	r, w, pipeErr := os.Pipe()
-	if pipeErr != nil {
-		return "", fmt.Errorf("captureOutput: failed to create pipe: %w", pipeErr)
-	}
-
-	defer func() {
-		os.Stdout = old
-		w.Close()
-	}()
-
-	os.Stdout = w
-
-	var panicked bool
-	func() {
-		defer func() {
-			if rec := recover(); rec != nil {
-				panicked = true
-			}
-		}()
-		f()
-	}()
-
-	w.Close()
-	os.Stdout = old
-
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	if panicked {
-		return buf.String(), fmt.Errorf("f() panicked")
-	}
-	return buf.String(), nil
-}
 
 func TestPrintConfigPairs(t *testing.T) {
 	t.Run("Human readable output", func(t *testing.T) {
@@ -57,7 +19,7 @@ func TestPrintConfigPairs(t *testing.T) {
 			{Key: "/app/port", Value: int64(8080)},
 		}
 
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			err := PrintConfigPairs(pairs, false)
 			require.NoError(t, err)
 		})
@@ -75,7 +37,7 @@ func TestPrintConfigPairs(t *testing.T) {
 			{Key: "/app/port", Value: int64(8080)},
 		}
 
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			err := PrintConfigPairs(pairs, true)
 			require.NoError(t, err)
 		})
@@ -98,7 +60,7 @@ func TestPrintConfigPairs(t *testing.T) {
 			},
 		}
 
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			err := PrintConfigPairs(pairs, false)
 			require.NoError(t, err)
 		})
@@ -117,7 +79,7 @@ func TestPrintValidationResult(t *testing.T) {
 			Issues: []validator.ValidationIssue{},
 		}
 
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			PrintValidationResult(result, false)
 		})
 		require.NoError(t, err)
@@ -138,7 +100,7 @@ func TestPrintValidationResult(t *testing.T) {
 			},
 		}
 
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			PrintValidationResult(result, false)
 		})
 		require.NoError(t, err)
@@ -161,7 +123,7 @@ func TestPrintValidationResult(t *testing.T) {
 			},
 		}
 
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			PrintValidationResult(result, false)
 		})
 		require.NoError(t, err)
@@ -183,7 +145,7 @@ func TestPrintValidationResult(t *testing.T) {
 			},
 		}
 
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			PrintValidationResult(result, true)
 		})
 		require.NoError(t, err)
@@ -209,7 +171,7 @@ func TestPrintValidationResult(t *testing.T) {
 			},
 		}
 
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			PrintValidationResult(result, false)
 		})
 		require.NoError(t, err)
@@ -225,7 +187,7 @@ func TestPrintDryRun(t *testing.T) {
 		{Key: "/app/version", Value: "1.0.0"},
 	}
 
-	output, err := captureOutput(func() {
+	output, err := testutil.CaptureStdoutFunc(func() {
 		PrintDryRun(pairs)
 	})
 	require.NoError(t, err)
@@ -248,7 +210,7 @@ func TestPrintApplyProgress(_ *testing.T) {
 }
 
 func TestPrintApplySuccess(t *testing.T) {
-	output, err := captureOutput(func() {
+	output, err := testutil.CaptureStdoutFunc(func() {
 		PrintApplySuccess(5)
 	})
 	require.NoError(t, err)
@@ -258,7 +220,7 @@ func TestPrintApplySuccess(t *testing.T) {
 }
 
 func TestPrintError(t *testing.T) {
-	output, err := captureOutput(func() {
+	output, err := testutil.CaptureStdoutFunc(func() {
 		PrintError(assert.AnError)
 	})
 	require.NoError(t, err)
@@ -291,7 +253,7 @@ func TestFormatValue(t *testing.T) {
 
 func TestHelperFunctions(t *testing.T) {
 	t.Run("Info", func(t *testing.T) {
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			Info("test message")
 		})
 		require.NoError(t, err)
@@ -299,7 +261,7 @@ func TestHelperFunctions(t *testing.T) {
 	})
 
 	t.Run("Success", func(t *testing.T) {
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			Success("operation completed")
 		})
 		require.NoError(t, err)
@@ -307,7 +269,7 @@ func TestHelperFunctions(t *testing.T) {
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			Error("error occurred")
 		})
 		require.NoError(t, err)
@@ -315,7 +277,7 @@ func TestHelperFunctions(t *testing.T) {
 	})
 
 	t.Run("Warning", func(t *testing.T) {
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			Warning("warning message")
 		})
 		require.NoError(t, err)
@@ -323,7 +285,7 @@ func TestHelperFunctions(t *testing.T) {
 	})
 
 	t.Run("Prompt", func(t *testing.T) {
-		output, err := captureOutput(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			Prompt("Enter value: ")
 		})
 		require.NoError(t, err)
@@ -332,7 +294,7 @@ func TestHelperFunctions(t *testing.T) {
 }
 
 func TestPrintSecurityWarning(t *testing.T) {
-	output, err := captureOutput(func() {
+	output, err := testutil.CaptureStdoutFunc(func() {
 		PrintSecurityWarning()
 	})
 	require.NoError(t, err)

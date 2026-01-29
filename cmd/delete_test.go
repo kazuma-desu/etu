@@ -2,56 +2,13 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
-	"io"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kazuma-desu/etu/pkg/testutil"
 )
-
-// captureStdoutFunc captures stdout from f() with panic recovery.
-func captureStdoutFunc(f func()) (string, error) {
-	old := os.Stdout
-	r, w, pipeErr := os.Pipe()
-	if pipeErr != nil {
-		return "", fmt.Errorf("captureStdout: failed to create pipe: %w", pipeErr)
-	}
-
-	// Read from pipe in goroutine to avoid blocking
-	outCh := make(chan string)
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		r.Close()
-		outCh <- buf.String()
-	}()
-
-	os.Stdout = w
-
-	var panicked bool
-	func() {
-		defer func() {
-			if rec := recover(); rec != nil {
-				panicked = true
-			}
-		}()
-		f()
-	}()
-
-	// Close writer to signal EOF to goroutine, then restore stdout
-	w.Close()
-	os.Stdout = old
-
-	// Wait for goroutine to finish reading
-	output := <-outCh
-
-	if panicked {
-		return output, fmt.Errorf("f() panicked")
-	}
-	return output, nil
-}
 
 func TestConfirmDeletion(t *testing.T) {
 	keys := []string{"/app/config/a", "/app/config/b", "/app/config/c"}
@@ -198,7 +155,7 @@ func TestConfirmDeletion(t *testing.T) {
 
 func TestPrintKeysToDelete(t *testing.T) {
 	t.Run("prints keys with prefix", func(t *testing.T) {
-		output, err := captureStdoutFunc(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			printKeysToDelete([]string{"/a", "/b", "/c"}, "/prefix/")
 		})
 		assert.NoError(t, err)
@@ -210,7 +167,7 @@ func TestPrintKeysToDelete(t *testing.T) {
 	})
 
 	t.Run("prints single key", func(t *testing.T) {
-		output, err := captureStdoutFunc(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			printKeysToDelete([]string{"/only"}, "/only")
 		})
 		assert.NoError(t, err)
@@ -219,7 +176,7 @@ func TestPrintKeysToDelete(t *testing.T) {
 	})
 
 	t.Run("handles empty keys slice", func(t *testing.T) {
-		output, err := captureStdoutFunc(func() {
+		output, err := testutil.CaptureStdoutFunc(func() {
 			printKeysToDelete([]string{}, "/empty/")
 		})
 		assert.NoError(t, err)

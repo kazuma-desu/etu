@@ -3,60 +3,19 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"io"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/testutil"
 
 	"github.com/stretchr/testify/require"
 )
-
-// captureStdout captures stdout from f() with panic recovery.
-func captureStdout(f func() error) (string, error) {
-	old := os.Stdout
-	r, w, pipeErr := os.Pipe()
-	if pipeErr != nil {
-		return "", fmt.Errorf("captureStdout: failed to create pipe: %w", pipeErr)
-	}
-
-	// Read from pipe in goroutine to avoid blocking
-	outCh := make(chan string)
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		r.Close()
-		outCh <- buf.String()
-	}()
-
-	os.Stdout = w
-
-	var fErr error
-	func() {
-		defer func() {
-			if rec := recover(); rec != nil {
-				fErr = fmt.Errorf("captureStdout: f() panicked: %v", rec)
-			}
-		}()
-		fErr = f()
-	}()
-
-	// Close writer to signal EOF to goroutine, then restore stdout
-	w.Close()
-	os.Stdout = old
-
-	// Wait for goroutine to finish reading
-	output := <-outCh
-
-	return output, fErr
-}
 
 func TestGetCommand_Integration(t *testing.T) {
 	if testing.Short() {
@@ -108,7 +67,7 @@ func TestGetCommand_Integration(t *testing.T) {
 	t.Run("Get single key", func(t *testing.T) {
 		resetGetFlags()
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/host"})
 		})
 		require.NoError(t, err)
@@ -121,7 +80,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		resetGetFlags()
 		getOpts.prefix = true
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/"})
 		})
 		require.NoError(t, err)
@@ -137,7 +96,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.prefix = true
 		getOpts.limit = 2
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/"})
 		})
 		require.NoError(t, err)
@@ -153,7 +112,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.prefix = true
 		getOpts.keysOnly = true
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/"})
 		})
 		require.NoError(t, err)
@@ -168,7 +127,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.prefix = true
 		getOpts.countOnly = true
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/"})
 		})
 		require.NoError(t, err)
@@ -180,7 +139,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		resetGetFlags()
 		getOpts.printValue = true
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/host"})
 		})
 		require.NoError(t, err)
@@ -193,7 +152,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		resetGetFlags()
 		outputFormat = "json"
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/host"})
 		})
 		require.NoError(t, err)
@@ -216,7 +175,7 @@ func TestGetCommand_Integration(t *testing.T) {
 	t.Run("Get with range", func(t *testing.T) {
 		resetGetFlags()
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/database", "/config/app/port"})
 		})
 		require.NoError(t, err)
@@ -231,7 +190,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.fromKey = true
 		getOpts.limit = 10
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/db/"})
 		})
 		require.NoError(t, err)
@@ -254,7 +213,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.sortOrder = "DESCEND"
 		getOpts.sortTarget = "KEY"
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/"})
 		})
 		require.NoError(t, err)
@@ -294,7 +253,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.sortTarget = "VERSION"
 		getOpts.sortOrder = "ASCEND"
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/"})
 		})
 		require.NoError(t, err)
@@ -307,7 +266,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.prefix = true
 		getOpts.sortTarget = "CREATE"
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/"})
 		})
 		require.NoError(t, err)
@@ -320,7 +279,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.prefix = true
 		getOpts.sortTarget = "MODIFY"
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/"})
 		})
 		require.NoError(t, err)
@@ -333,7 +292,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.prefix = true
 		getOpts.sortTarget = "VALUE"
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/"})
 		})
 		require.NoError(t, err)
@@ -349,7 +308,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.minCreateRev = 1
 		getOpts.maxCreateRev = 1000
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/"})
 		})
 		require.NoError(t, err)
@@ -367,7 +326,7 @@ func TestGetCommand_Integration(t *testing.T) {
 		// Use the current revision to ensure the key exists at that revision
 		getOpts.revision = resp.Kvs[0].CreateRevision
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runGet(getCmd, []string{"/config/app/host"})
 		})
 		require.NoError(t, err)
