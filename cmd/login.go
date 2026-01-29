@@ -52,6 +52,7 @@ var (
 	loginEndpoints             []string
 	loginUsername              string
 	loginPassword              string
+	loginPasswordStdin         bool
 	loginNoTest                bool
 	loginNoAuth                bool
 	loginCACert                string
@@ -74,6 +75,7 @@ func init() {
 	loginCmd.Flags().StringSliceVar(&loginEndpoints, "endpoints", nil, "Etcd endpoints (comma-separated)")
 	loginCmd.Flags().StringVar(&loginUsername, "username", "", "Etcd username")
 	loginCmd.Flags().StringVar(&loginPassword, "password", "", "Etcd password")
+	loginCmd.Flags().BoolVar(&loginPasswordStdin, "password-stdin", false, "Read password from stdin (mutually exclusive with --password)")
 	loginCmd.Flags().BoolVar(&loginNoAuth, "no-auth", false, "Skip authentication")
 	loginCmd.Flags().BoolVar(&loginNoTest, "no-test", false, "Skip connection test")
 	loginCmd.Flags().StringVar(&loginCACert, "cacert", "", "Path to CA certificate for server verification")
@@ -91,7 +93,7 @@ func runLogin(_ *cobra.Command, _ []string) error {
 
 func hasLoginFlags() bool {
 	return loginContextName != "" || len(loginEndpoints) > 0 ||
-		loginUsername != "" || loginPassword != "" || loginNoAuth || loginNoTest ||
+		loginUsername != "" || loginPassword != "" || loginPasswordStdin || loginNoAuth || loginNoTest ||
 		loginCACert != "" || loginCert != "" || loginKey != "" || loginInsecureSkipTLSVerify
 }
 
@@ -231,6 +233,18 @@ func runLoginAutomated() error {
 	username, password := loginUsername, loginPassword
 	if loginNoAuth {
 		username, password = "", ""
+	}
+
+	// Handle password-stdin
+	if loginPasswordStdin {
+		if loginPassword != "" {
+			return fmt.Errorf("--password and --password-stdin are mutually exclusive")
+		}
+		stdinPassword, err := readPasswordFromStdin()
+		if err != nil {
+			return fmt.Errorf("failed to read password from stdin: %w", err)
+		}
+		password = stdinPassword
 	}
 
 	if !loginNoTest {
