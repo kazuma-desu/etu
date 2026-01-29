@@ -521,6 +521,7 @@ func TestRunLoginAutomated(t *testing.T) {
 		loginEndpoints = nil
 		loginUsername = ""
 		loginPassword = ""
+		loginPasswordStdin = false
 		loginNoAuth = false
 		loginNoTest = false
 	}

@@ -235,8 +235,8 @@ func runLoginAutomated() error {
 		username, password = "", ""
 	}
 
-	// Handle password-stdin
-	if loginPasswordStdin {
+	// Handle password-stdin (skip if --no-auth is set)
+	if loginPasswordStdin && !loginNoAuth {
 		if loginPassword != "" {
 			return fmt.Errorf("--password and --password-stdin are mutually exclusive")
 		}
