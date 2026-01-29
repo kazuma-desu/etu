@@ -13,6 +13,7 @@ import (
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/testutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,21 +68,9 @@ func TestDeleteCommand_Integration(t *testing.T) {
 	t.Run("Delete non-existent key shows warning", func(t *testing.T) {
 		resetDeleteFlags()
 
-		old := os.Stdout
-		defer func() { os.Stdout = old }()
-
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		err := runDelete(deleteCmd, []string{"/delete/nonexistent/key"})
-
-		w.Close()
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		r.Close()
-		output := buf.String()
-
+		output, err := testutil.CaptureStdout(func() error {
+			return runDelete(deleteCmd, []string{"/delete/nonexistent/key"})
+		})
 		require.NoError(t, err)
 		assert.Contains(t, output, "not found")
 	})
@@ -119,21 +108,9 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		deleteOpts.prefix = true
 		deleteOpts.dryRun = true
 
-		old := os.Stdout
-		defer func() { os.Stdout = old }()
-
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		err = runDelete(deleteCmd, []string{"/delete/dryrun/"})
-
-		w.Close()
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		r.Close()
-		output := buf.String()
-
+		output, err := testutil.CaptureStdout(func() error {
+			return runDelete(deleteCmd, []string{"/delete/dryrun/"})
+		})
 		require.NoError(t, err)
 		assert.Contains(t, output, "/delete/dryrun/a")
 		assert.Contains(t, output, "/delete/dryrun/b")
@@ -157,21 +134,9 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		deleteOpts.prefix = true
 		deleteOpts.force = true
 
-		old := os.Stdout
-		defer func() { os.Stdout = old }()
-
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		err := runDelete(deleteCmd, []string{"/nonexistent/prefix/"})
-
-		w.Close()
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		r.Close()
-		output := buf.String()
-
+		output, err := testutil.CaptureStdout(func() error {
+			return runDelete(deleteCmd, []string{"/nonexistent/prefix/"})
+		})
 		require.NoError(t, err)
 		assert.Contains(t, output, "No keys found")
 	})

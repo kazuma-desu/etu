@@ -3,60 +3,18 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/kazuma-desu/etu/pkg/client"
+	"github.com/kazuma-desu/etu/pkg/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// captureStdout captures stdout from f() without blocking.
-// Uses a goroutine for io.Copy to avoid holding redirected stdout while blocked.
-func captureStdout(f func() error) (string, error) {
-	old := os.Stdout
-	r, w, pipeErr := os.Pipe()
-	if pipeErr != nil {
-		return "", fmt.Errorf("captureStdout: failed to create pipe: %w", pipeErr)
-	}
-
-	// Read from pipe in goroutine to avoid blocking
-	outCh := make(chan string)
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		r.Close()
-		outCh <- buf.String()
-	}()
-
-	os.Stdout = w
-
-	var fErr error
-	func() {
-		defer func() {
-			if rec := recover(); rec != nil {
-				fErr = fmt.Errorf("captureStdout: f() panicked: %v", rec)
-			}
-		}()
-		fErr = f()
-	}()
-
-	// Close writer to signal EOF to goroutine, then restore stdout
-	w.Close()
-	os.Stdout = old
-
-	// Wait for goroutine to finish reading
-	output := <-outCh
-
-	return output, fErr
-}
 
 // TestDiffCommand_Integration tests the diff command against a real etcd instance.
 func TestDiffCommand_Integration(t *testing.T) {
@@ -120,7 +78,7 @@ added_value
 		diffOpts.Prefix = ""
 		diffOpts.Full = false
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runDiff(diffCmd, []string{})
 		})
 		require.NoError(t, err)
@@ -160,7 +118,7 @@ unchanged
 		diffOpts.Prefix = "/app/config"
 		diffOpts.Full = true
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runDiff(diffCmd, []string{})
 		})
 		require.NoError(t, err)
@@ -191,7 +149,7 @@ unchanged
 		diffOpts.Prefix = ""
 		diffOpts.Full = false
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runDiff(diffCmd, []string{})
 		})
 		require.NoError(t, err)
@@ -218,7 +176,7 @@ new_value
 		diffOpts.Prefix = ""
 		diffOpts.Full = false
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runDiff(diffCmd, []string{})
 		})
 		require.NoError(t, err)
@@ -273,7 +231,7 @@ new_value
 		diffOpts.Prefix = ""
 		diffOpts.Full = false
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runDiff(diffCmd, []string{})
 		})
 		require.NoError(t, err)
@@ -303,7 +261,7 @@ other_value
 		diffOpts.Prefix = "/app/config"
 		diffOpts.Full = false
 
-		output, err := captureStdout(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return runDiff(diffCmd, []string{})
 		})
 		require.NoError(t, err)

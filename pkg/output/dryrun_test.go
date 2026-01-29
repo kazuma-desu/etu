@@ -1,43 +1,15 @@
 package output
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kazuma-desu/etu/pkg/client"
+	"github.com/kazuma-desu/etu/pkg/testutil"
 )
-
-func captureOutputWithError(f func() error) (string, error) {
-	oldStdout := os.Stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		return "", err
-	}
-
-	defer func() {
-		os.Stdout = oldStdout
-		w.Close()
-	}()
-
-	os.Stdout = w
-
-	if err := f(); err != nil {
-		return "", err
-	}
-
-	w.Close()
-	os.Stdout = oldStdout
-
-	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
-	return buf.String(), nil
-}
 
 func TestPrintDryRunOperations(t *testing.T) {
 	ops := []client.Operation{
@@ -46,7 +18,7 @@ func TestPrintDryRunOperations(t *testing.T) {
 	}
 
 	t.Run("json format", func(t *testing.T) {
-		output, err := captureOutputWithError(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return PrintDryRunOperations(ops, "json")
 		})
 
@@ -60,7 +32,7 @@ func TestPrintDryRunOperations(t *testing.T) {
 	})
 
 	t.Run("simple format", func(t *testing.T) {
-		output, err := captureOutputWithError(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return PrintDryRunOperations(ops, "simple")
 		})
 
@@ -72,7 +44,7 @@ func TestPrintDryRunOperations(t *testing.T) {
 	})
 
 	t.Run("table format (alias for simple)", func(t *testing.T) {
-		output, err := captureOutputWithError(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return PrintDryRunOperations(ops, "table")
 		})
 
@@ -87,7 +59,7 @@ func TestPrintDryRunOperations(t *testing.T) {
 	})
 
 	t.Run("empty operations", func(t *testing.T) {
-		output, err := captureOutputWithError(func() error {
+		output, err := testutil.CaptureStdout(func() error {
 			return PrintDryRunOperations([]client.Operation{}, "simple")
 		})
 

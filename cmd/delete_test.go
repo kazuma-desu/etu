@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"bytes"
-	"io"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kazuma-desu/etu/pkg/testutil"
 )
 
 func TestConfirmDeletion(t *testing.T) {
@@ -155,19 +155,10 @@ func TestConfirmDeletion(t *testing.T) {
 
 func TestPrintKeysToDelete(t *testing.T) {
 	t.Run("prints keys with prefix", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		printKeysToDelete([]string{"/a", "/b", "/c"}, "/prefix/")
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
-
+		output, err := testutil.CaptureStdoutFunc(func() {
+			printKeysToDelete([]string{"/a", "/b", "/c"}, "/prefix/")
+		})
+		assert.NoError(t, err)
 		assert.Contains(t, output, "Would delete 3 keys")
 		assert.Contains(t, output, `"/prefix/"`)
 		assert.Contains(t, output, "/a")
@@ -176,37 +167,19 @@ func TestPrintKeysToDelete(t *testing.T) {
 	})
 
 	t.Run("prints single key", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		printKeysToDelete([]string{"/only"}, "/only")
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
-
+		output, err := testutil.CaptureStdoutFunc(func() {
+			printKeysToDelete([]string{"/only"}, "/only")
+		})
+		assert.NoError(t, err)
 		assert.Contains(t, output, "Would delete 1 keys")
 		assert.Contains(t, output, "/only")
 	})
 
 	t.Run("handles empty keys slice", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		printKeysToDelete([]string{}, "/empty/")
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
-
+		output, err := testutil.CaptureStdoutFunc(func() {
+			printKeysToDelete([]string{}, "/empty/")
+		})
+		assert.NoError(t, err)
 		assert.Contains(t, output, "Would delete 0 keys")
 	})
 }

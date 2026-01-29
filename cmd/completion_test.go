@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"os"
 	"testing"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kazuma-desu/etu/pkg/config"
+	"github.com/kazuma-desu/etu/pkg/testutil"
 )
 
 func TestRunCompletion(t *testing.T) {
@@ -18,89 +18,33 @@ func TestRunCompletion(t *testing.T) {
 	defer rootCmd.RemoveCommand(testCmd)
 
 	t.Run("bash completion", func(t *testing.T) {
-		old := os.Stdout
-		defer func() { os.Stdout = old }()
-
-		r, w, pipeErr := os.Pipe()
-		require.NoError(t, pipeErr)
-		defer r.Close()
-		os.Stdout = w
-
-		err := runCompletion(completionCmd, []string{"bash"})
-
-		require.NoError(t, w.Close())
-
-		var buf bytes.Buffer
-		_, copyErr := buf.ReadFrom(r)
-		require.NoError(t, copyErr)
-		output := buf.String()
-
+		output, err := testutil.CaptureStdout(func() error {
+			return runCompletion(completionCmd, []string{"bash"})
+		})
 		require.NoError(t, err)
 		assert.Contains(t, output, "bash completion")
 	})
 
 	t.Run("zsh completion", func(t *testing.T) {
-		old := os.Stdout
-		defer func() { os.Stdout = old }()
-
-		r, w, pipeErr := os.Pipe()
-		require.NoError(t, pipeErr)
-		defer r.Close()
-		os.Stdout = w
-
-		err := runCompletion(completionCmd, []string{"zsh"})
-
-		require.NoError(t, w.Close())
-
-		var buf bytes.Buffer
-		_, copyErr := buf.ReadFrom(r)
-		require.NoError(t, copyErr)
-		output := buf.String()
-
+		output, err := testutil.CaptureStdout(func() error {
+			return runCompletion(completionCmd, []string{"zsh"})
+		})
 		require.NoError(t, err)
 		assert.Contains(t, output, "zsh completion")
 	})
 
 	t.Run("fish completion", func(t *testing.T) {
-		old := os.Stdout
-		defer func() { os.Stdout = old }()
-
-		r, w, pipeErr := os.Pipe()
-		require.NoError(t, pipeErr)
-		defer r.Close()
-		os.Stdout = w
-
-		err := runCompletion(completionCmd, []string{"fish"})
-
-		require.NoError(t, w.Close())
-
-		var buf bytes.Buffer
-		_, copyErr := buf.ReadFrom(r)
-		require.NoError(t, copyErr)
-		output := buf.String()
-
+		output, err := testutil.CaptureStdout(func() error {
+			return runCompletion(completionCmd, []string{"fish"})
+		})
 		require.NoError(t, err)
 		assert.Contains(t, output, "fish")
 	})
 
 	t.Run("powershell completion", func(t *testing.T) {
-		old := os.Stdout
-		defer func() { os.Stdout = old }()
-
-		r, w, pipeErr := os.Pipe()
-		require.NoError(t, pipeErr)
-		defer r.Close()
-		os.Stdout = w
-
-		err := runCompletion(completionCmd, []string{"powershell"})
-
-		require.NoError(t, w.Close())
-
-		var buf bytes.Buffer
-		_, copyErr := buf.ReadFrom(r)
-		require.NoError(t, copyErr)
-		output := buf.String()
-
+		output, err := testutil.CaptureStdout(func() error {
+			return runCompletion(completionCmd, []string{"powershell"})
+		})
 		require.NoError(t, err)
 		assert.Contains(t, output, "PowerShell")
 	})
