@@ -2,6 +2,7 @@ package output
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -14,19 +15,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func captureOutput(f func()) string {
+func captureOutput(f func()) (string, error) {
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		return "", fmt.Errorf("captureOutput: failed to create pipe: %w", pipeErr)
+	}
+
+	defer func() {
+		os.Stdout = old
+		w.Close()
+	}()
+
 	os.Stdout = w
 
-	f()
+	var panicked bool
+	func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				panicked = true
+			}
+		}()
+		f()
+	}()
 
 	w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
 	io.Copy(&buf, r)
-	return buf.String()
+	if panicked {
+		return buf.String(), fmt.Errorf("f() panicked")
+	}
+	return buf.String(), nil
 }
 
 func TestPrintConfigPairs(t *testing.T) {
@@ -36,10 +57,11 @@ func TestPrintConfigPairs(t *testing.T) {
 			{Key: "/app/port", Value: int64(8080)},
 		}
 
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			err := PrintConfigPairs(pairs, false)
 			require.NoError(t, err)
 		})
+		require.NoError(t, err)
 
 		assert.Contains(t, output, "/app/name")
 		assert.Contains(t, output, "myapp")
@@ -53,10 +75,11 @@ func TestPrintConfigPairs(t *testing.T) {
 			{Key: "/app/port", Value: int64(8080)},
 		}
 
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			err := PrintConfigPairs(pairs, true)
 			require.NoError(t, err)
 		})
+		require.NoError(t, err)
 
 		assert.Contains(t, output, `"key"`)
 		assert.Contains(t, output, `"value"`)
@@ -75,10 +98,11 @@ func TestPrintConfigPairs(t *testing.T) {
 			},
 		}
 
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			err := PrintConfigPairs(pairs, false)
 			require.NoError(t, err)
 		})
+		require.NoError(t, err)
 
 		assert.Contains(t, output, "/config/settings")
 		assert.Contains(t, output, "timeout")
@@ -93,9 +117,10 @@ func TestPrintValidationResult(t *testing.T) {
 			Issues: []validator.ValidationIssue{},
 		}
 
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			PrintValidationResult(result, false)
 		})
+		require.NoError(t, err)
 
 		assert.Contains(t, output, "Validation passed")
 		assert.Contains(t, output, "no issues")
@@ -113,9 +138,10 @@ func TestPrintValidationResult(t *testing.T) {
 			},
 		}
 
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			PrintValidationResult(result, false)
 		})
+		require.NoError(t, err)
 
 		assert.Contains(t, output, "error(s)")
 		assert.Contains(t, output, "/invalid/key")
@@ -135,9 +161,10 @@ func TestPrintValidationResult(t *testing.T) {
 			},
 		}
 
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			PrintValidationResult(result, false)
 		})
+		require.NoError(t, err)
 
 		assert.Contains(t, output, "warning(s)")
 		assert.Contains(t, output, "/config/deprecated")
@@ -156,9 +183,10 @@ func TestPrintValidationResult(t *testing.T) {
 			},
 		}
 
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			PrintValidationResult(result, true)
 		})
+		require.NoError(t, err)
 
 		assert.Contains(t, output, "strict mode")
 		assert.Contains(t, output, "warnings treated as errors")
@@ -181,9 +209,10 @@ func TestPrintValidationResult(t *testing.T) {
 			},
 		}
 
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			PrintValidationResult(result, false)
 		})
+		require.NoError(t, err)
 
 		assert.Contains(t, output, "error(s)")
 		assert.Contains(t, output, "warning(s)")
@@ -196,9 +225,10 @@ func TestPrintDryRun(t *testing.T) {
 		{Key: "/app/version", Value: "1.0.0"},
 	}
 
-	output := captureOutput(func() {
+	output, err := captureOutput(func() {
 		PrintDryRun(pairs)
 	})
+	require.NoError(t, err)
 
 	assert.Contains(t, output, "DRY RUN")
 	assert.Contains(t, output, "Would apply")
@@ -218,18 +248,20 @@ func TestPrintApplyProgress(_ *testing.T) {
 }
 
 func TestPrintApplySuccess(t *testing.T) {
-	output := captureOutput(func() {
+	output, err := captureOutput(func() {
 		PrintApplySuccess(5)
 	})
+	require.NoError(t, err)
 
 	assert.Contains(t, output, "Successfully applied")
 	assert.Contains(t, output, "5 items")
 }
 
 func TestPrintError(t *testing.T) {
-	output := captureOutput(func() {
+	output, err := captureOutput(func() {
 		PrintError(assert.AnError)
 	})
+	require.NoError(t, err)
 
 	assert.Contains(t, output, "Error")
 	assert.Contains(t, output, assert.AnError.Error())
@@ -259,45 +291,51 @@ func TestFormatValue(t *testing.T) {
 
 func TestHelperFunctions(t *testing.T) {
 	t.Run("Info", func(t *testing.T) {
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			Info("test message")
 		})
+		require.NoError(t, err)
 		assert.Contains(t, output, "test message")
 	})
 
 	t.Run("Success", func(t *testing.T) {
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			Success("operation completed")
 		})
+		require.NoError(t, err)
 		assert.Contains(t, output, "operation completed")
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			Error("error occurred")
 		})
+		require.NoError(t, err)
 		assert.Contains(t, output, "error occurred")
 	})
 
 	t.Run("Warning", func(t *testing.T) {
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			Warning("warning message")
 		})
+		require.NoError(t, err)
 		assert.Contains(t, output, "warning message")
 	})
 
 	t.Run("Prompt", func(t *testing.T) {
-		output := captureOutput(func() {
+		output, err := captureOutput(func() {
 			Prompt("Enter value: ")
 		})
+		require.NoError(t, err)
 		assert.Contains(t, output, "Enter value:")
 	})
 }
 
 func TestPrintSecurityWarning(t *testing.T) {
-	output := captureOutput(func() {
+	output, err := captureOutput(func() {
 		PrintSecurityWarning()
 	})
+	require.NoError(t, err)
 
 	assert.Contains(t, output, "Security Warning")
 	assert.Contains(t, output, "plain text")

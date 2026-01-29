@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -9,6 +10,48 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+// captureStdoutFunc captures stdout from f() with panic recovery.
+func captureStdoutFunc(f func()) (string, error) {
+	old := os.Stdout
+	r, w, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		return "", fmt.Errorf("captureStdout: failed to create pipe: %w", pipeErr)
+	}
+
+	// Read from pipe in goroutine to avoid blocking
+	outCh := make(chan string)
+	go func() {
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+		r.Close()
+		outCh <- buf.String()
+	}()
+
+	os.Stdout = w
+
+	var panicked bool
+	func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				panicked = true
+			}
+		}()
+		f()
+	}()
+
+	// Close writer to signal EOF to goroutine, then restore stdout
+	w.Close()
+	os.Stdout = old
+
+	// Wait for goroutine to finish reading
+	output := <-outCh
+
+	if panicked {
+		return output, fmt.Errorf("f() panicked")
+	}
+	return output, nil
+}
 
 func TestConfirmDeletion(t *testing.T) {
 	keys := []string{"/app/config/a", "/app/config/b", "/app/config/c"}
@@ -155,19 +198,10 @@ func TestConfirmDeletion(t *testing.T) {
 
 func TestPrintKeysToDelete(t *testing.T) {
 	t.Run("prints keys with prefix", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		printKeysToDelete([]string{"/a", "/b", "/c"}, "/prefix/")
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
-
+		output, err := captureStdoutFunc(func() {
+			printKeysToDelete([]string{"/a", "/b", "/c"}, "/prefix/")
+		})
+		assert.NoError(t, err)
 		assert.Contains(t, output, "Would delete 3 keys")
 		assert.Contains(t, output, `"/prefix/"`)
 		assert.Contains(t, output, "/a")
@@ -176,37 +210,19 @@ func TestPrintKeysToDelete(t *testing.T) {
 	})
 
 	t.Run("prints single key", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		printKeysToDelete([]string{"/only"}, "/only")
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
-
+		output, err := captureStdoutFunc(func() {
+			printKeysToDelete([]string{"/only"}, "/only")
+		})
+		assert.NoError(t, err)
 		assert.Contains(t, output, "Would delete 1 keys")
 		assert.Contains(t, output, "/only")
 	})
 
 	t.Run("handles empty keys slice", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		printKeysToDelete([]string{}, "/empty/")
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
-
+		output, err := captureStdoutFunc(func() {
+			printKeysToDelete([]string{}, "/empty/")
+		})
+		assert.NoError(t, err)
 		assert.Contains(t, output, "Would delete 0 keys")
 	})
 }

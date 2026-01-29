@@ -3,6 +3,7 @@ package output
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -27,8 +28,18 @@ func captureOutputWithError(f func() error) (string, error) {
 
 	os.Stdout = w
 
-	if err := f(); err != nil {
-		return "", err
+	var fErr error
+	func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				fErr = fmt.Errorf("f() panicked: %v", rec)
+			}
+		}()
+		fErr = f()
+	}()
+
+	if fErr != nil {
+		return "", fErr
 	}
 
 	w.Close()

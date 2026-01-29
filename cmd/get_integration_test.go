@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -17,6 +18,45 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
+
+// captureStdout captures stdout from f() with panic recovery.
+func captureStdout(f func() error) (string, error) {
+	old := os.Stdout
+	r, w, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		return "", fmt.Errorf("captureStdout: failed to create pipe: %w", pipeErr)
+	}
+
+	// Read from pipe in goroutine to avoid blocking
+	outCh := make(chan string)
+	go func() {
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+		r.Close()
+		outCh <- buf.String()
+	}()
+
+	os.Stdout = w
+
+	var fErr error
+	func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				fErr = fmt.Errorf("captureStdout: f() panicked: %v", rec)
+			}
+		}()
+		fErr = f()
+	}()
+
+	// Close writer to signal EOF to goroutine, then restore stdout
+	w.Close()
+	os.Stdout = old
+
+	// Wait for goroutine to finish reading
+	output := <-outCh
+
+	return output, fErr
+}
 
 func TestGetCommand_Integration(t *testing.T) {
 	if testing.Short() {
@@ -66,45 +106,25 @@ func TestGetCommand_Integration(t *testing.T) {
 	}
 
 	t.Run("Get single key", func(t *testing.T) {
-		// Capture stdout
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		// Reset flags
 		resetGetFlags()
 
-		err := runGet(getCmd, []string{"/config/app/host"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/host"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		require.Contains(t, output, "/config/app/host")
 		require.Contains(t, output, "localhost")
 	})
 
 	t.Run("Get with prefix", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.prefix = true
 
-		err := runGet(getCmd, []string{"/config/app/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		require.Contains(t, output, "/config/app/host")
 		require.Contains(t, output, "/config/app/port")
@@ -113,23 +133,14 @@ func TestGetCommand_Integration(t *testing.T) {
 	})
 
 	t.Run("Get with prefix and limit", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.prefix = true
 		getOpts.limit = 2
 
-		err := runGet(getCmd, []string{"/config/app/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		// Should only have 2 keys
 		lines := strings.Split(strings.TrimSpace(output), "\n")
@@ -138,23 +149,14 @@ func TestGetCommand_Integration(t *testing.T) {
 	})
 
 	t.Run("Get keys only", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.prefix = true
 		getOpts.keysOnly = true
 
-		err := runGet(getCmd, []string{"/config/app/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		require.Contains(t, output, "/config/app/host")
 		require.NotContains(t, output, "localhost")
@@ -162,66 +164,39 @@ func TestGetCommand_Integration(t *testing.T) {
 	})
 
 	t.Run("Get count only", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.prefix = true
 		getOpts.countOnly = true
 
-		err := runGet(getCmd, []string{"/config/app/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/"})
+		})
 		require.NoError(t, err)
 
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := strings.TrimSpace(buf.String())
-
-		require.Equal(t, "3", output)
+		require.Equal(t, "3", strings.TrimSpace(output))
 	})
 
 	t.Run("Get with print-value-only", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.printValue = true
 
-		err := runGet(getCmd, []string{"/config/app/host"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/host"})
+		})
 		require.NoError(t, err)
 
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := strings.TrimSpace(buf.String())
-
-		require.Equal(t, "localhost", output)
+		require.Equal(t, "localhost", strings.TrimSpace(output))
 		require.NotContains(t, output, "/config/app/host")
 	})
 
 	t.Run("Get with JSON output", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		outputFormat = "json"
 
-		err := runGet(getCmd, []string{"/config/app/host"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/host"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		var result map[string]any
 		err = json.Unmarshal([]byte(output), &result)
@@ -239,21 +214,12 @@ func TestGetCommand_Integration(t *testing.T) {
 	})
 
 	t.Run("Get with range", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 
-		err := runGet(getCmd, []string{"/config/app/database", "/config/app/port"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/database", "/config/app/port"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		// Range is [start, end) so should include database and host but not port
 		require.Contains(t, output, "/config/app/database")
@@ -261,23 +227,14 @@ func TestGetCommand_Integration(t *testing.T) {
 	})
 
 	t.Run("Get from-key", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.fromKey = true
 		getOpts.limit = 10
 
-		err := runGet(getCmd, []string{"/config/db/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/db/"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		require.Contains(t, output, "/config/db/host")
 		require.Contains(t, output, "/other/key")
@@ -292,24 +249,15 @@ func TestGetCommand_Integration(t *testing.T) {
 	})
 
 	t.Run("Get with sort order", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.prefix = true
 		getOpts.sortOrder = "DESCEND"
 		getOpts.sortTarget = "KEY"
 
-		err := runGet(getCmd, []string{"/config/app/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		// Check that keys appear in descending order
 		portIdx := strings.Index(output, "/config/app/port")
@@ -341,99 +289,59 @@ func TestGetCommand_Integration(t *testing.T) {
 	})
 
 	t.Run("Get with VERSION sort target", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.prefix = true
 		getOpts.sortTarget = "VERSION"
 		getOpts.sortOrder = "ASCEND"
 
-		err := runGet(getCmd, []string{"/config/app/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		require.NotEmpty(t, output)
 	})
 
 	t.Run("Get with CREATE sort target", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.prefix = true
 		getOpts.sortTarget = "CREATE"
 
-		err := runGet(getCmd, []string{"/config/app/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		require.NotEmpty(t, output)
 	})
 
 	t.Run("Get with MODIFY sort target", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.prefix = true
 		getOpts.sortTarget = "MODIFY"
 
-		err := runGet(getCmd, []string{"/config/app/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		require.NotEmpty(t, output)
 	})
 
 	t.Run("Get with VALUE sort target", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.prefix = true
 		getOpts.sortTarget = "VALUE"
 
-		err := runGet(getCmd, []string{"/config/app/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		require.NotEmpty(t, output)
 	})
 
 	t.Run("Get with revision filters", func(t *testing.T) {
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		getOpts.prefix = true
 		getOpts.minModRev = 1
@@ -441,15 +349,10 @@ func TestGetCommand_Integration(t *testing.T) {
 		getOpts.minCreateRev = 1
 		getOpts.maxCreateRev = 1000
 
-		err := runGet(getCmd, []string{"/config/app/"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		require.NotEmpty(t, output)
 	})
@@ -460,23 +363,14 @@ func TestGetCommand_Integration(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, resp.Kvs)
 
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
 		resetGetFlags()
 		// Use the current revision to ensure the key exists at that revision
 		getOpts.revision = resp.Kvs[0].CreateRevision
 
-		err = runGet(getCmd, []string{"/config/app/host"})
+		output, err := captureStdout(func() error {
+			return runGet(getCmd, []string{"/config/app/host"})
+		})
 		require.NoError(t, err)
-
-		w.Close()
-		os.Stdout = old
-
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
 
 		require.NotEmpty(t, output)
 		require.Contains(t, output, "/config/app/host")
