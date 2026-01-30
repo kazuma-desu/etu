@@ -457,6 +457,7 @@ func TestHasLoginFlags(t *testing.T) {
 		loginEndpoints = nil
 		loginUsername = ""
 		loginPassword = ""
+		loginPasswordStdin = false
 		loginNoAuth = false
 		loginNoTest = false
 	}
@@ -490,6 +491,12 @@ func TestHasLoginFlags(t *testing.T) {
 		assert.True(t, hasLoginFlags())
 	})
 
+	t.Run("password-stdin flag set", func(t *testing.T) {
+		resetLoginFlags()
+		loginPasswordStdin = true
+		assert.True(t, hasLoginFlags())
+	})
+
 	t.Run("no-auth flag set", func(t *testing.T) {
 		resetLoginFlags()
 		loginNoAuth = true
@@ -514,6 +521,7 @@ func TestRunLoginAutomated(t *testing.T) {
 		loginEndpoints = nil
 		loginUsername = ""
 		loginPassword = ""
+		loginPasswordStdin = false
 		loginNoAuth = false
 		loginNoTest = false
 	}
@@ -670,6 +678,51 @@ func TestRunLoginAutomated(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "already exists")
 	})
+
+	t.Run("errors when both --password and --password-stdin are set", func(t *testing.T) {
+		resetLoginFlags()
+		loginContextName = "test-ctx"
+		loginEndpoints = []string{"http://localhost:2379"}
+		loginUsername = "admin"
+		loginPassword = "secret"
+		loginPasswordStdin = true
+		loginNoTest = true
+
+		err := runLoginAutomated()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "mutually exclusive")
+	})
+
+	t.Run("uses password from stdin when --password-stdin is set", func(t *testing.T) {
+		resetLoginFlags()
+		loginContextName = "stdin-test"
+		loginEndpoints = []string{"http://localhost:2379"}
+		loginUsername = "admin"
+		loginPasswordStdin = true
+		loginNoTest = true
+
+		// Simulate piped stdin
+		oldStdin := os.Stdin
+		defer func() { os.Stdin = oldStdin }()
+
+		r, w, _ := os.Pipe()
+		os.Stdin = r
+
+		go func() {
+			w.WriteString("stdin-password\n")
+			w.Close()
+		}()
+
+		err := runLoginAutomated()
+		require.NoError(t, err)
+
+		// Verify the password was saved
+		cfg, err := config.LoadConfig()
+		require.NoError(t, err)
+		ctx := cfg.Contexts["stdin-test"]
+		require.NotNil(t, ctx)
+		assert.Equal(t, "stdin-password", ctx.Password)
+	})
 }
 
 func TestValidateContextName_DuplicateCheck(t *testing.T) {
@@ -735,10 +788,12 @@ func TestRunLogin(t *testing.T) {
 		loginContextName = "test-ctx"
 		loginEndpoints = []string{"http://localhost:2379"}
 		loginNoTest = true
+		loginPasswordStdin = false
 		defer func() {
 			loginContextName = ""
 			loginEndpoints = nil
 			loginNoTest = false
+			loginPasswordStdin = false
 		}()
 
 		err := runLogin(loginCmd, []string{})
