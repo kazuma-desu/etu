@@ -20,7 +20,7 @@ import (
 func loadAppConfig() *config.Config {
 	appCfg, err := config.LoadConfig()
 	if err != nil {
-		logger.Log.Debugw("Failed to load config, using defaults", "error", err)
+		logger.Log.Debug("Failed to load config, using defaults", "error", err)
 		return nil
 	}
 	return appCfg
@@ -45,7 +45,7 @@ func getParserForFile(filePath string, format models.FormatType) (parsers.Parser
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to detect format: %w", err)
 		}
-		logger.Log.Debugw("Auto-detected format", "format", format)
+		logger.Log.Debug("Auto-detected format", "format", format)
 	}
 
 	parser, err := registry.GetParser(format)
@@ -185,7 +185,7 @@ func isQuietOutput() bool {
 
 func logVerbose(msg string, keyvals ...any) {
 	if !isQuietOutput() {
-		logger.Log.Infow(msg, keyvals...)
+		logger.Log.Info(msg, keyvals...)
 	}
 }
 
