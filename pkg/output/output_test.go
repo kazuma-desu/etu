@@ -430,6 +430,6 @@ func TestAllFormats(t *testing.T) {
 
 	// Verify it's a copy by modifying the returned slice
 	originalLen := len(formats)
-	formats = append(formats, Format("extra"))
+	_ = append(formats, Format("extra"))
 	assert.Len(t, AllFormats(), originalLen)
 }
