@@ -62,7 +62,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	noValidate := resolveNoValidateOption(applyOpts.NoValidate, cmd.Flags().Changed("no-validate"), appCfg)
 	strict := resolveStrictOption(applyOpts.Strict, cmd.Flags().Changed("strict"), appCfg)
 
-	pairs, err := parseConfigFile(applyOpts.FilePath, applyOpts.Format, appCfg)
+	pairs, err := parseConfigFile(ctx, applyOpts.FilePath, applyOpts.Format, appCfg)
 	if err != nil {
 		return err
 	}

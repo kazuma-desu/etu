@@ -79,7 +79,7 @@ func runDiff(_ *cobra.Command, _ []string) error {
 	appCfg := loadAppConfig()
 
 	// Parse the configuration file
-	pairs, err := parseConfigFile(diffOpts.FilePath, models.FormatAuto, appCfg)
+	pairs, err := parseConfigFile(ctx, diffOpts.FilePath, models.FormatAuto, appCfg)
 	if err != nil {
 		return err
 	}

@@ -47,9 +47,12 @@ func init() {
 }
 
 func runValidate(cmd *cobra.Command, _ []string) error {
+	ctx, cancel := getOperationContext()
+	defer cancel()
+
 	appCfg := loadAppConfig()
 
-	pairs, err := parseConfigFile(validateOpts.FilePath, validateOpts.Format, appCfg)
+	pairs, err := parseConfigFile(ctx, validateOpts.FilePath, validateOpts.Format, appCfg)
 	if err != nil {
 		return err
 	}
