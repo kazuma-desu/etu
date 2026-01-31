@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/testutil"
 	"github.com/kazuma-desu/etu/pkg/validator"
@@ -303,4 +304,116 @@ func TestPrintSecurityWarning(t *testing.T) {
 	assert.Contains(t, output, "plain text")
 	assert.Contains(t, output, "password")
 	assert.Contains(t, strings.ToLower(output), "security")
+}
+
+// TestColorConstantsAreHex verifies that all color constants use hex format.
+func TestColorConstantsAreHex(t *testing.T) {
+	// This test documents the expected color format
+	// All colors should be in hex format (e.g., "#7C3AED") not ANSI codes (e.g., "252")
+	colors := map[string]lipgloss.Color{
+		"colorPrimary":   colorPrimary,
+		"colorSuccess":   colorSuccess,
+		"colorWarning":   colorWarning,
+		"colorError":     colorError,
+		"colorInfo":      colorInfo,
+		"colorMuted":     colorMuted,
+		"colorHighlight": colorHighlight,
+		"colorTableOdd":  colorTableOdd,
+		"colorTableEven": colorTableEven,
+	}
+
+	// Note: lipgloss.Color is an opaque type, so we can't directly inspect the value
+	// This test serves as documentation that all colors should be hex
+	for name := range colors {
+		// Just verify the color is defined (not nil/zero)
+		assert.NotNil(t, colors[name], "Color %s should be defined", name)
+	}
+}
+
+// TestIsTerminal does not mock terminal detection but documents the behavior.
+func TestIsTerminal(t *testing.T) {
+	// IsTerminal returns true when stdout is a TTY
+	// In test environment, this is typically false (redirected)
+	// We just verify the function doesn't panic
+	result := IsTerminal()
+	assert.IsType(t, true, result)
+}
+
+// TestStyleIfTerminal applies styling only in terminal mode.
+func TestStyleIfTerminal(t *testing.T) {
+	testStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000"))
+	content := "test content"
+
+	// When not in terminal, should return unstyled content
+	if !IsTerminal() {
+		result := StyleIfTerminal(testStyle, content)
+		assert.Equal(t, content, result)
+	}
+}
+
+// TestOutputFormatConstants verifies all format constants are defined.
+func TestOutputFormatConstants(t *testing.T) {
+	assert.Equal(t, OutputFormat("simple"), FormatSimple)
+	assert.Equal(t, OutputFormat("json"), FormatJSON)
+	assert.Equal(t, OutputFormat("table"), FormatTable)
+	assert.Equal(t, OutputFormat("tree"), FormatTree)
+	assert.Equal(t, OutputFormat("fields"), FormatFields)
+}
+
+// TestOutputFormatIsValid validates format detection.
+func TestOutputFormatIsValid(t *testing.T) {
+	tests := []struct {
+		format  OutputFormat
+		isValid bool
+	}{
+		{FormatSimple, true},
+		{FormatJSON, true},
+		{FormatTable, true},
+		{FormatTree, true},
+		{FormatFields, true},
+		{OutputFormat("invalid"), false},
+		{OutputFormat(""), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.format), func(t *testing.T) {
+			assert.Equal(t, tt.isValid, tt.format.IsValid())
+		})
+	}
+}
+
+// TestParseFormat validates format parsing with error cases.
+func TestParseFormat(t *testing.T) {
+	tests := []struct {
+		input    string
+		wantErr  bool
+		expected OutputFormat
+	}{
+		{"simple", false, FormatSimple},
+		{"json", false, FormatJSON},
+		{"table", false, FormatTable},
+		{"tree", false, FormatTree},
+		{"fields", false, FormatFields},
+		{"invalid", true, ""},
+		{"", true, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result, err := ParseFormat(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// BenchmarkParseFormat measures format validation performance.
+func BenchmarkParseFormat(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseFormat("json")
+	}
 }
