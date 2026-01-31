@@ -60,7 +60,7 @@ func TestResolveFormat(t *testing.T) {
 	}
 }
 
-func TestWrapTimeoutError(t *testing.T) {
+func TestWrapContextError(t *testing.T) {
 	tests := []struct {
 		name    string
 		wantMsg string
@@ -79,6 +79,12 @@ func TestWrapTimeoutError(t *testing.T) {
 			wantMsg: "operation timed out",
 		},
 		{
+			name:    "context canceled gets wrapped",
+			err:     context.Canceled,
+			wantNil: false,
+			wantMsg: "operation canceled by user",
+		},
+		{
 			name:    "other errors pass through",
 			err:     errors.New("some other error"),
 			wantNil: false,
@@ -88,19 +94,19 @@ func TestWrapTimeoutError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := wrapTimeoutError(tt.err)
+			got := wrapContextError(tt.err)
 			if tt.wantNil {
 				if got != nil {
-					t.Errorf("wrapTimeoutError() = %v, want nil", got)
+					t.Errorf("wrapContextError() = %v, want nil", got)
 				}
 				return
 			}
 			if got == nil {
-				t.Errorf("wrapTimeoutError() = nil, want error containing %q", tt.wantMsg)
+				t.Errorf("wrapContextError() = nil, want error containing %q", tt.wantMsg)
 				return
 			}
 			if !strings.Contains(got.Error(), tt.wantMsg) {
-				t.Errorf("wrapTimeoutError() = %v, want error containing %q", got, tt.wantMsg)
+				t.Errorf("wrapContextError() = %v, want error containing %q", got, tt.wantMsg)
 			}
 		})
 	}

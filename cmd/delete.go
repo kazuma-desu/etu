@@ -83,7 +83,7 @@ func runDeleteSingle(ctx context.Context, key string) error {
 
 	deleted, err := etcdClient.Delete(ctx, key)
 	if err != nil {
-		return wrapTimeoutError(fmt.Errorf("failed to delete key: %w", err))
+		return wrapContextError(fmt.Errorf("failed to delete key: %w", err))
 	}
 
 	if deleted == 0 {
@@ -126,7 +126,7 @@ func runDeletePrefix(ctx context.Context, prefix string) error {
 
 	deleted, err := etcdClient.DeletePrefix(ctx, prefix)
 	if err != nil {
-		return wrapTimeoutError(fmt.Errorf("failed to delete prefix: %w", err))
+		return wrapContextError(fmt.Errorf("failed to delete prefix: %w", err))
 	}
 
 	output.Success(fmt.Sprintf("Deleted %d keys with prefix: %s", deleted, prefix))
@@ -139,7 +139,7 @@ func fetchKeysWithPrefix(ctx context.Context, etcdClient client.EtcdClient, pref
 		KeysOnly: true,
 	})
 	if err != nil {
-		return nil, wrapTimeoutError(fmt.Errorf("failed to fetch keys: %w", err))
+		return nil, wrapContextError(fmt.Errorf("failed to fetch keys: %w", err))
 	}
 
 	keys := make([]string, len(resp.Kvs))

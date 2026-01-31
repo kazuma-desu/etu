@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
@@ -73,15 +75,39 @@ func parseConfigFile(ctx context.Context, filePath string, flagFormat models.For
 }
 
 func getOperationContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), operationTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+
+	// Set up signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		select {
+		case <-sigChan:
+			logger.Log.Debug("Received interrupt signal, canceling operation")
+			signal.Stop(sigChan)
+			cancel()
+		case <-ctx.Done():
+			// Context canceled by timeout, clean up signal handler
+			signal.Stop(sigChan)
+		}
+	}()
+
+	return ctx, func() {
+		signal.Stop(sigChan)
+		cancel()
+	}
 }
 
-func wrapTimeoutError(err error) error {
+func wrapContextError(err error) error {
 	if err == nil {
 		return nil
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
 		return fmt.Errorf("operation timed out after %v: consider increasing --timeout", operationTimeout)
+	}
+	if errors.Is(err, context.Canceled) {
+		return fmt.Errorf("operation canceled by user")
 	}
 	return err
 }

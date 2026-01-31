@@ -116,7 +116,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 			output.Warning(fmt.Sprintf("Partial failure: %d/%d items applied before error",
 				result.Succeeded, result.Total))
 		}
-		return wrapTimeoutError(fmt.Errorf("failed to apply configuration: %w", err))
+		return wrapContextError(fmt.Errorf("failed to apply configuration: %w", err))
 	}
 
 	if recorder, ok := etcdClient.(client.OperationRecorder); ok {
