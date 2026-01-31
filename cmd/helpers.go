@@ -192,15 +192,15 @@ func isQuietOutput() bool {
 	return outputFormat == output.FormatJSON.String()
 }
 
-func logVerbose(msg string, keyvals ...any) {
+func logVerbose(msg string, _ ...any) {
 	if !isQuietOutput() {
-		logger.Log.Info(msg, keyvals...)
+		output.Info(msg)
 	}
 }
 
 func logVerboseInfo(msg string) {
 	if !isQuietOutput() {
-		logger.Log.Info(msg)
+		output.Info(msg)
 	}
 }
 
