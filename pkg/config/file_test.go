@@ -391,3 +391,140 @@ func TestUseContext_NonExistent(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 }
+
+func TestDeleteContext_SwitchesToAnotherContext(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	// Setup: current context is "dev", also have "prod" and "staging"
+	cfg := &Config{
+		CurrentContext: "dev",
+		Contexts: map[string]*ContextConfig{
+			"dev": {
+				Endpoints: []string{"http://localhost:2379"},
+			},
+			"prod": {
+				Endpoints: []string{"http://prod:2379"},
+			},
+			"staging": {
+				Endpoints: []string{"http://staging:2379"},
+			},
+		},
+	}
+	err := SaveConfig(cfg)
+	require.NoError(t, err)
+
+	// Delete current context "dev" - should switch to another context
+	err = DeleteContext("dev")
+	require.NoError(t, err)
+
+	cfg, err = LoadConfig()
+	require.NoError(t, err)
+	assert.Len(t, cfg.Contexts, 2)
+	assert.NotContains(t, cfg.Contexts, "dev")
+	// Current context should be switched to one of the remaining contexts
+	assert.NotEmpty(t, cfg.CurrentContext)
+	assert.Contains(t, cfg.Contexts, cfg.CurrentContext)
+}
+
+func TestLoadConfig_CorruptedFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	// Create a corrupted config file
+	configPath := filepath.Join(tmpDir, ".config", "etu", "config.yaml")
+	err := os.MkdirAll(filepath.Dir(configPath), 0700)
+	require.NoError(t, err)
+
+	err = os.WriteFile(configPath, []byte("invalid: yaml: content: ["), 0600)
+	require.NoError(t, err)
+
+	// Try to load corrupted config
+	_, err = LoadConfig()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse config file")
+}
+
+func TestLoadConfig_NilContexts(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	// Create a config file with nil contexts (edge case)
+	configPath := filepath.Join(tmpDir, ".config", "etu", "config.yaml")
+	err := os.MkdirAll(filepath.Dir(configPath), 0700)
+	require.NoError(t, err)
+
+	// YAML with no contexts field
+	err = os.WriteFile(configPath, []byte("current-context: dev\nlog-level: info\n"), 0600)
+	require.NoError(t, err)
+
+	// Load should initialize empty contexts map
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.NotNil(t, cfg.Contexts)
+	assert.Empty(t, cfg.Contexts)
+}
+
+func TestGetEtcdConfig_NoContext(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	// Create empty config (no current context)
+	cfg := &Config{
+		Contexts: map[string]*ContextConfig{},
+	}
+	err := SaveConfig(cfg)
+	require.NoError(t, err)
+
+	// Try to get etcd config without current context
+	_, err = GetEtcdConfig()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "no current context set")
+}
+
+func TestGetEtcdConfigWithContext_ContextNotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	cfg := &Config{
+		Contexts: map[string]*ContextConfig{
+			"dev": {Endpoints: []string{"http://localhost:2379"}},
+		},
+	}
+	err := SaveConfig(cfg)
+	require.NoError(t, err)
+
+	// Try to get config for non-existent context
+	_, err = GetEtcdConfigWithContext("nonexistent")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestGetEtcdConfigWithContext_EmptyEndpoints(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	cfg := &Config{
+		Contexts: map[string]*ContextConfig{
+			"empty": {Endpoints: []string{}},
+		},
+	}
+	err := SaveConfig(cfg)
+	require.NoError(t, err)
+
+	_, err = GetEtcdConfigWithContext("empty")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "no etcd endpoints configured")
+}
