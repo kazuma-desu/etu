@@ -83,9 +83,9 @@ func TestDryRunClient_Watch(t *testing.T) {
 
 func TestWatchEventType(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		eventType WatchEventType
-		expected string
+		expected  string
 	}{
 		{"PUT", WatchEventPut, "PUT"},
 		{"DELETE", WatchEventDelete, "DELETE"},

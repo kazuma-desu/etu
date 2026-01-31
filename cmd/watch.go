@@ -106,7 +106,7 @@ func runWatch(_ *cobra.Command, args []string) error {
 		}
 
 		if resp.CompactRevision > 0 {
-			return fmt.Errorf("watch cancelled: revision %d has been compacted", resp.CompactRevision)
+			return fmt.Errorf("watch canceled: revision %d has been compacted", resp.CompactRevision)
 		}
 
 		for _, event := range resp.Events {
@@ -130,8 +130,8 @@ func printWatchEvent(event client.WatchEvent) error {
 		typeStr := string(event.Type)
 		fmt.Printf("[%s] rev=%d %s\n", typeStr, event.Revision, event.Key)
 
-		if event.PrevValue != "" {
-			fmt.Printf("  prev: %s\n", event.PrevValue)
+		if event.PrevValue != nil {
+			fmt.Printf("  prev: %s\n", *event.PrevValue)
 		}
 		if event.Type == client.WatchEventPut {
 			fmt.Printf("  value: %s\n", event.Value)
