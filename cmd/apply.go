@@ -6,7 +6,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/client"
-	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
 	"github.com/kazuma-desu/etu/pkg/validator"
@@ -81,14 +80,13 @@ func runApply(cmd *cobra.Command, _ []string) error {
 
 		if !result.Valid {
 			if !isQuietOutput() {
-				logger.Log.Error("Validation failed - not applying to etcd")
+				output.Error("Validation failed - not applying to etcd")
 			}
 			return fmt.Errorf("validation failed")
 		}
 
 		if !isQuietOutput() {
-			logger.Log.Info("Validation passed")
-			fmt.Println()
+			output.Info("Validation passed")
 		}
 	}
 

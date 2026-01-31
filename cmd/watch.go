@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/client"
-	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/output"
 )
 
@@ -85,7 +84,7 @@ func runWatch(_ *cobra.Command, args []string) error {
 		defer signal.Stop(sigChan)
 		select {
 		case <-sigChan:
-			logger.Log.Info("Stopping watch...")
+			output.Info("Stopping watch...")
 			cancel()
 		case <-ctx.Done():
 			// Context canceled elsewhere, exit cleanly
