@@ -7,19 +7,19 @@ import (
 	"strings"
 )
 
-// OutputFormat represents a supported output format.
-type OutputFormat string
+// Format represents a supported output format.
+type Format string
 
 const (
-	FormatSimple OutputFormat = "simple"
-	FormatJSON   OutputFormat = "json"
-	FormatTable  OutputFormat = "table"
-	FormatTree   OutputFormat = "tree"
-	FormatFields OutputFormat = "fields"
+	FormatSimple Format = "simple"
+	FormatJSON   Format = "json"
+	FormatTable  Format = "table"
+	FormatTree   Format = "tree"
+	FormatFields Format = "fields"
 )
 
 // formatSet for O(1) validation lookup.
-var formatSet = map[OutputFormat]struct{}{
+var formatSet = map[Format]struct{}{
 	FormatSimple: {},
 	FormatJSON:   {},
 	FormatTable:  {},
@@ -28,7 +28,7 @@ var formatSet = map[OutputFormat]struct{}{
 }
 
 // AllFormats contains all supported formats.
-var AllFormats = []OutputFormat{
+var AllFormats = []Format{
 	FormatSimple,
 	FormatJSON,
 	FormatTable,
@@ -37,20 +37,20 @@ var AllFormats = []OutputFormat{
 }
 
 // String returns the string representation.
-func (f OutputFormat) String() string {
+func (f Format) String() string {
 	return string(f)
 }
 
 // IsValid checks if the format is supported (O(1) lookup).
-func (f OutputFormat) IsValid() bool {
+func (f Format) IsValid() bool {
 	_, ok := formatSet[f]
 	return ok
 }
 
-// ParseFormat parses a string into OutputFormat, validating it.
+// ParseFormat parses a string into Format, validating it.
 // Maintains backward-compatible error message format.
-func ParseFormat(s string) (OutputFormat, error) {
-	f := OutputFormat(s)
+func ParseFormat(s string) (Format, error) {
+	f := Format(s)
 	if !f.IsValid() {
 		return "", fmt.Errorf("invalid output format: %s (use simple, json, table, tree, or fields)", s)
 	}

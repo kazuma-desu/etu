@@ -351,19 +351,19 @@ func TestStyleIfTerminal(t *testing.T) {
 	}
 }
 
-// TestOutputFormatConstants verifies all format constants are defined.
-func TestOutputFormatConstants(t *testing.T) {
-	assert.Equal(t, OutputFormat("simple"), FormatSimple)
-	assert.Equal(t, OutputFormat("json"), FormatJSON)
-	assert.Equal(t, OutputFormat("table"), FormatTable)
-	assert.Equal(t, OutputFormat("tree"), FormatTree)
-	assert.Equal(t, OutputFormat("fields"), FormatFields)
+// TestFormatConstants verifies all format constants are defined.
+func TestFormatConstants(t *testing.T) {
+	assert.Equal(t, Format("simple"), FormatSimple)
+	assert.Equal(t, Format("json"), FormatJSON)
+	assert.Equal(t, Format("table"), FormatTable)
+	assert.Equal(t, Format("tree"), FormatTree)
+	assert.Equal(t, Format("fields"), FormatFields)
 }
 
-// TestOutputFormatIsValid validates format detection.
-func TestOutputFormatIsValid(t *testing.T) {
+// TestFormatIsValid validates format detection.
+func TestFormatIsValid(t *testing.T) {
 	tests := []struct {
-		format  OutputFormat
+		format  Format
 		isValid bool
 	}{
 		{FormatSimple, true},
@@ -371,8 +371,8 @@ func TestOutputFormatIsValid(t *testing.T) {
 		{FormatTable, true},
 		{FormatTree, true},
 		{FormatFields, true},
-		{OutputFormat("invalid"), false},
-		{OutputFormat(""), false},
+		{Format("invalid"), false},
+		{Format(""), false},
 	}
 
 	for _, tt := range tests {
@@ -387,7 +387,7 @@ func TestParseFormat(t *testing.T) {
 	tests := []struct {
 		input    string
 		wantErr  bool
-		expected OutputFormat
+		expected Format
 	}{
 		{"simple", false, FormatSimple},
 		{"json", false, FormatJSON},
