@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	clientv3 "go.etcd.io/etcd/client/v3"
-
 	"github.com/kazuma-desu/etu/pkg/models"
 )
 
@@ -104,7 +102,7 @@ func (d *DryRunClient) Close() error {
 	return nil
 }
 
-func (d *DryRunClient) Status(_ context.Context, _ string) (*clientv3.StatusResponse, error) {
+func (d *DryRunClient) Status(_ context.Context, _ string) (*StatusResponse, error) {
 	return nil, fmt.Errorf("dry-run mode: status check not available")
 }
 

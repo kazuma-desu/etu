@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/kazuma-desu/etu/pkg/models"
 )
@@ -411,7 +410,7 @@ func TestMockClient_CloseWithCustomFunc(t *testing.T) {
 func TestMockClient_StatusWithCustomFunc(t *testing.T) {
 	expectedErr := errors.New("status check failed")
 	mock := NewMockClient()
-	mock.StatusFunc = func(_ context.Context, _ string) (*clientv3.StatusResponse, error) {
+	mock.StatusFunc = func(_ context.Context, _ string) (*StatusResponse, error) {
 		return nil, expectedErr
 	}
 
