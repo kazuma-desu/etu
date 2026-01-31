@@ -18,21 +18,23 @@ const (
 	FormatFields Format = "fields"
 )
 
-// formatSet for O(1) validation lookup.
-var formatSet = map[Format]struct{}{
-	FormatSimple: {},
-	FormatJSON:   {},
-	FormatTable:  {},
-	FormatTree:   {},
-	FormatFields: {},
-}
-
 var allFormats = []Format{
 	FormatSimple,
 	FormatJSON,
 	FormatTable,
 	FormatTree,
 	FormatFields,
+}
+
+// formatSet is derived from allFormats for O(1) validation lookup.
+// Initialized in init() to ensure it stays in sync with allFormats.
+var formatSet map[Format]struct{}
+
+func init() {
+	formatSet = make(map[Format]struct{}, len(allFormats))
+	for _, f := range allFormats {
+		formatSet[f] = struct{}{}
+	}
 }
 
 // AllFormats returns a copy of all supported formats.
@@ -58,7 +60,11 @@ func (f Format) IsValid() bool {
 func ParseFormat(s string) (Format, error) {
 	f := Format(s)
 	if !f.IsValid() {
-		return "", fmt.Errorf("invalid output format: %s (use simple, json, table, tree, or fields)", s)
+		validFormats := make([]string, len(allFormats))
+		for i, format := range allFormats {
+			validFormats[i] = string(format)
+		}
+		return "", fmt.Errorf("invalid output format: %s (use %s)", s, strings.Join(validFormats, ", "))
 	}
 	return f, nil
 }
