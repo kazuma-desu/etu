@@ -192,8 +192,12 @@ func isQuietOutput() bool {
 	return outputFormat == output.FormatJSON.String()
 }
 
-func logVerbose(msg string, _ ...any) {
+func logVerbose(msg string, keyvals ...any) {
 	if !isQuietOutput() {
+		// Format keyvals into message if provided
+		if len(keyvals) > 0 {
+			msg = fmt.Sprintf("%s %v", msg, keyvals)
+		}
 		output.Info(msg)
 	}
 }
