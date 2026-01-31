@@ -60,7 +60,7 @@ func TestResolveFormat(t *testing.T) {
 	}
 }
 
-func TestWrapTimeoutError(t *testing.T) {
+func TestWrapContextError(t *testing.T) {
 	tests := []struct {
 		name    string
 		wantMsg string
@@ -77,6 +77,12 @@ func TestWrapTimeoutError(t *testing.T) {
 			err:     context.DeadlineExceeded,
 			wantNil: false,
 			wantMsg: "operation timed out",
+		},
+		{
+			name:    "context canceled gets wrapped",
+			err:     context.Canceled,
+			wantNil: false,
+			wantMsg: "operation canceled by user",
 		},
 		{
 			name:    "other errors pass through",

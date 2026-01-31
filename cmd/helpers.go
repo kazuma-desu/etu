@@ -85,6 +85,7 @@ func getOperationContext() (context.Context, context.CancelFunc) {
 		select {
 		case <-sigChan:
 			logger.Log.Debug("Received interrupt signal, canceling operation")
+			signal.Stop(sigChan)
 			cancel()
 		case <-ctx.Done():
 			// Context canceled by timeout, clean up signal handler
