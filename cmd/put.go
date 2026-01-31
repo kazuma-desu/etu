@@ -83,7 +83,7 @@ func runPut(_ *cobra.Command, args []string) error {
 	defer cleanup()
 
 	if err := etcdClient.Put(ctx, key, value); err != nil {
-		return wrapTimeoutError(fmt.Errorf("failed to put key: %w", err))
+		return wrapContextError(fmt.Errorf("failed to put key: %w", err))
 	}
 
 	if putOpts.dryRun {
