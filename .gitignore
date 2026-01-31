@@ -48,7 +48,6 @@ Thumbs.db
 *.tmp
 *.bak
 *.log
-docs/
 
 # Don't ignore empty internal directory
 !internal/.gitkeep
