@@ -86,7 +86,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		}
 
 		if !isQuietOutput() {
-			output.Info("Validation passed")
+			output.Success("Validation passed")
 		}
 	}
 
