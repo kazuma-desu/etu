@@ -28,9 +28,9 @@ func PrintConfigPairs(pairs []*models.ConfigPair, jsonOutput bool) error {
 	fmt.Println()
 
 	for _, pair := range pairs {
-		key := keyStyle.Render(pair.Key)
+		key := StyleIfTerminal(keyStyle, pair.Key)
 		value := formatValue(pair.Value)
-		fmt.Printf("%s\n%s\n\n", key, valueStyle.Render(value))
+		fmt.Printf("%s\n%s\n\n", key, StyleIfTerminal(valueStyle, value))
 	}
 
 	return nil
@@ -83,8 +83,8 @@ func printConfigPairsTable(pairs []*models.ConfigPair) error {
 // PrintValidationResult prints validation results with styling
 func PrintValidationResult(result *validator.ValidationResult, strict bool) {
 	if len(result.Issues) == 0 {
-		msg := successStyle.Render("✓ Validation passed - no issues found")
-		fmt.Println(successPanelStyle.Render(msg))
+		msg := StyleIfTerminal(successStyle, "✓ Validation passed - no issues found")
+		fmt.Println(StyleIfTerminal(successPanelStyle, msg))
 		return
 	}
 
@@ -102,16 +102,16 @@ func PrintValidationResult(result *validator.ValidationResult, strict bool) {
 	// Print summary
 	var summary strings.Builder
 	if errorCount > 0 {
-		summary.WriteString(errorStyle.Render(fmt.Sprintf("✗ %d error(s)", errorCount)))
+		summary.WriteString(StyleIfTerminal(errorStyle, fmt.Sprintf("✗ %d error(s)", errorCount)))
 	}
 	if warningCount > 0 {
 		if summary.Len() > 0 {
 			summary.WriteString(", ")
 		}
-		summary.WriteString(warningStyle.Render(fmt.Sprintf("⚠ %d warning(s)", warningCount)))
+		summary.WriteString(StyleIfTerminal(warningStyle, fmt.Sprintf("⚠ %d warning(s)", warningCount)))
 	}
 
-	fmt.Println(infoPanelStyle.Render(summary.String()))
+	fmt.Println(StyleIfTerminal(infoPanelStyle, summary.String()))
 	fmt.Println()
 
 	// Print each issue
@@ -126,20 +126,20 @@ func PrintValidationResult(result *validator.ValidationResult, strict bool) {
 			style = warningStyle
 		}
 
-		key := keyStyle.Render(issue.Key)
+		key := StyleIfTerminal(keyStyle, issue.Key)
 		msg := fmt.Sprintf("%s %s: %s", prefix, key, issue.Message)
-		fmt.Println(style.Render(msg))
+		fmt.Println(StyleIfTerminal(style, msg))
 	}
 	fmt.Println()
 
 	// Print final verdict
 	if result.Valid {
-		fmt.Println(successStyle.Render("✓ Validation passed"))
+		fmt.Println(StyleIfTerminal(successStyle, "✓ Validation passed"))
 	} else {
 		if strict && warningCount > 0 && errorCount == 0 {
-			fmt.Println(errorStyle.Render("✗ Validation failed (strict mode: warnings treated as errors)"))
+			fmt.Println(StyleIfTerminal(errorStyle, "✗ Validation failed (strict mode: warnings treated as errors)"))
 		} else {
-			fmt.Println(errorStyle.Render("✗ Validation failed"))
+			fmt.Println(StyleIfTerminal(errorStyle, "✗ Validation failed"))
 		}
 	}
 }
@@ -226,37 +226,35 @@ func hasOnlyWarnings(result *validator.ValidationResult) bool {
 
 // PrintDryRun prints what would be applied in a dry run
 func PrintDryRun(pairs []*models.ConfigPair) {
-	title := warningStyle.Render(fmt.Sprintf("DRY RUN - Would apply %d configuration items", len(pairs)))
-	fmt.Println(warningPanelStyle.Render(title))
+	title := StyleIfTerminal(warningStyle, fmt.Sprintf("DRY RUN - Would apply %d configuration items", len(pairs)))
+	fmt.Println(StyleIfTerminal(warningPanelStyle, title))
 	fmt.Println()
 
 	for i, pair := range pairs {
 		value := formatValue(pair.Value)
-		key := keyStyle.Render(pair.Key)
+		key := StyleIfTerminal(keyStyle, pair.Key)
 
-		// Show progress indicator
 		progress := fmt.Sprintf("[%d/%d]", i+1, len(pairs))
-		fmt.Printf("%s %s → %s\n", valueStyle.Render(progress), successStyle.Render("PUT"), key)
+		fmt.Printf("%s %s → %s\n", StyleIfTerminal(valueStyle, progress), StyleIfTerminal(successStyle, "PUT"), key)
 
-		// Show the value being written
-		fmt.Printf("%s\n\n", valueStyle.Render(value))
+		fmt.Printf("%s\n\n", StyleIfTerminal(valueStyle, value))
 	}
 
-	fmt.Println(warningStyle.Render("DRY RUN complete - no changes made to etcd"))
+	fmt.Println(StyleIfTerminal(warningStyle, "DRY RUN complete - no changes made to etcd"))
 }
 
 // PrintApplyProgress prints progress during apply operation
 func PrintApplyProgress(current, total int, key string) {
 	progress := fmt.Sprintf("[%d/%d]", current, total)
-	k := keyStyle.Render(key)
+	k := StyleIfTerminal(keyStyle, key)
 	logger.Log.Info(fmt.Sprintf("%s Applying %s", progress, k))
 }
 
 // PrintApplySuccess prints success message after apply
 func PrintApplySuccess(count int) {
-	msg := successStyle.Render(fmt.Sprintf("✓ Successfully applied %d items to etcd", count))
+	msg := StyleIfTerminal(successStyle, fmt.Sprintf("✓ Successfully applied %d items to etcd", count))
 	fmt.Println()
-	fmt.Println(successPanelStyle.Render(msg))
+	fmt.Println(StyleIfTerminal(successPanelStyle, msg))
 }
 
 // PrintApplyResultsWithFormat prints apply results in the specified format
@@ -524,8 +522,8 @@ func printConfigViewTable(cfg *config.Config) error {
 
 // PrintError prints an error message
 func PrintError(err error) {
-	msg := errorStyle.Render(fmt.Sprintf("✗ Error: %v", err))
-	fmt.Println(errorPanelStyle.Render(msg))
+	msg := StyleIfTerminal(errorStyle, fmt.Sprintf("✗ Error: %v", err))
+	fmt.Println(StyleIfTerminal(errorPanelStyle, msg))
 }
 
 // formatValue is a package-local alias to models.FormatValue for backward compatibility.
@@ -550,38 +548,38 @@ func printJSON(pairs []*models.ConfigPair) error {
 
 // Info prints an info message
 func Info(msg string) {
-	fmt.Println(valueStyle.Render("⋯ " + msg))
+	fmt.Println(StyleIfTerminal(valueStyle, "⋯ "+msg))
 }
 
 // Success prints a success message
 func Success(msg string) {
-	fmt.Println(successStyle.Render("✓ " + msg))
+	fmt.Println(StyleIfTerminal(successStyle, "✓ "+msg))
 }
 
 // Error prints an error message
 func Error(msg string) {
-	fmt.Println(errorStyle.Render("✗ " + msg))
+	fmt.Println(StyleIfTerminal(errorStyle, "✗ "+msg))
 }
 
 // Warning prints a warning message
 func Warning(msg string) {
-	fmt.Println(warningStyle.Render("⚠ " + msg))
+	fmt.Println(StyleIfTerminal(warningStyle, "⚠ "+msg))
 }
 
 // Prompt prints a styled prompt
 func Prompt(msg string) {
-	fmt.Print(keyStyle.Render("? ") + msg)
+	fmt.Print(StyleIfTerminal(keyStyle, "? ") + msg)
 }
 
 // PrintSecurityWarning prints the password storage security warning
 func PrintSecurityWarning() {
 	fmt.Println()
 	Warning("Security Warning:")
-	fmt.Println("  Your password is stored in plain text in the config file.")
-	fmt.Println("  For better security:")
-	fmt.Println("    - Use --password flag at runtime instead of storing it")
-	fmt.Println("    - Use --password-stdin for CI/CD pipelines")
-	fmt.Println("    - Ensure config file permissions are restrictive (0600)")
+	fmt.Println(StyleIfTerminal(valueStyle, "  Your password is stored in plain text in the config file."))
+	fmt.Println(StyleIfTerminal(valueStyle, "  For better security:"))
+	fmt.Println(StyleIfTerminal(valueStyle, "    - Use --password flag at runtime instead of storing it"))
+	fmt.Println(StyleIfTerminal(valueStyle, "    - Use --password-stdin for CI/CD pipelines"))
+	fmt.Println(StyleIfTerminal(valueStyle, "    - Ensure config file permissions are restrictive (0600)"))
 }
 
 // PrintTree renders etcd configuration as a tree structure
@@ -596,11 +594,12 @@ func PrintTree(pairs []*models.ConfigPair) error {
 
 // buildEtcdTree builds a lipgloss tree from config pairs
 func buildEtcdTree(pairs []*models.ConfigPair) *tree.Tree {
-	// Create root
 	root := tree.Root("/").
-		RootStyle(treeRootStyle).
-		Enumerator(tree.RoundedEnumerator).
-		EnumeratorStyle(treeEnumeratorStyle)
+		Enumerator(tree.RoundedEnumerator)
+
+	if IsTerminal() {
+		root = root.RootStyle(treeRootStyle).EnumeratorStyle(treeEnumeratorStyle)
+	}
 
 	// Build hierarchical structure
 	pathMap := make(map[string]*tree.Tree)
@@ -628,21 +627,20 @@ func buildEtcdTree(pairs []*models.ConfigPair) *tree.Tree {
 			}
 			currentPath = currentPath + "/" + part
 
-			// Check if this path already exists
 			if _, exists := pathMap[currentPath]; !exists {
 				parent := pathMap[parentPath]
 
-				// Last part = leaf node with value
 				if i == len(parts)-1 {
 					valueStr := formatTreeValue(pair.Value)
-					display := treeKeyStyle.Render(part) + " " + treeValueStyle.Render(valueStr)
+					display := StyleIfTerminal(treeKeyStyle, part) + " " + StyleIfTerminal(treeValueStyle, valueStr)
 					leaf := tree.New().Root(display)
 					parent.Child(leaf)
 				} else {
-					// Intermediate folder
 					folder := tree.New().
-						Root(treeFolderStyle.Render(part + "/")).
-						EnumeratorStyle(treeEnumeratorStyle)
+						Root(StyleIfTerminal(treeFolderStyle, part+"/"))
+					if IsTerminal() {
+						folder = folder.EnumeratorStyle(treeEnumeratorStyle)
+					}
 					parent.Child(folder)
 					pathMap[currentPath] = folder
 				}

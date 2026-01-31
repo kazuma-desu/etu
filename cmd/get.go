@@ -170,23 +170,20 @@ func printSimple(resp *client.GetResponse) {
 	for _, kv := range resp.Kvs {
 		switch {
 		case getOpts.printValue:
-			// Only print value (useful for scripting)
 			fmt.Println(kv.Value)
 		case getOpts.keysOnly:
-			// Only print key
 			fmt.Println(kv.Key)
 		case getOpts.showMetadata:
-			// Print with metadata
-			fmt.Printf("%s\n", kv.Key)
-			fmt.Printf("%s\n", kv.Value)
-			fmt.Printf("CreateRevision: %d, ModRevision: %d, Version: %d\n",
-				kv.CreateRevision, kv.ModRevision, kv.Version)
-			if kv.Lease > 0 {
-				fmt.Printf("Lease: %d\n", kv.Lease)
+			meta := [][2]string{
+				{"CreateRevision", fmt.Sprintf("%d", kv.CreateRevision)},
+				{"ModRevision", fmt.Sprintf("%d", kv.ModRevision)},
+				{"Version", fmt.Sprintf("%d", kv.Version)},
 			}
-			fmt.Println()
+			if kv.Lease > 0 {
+				meta = append(meta, [2]string{"Lease", fmt.Sprintf("%d", kv.Lease)})
+			}
+			output.KeyValueWithMetadata(kv.Key, kv.Value, meta)
 		default:
-			// Standard key-value output (etcdctl compatible)
 			fmt.Println(kv.Key)
 			fmt.Println(kv.Value)
 		}
@@ -275,20 +272,21 @@ func printTable(resp *client.GetResponse) error {
 }
 
 func printFields(resp *client.GetResponse) {
-	for i, kv := range resp.Kvs {
-		if i > 0 {
-			fmt.Println()
+	for _, kv := range resp.Kvs {
+		meta := [][2]string{
+			{"CreateRevision", fmt.Sprintf("%d", kv.CreateRevision)},
+			{"ModRevision", fmt.Sprintf("%d", kv.ModRevision)},
+			{"Version", fmt.Sprintf("%d", kv.Version)},
 		}
-		fmt.Printf("Key:            %s\n", kv.Key)
-		if !getOpts.keysOnly {
-			fmt.Printf("Value:          %s\n", kv.Value)
-		}
-		fmt.Printf("CreateRevision: %d\n", kv.CreateRevision)
-		fmt.Printf("ModRevision:    %d\n", kv.ModRevision)
-		fmt.Printf("Version:        %d\n", kv.Version)
 		if kv.Lease > 0 {
-			fmt.Printf("Lease:          %d\n", kv.Lease)
+			meta = append(meta, [2]string{"Lease", fmt.Sprintf("%d", kv.Lease)})
 		}
+
+		value := kv.Value
+		if getOpts.keysOnly {
+			value = ""
+		}
+		output.KeyValueWithMetadata(kv.Key, value, meta)
 	}
 }
 

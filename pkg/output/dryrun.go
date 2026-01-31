@@ -21,29 +21,29 @@ func PrintDryRunOperations(ops []client.Operation, format string) error {
 }
 
 func printDryRunSimple(ops []client.Operation) error {
-	title := warningStyle.Render(fmt.Sprintf("DRY RUN - Would perform %d operations", len(ops)))
-	fmt.Println(warningPanelStyle.Render(title))
+	title := StyleIfTerminal(warningStyle, fmt.Sprintf("DRY RUN - Would perform %d operations", len(ops)))
+	fmt.Println(StyleIfTerminal(warningPanelStyle, title))
 	fmt.Println()
 
 	for i, op := range ops {
 		progress := fmt.Sprintf("[%d/%d]", i+1, len(ops))
 
-		var actionStyle string
+		var actionStr string
 		if op.Type == "PUT" {
-			actionStyle = successStyle.Render("PUT")
+			actionStr = StyleIfTerminal(successStyle, "PUT")
 		} else {
-			actionStyle = keyStyle.Render(op.Type)
+			actionStr = StyleIfTerminal(keyStyle, op.Type)
 		}
 
-		key := keyStyle.Render(op.Key)
-		fmt.Printf("%s %s → %s\n", valueStyle.Render(progress), actionStyle, key)
+		key := StyleIfTerminal(keyStyle, op.Key)
+		fmt.Printf("%s %s → %s\n", StyleIfTerminal(valueStyle, progress), actionStr, key)
 
 		if op.Value != "" {
-			fmt.Printf("%s\n\n", valueStyle.Render(op.Value))
+			fmt.Printf("%s\n\n", StyleIfTerminal(valueStyle, op.Value))
 		}
 	}
 
-	fmt.Println(warningStyle.Render("DRY RUN complete - no changes made to etcd"))
+	fmt.Println(StyleIfTerminal(warningStyle, "DRY RUN complete - no changes made to etcd"))
 	return nil
 }
 

@@ -83,40 +83,37 @@ func printDiffSimple(result *DiffResult, showUnchanged bool) error {
 
 	// Print added
 	if len(added) > 0 {
-		fmt.Println(addedStyle.Render(fmt.Sprintf("Added (%d):", len(added))))
+		fmt.Println(StyleIfTerminal(addedStyle, fmt.Sprintf("Added (%d):", len(added))))
 		for _, e := range added {
-			fmt.Printf("  %s %s\n", addedStyle.Render("+"), keyStyle.Render(e.Key))
-			fmt.Printf("    %s\n", valueStyle.Render(e.NewValue))
+			fmt.Printf("  %s %s\n", StyleIfTerminal(addedStyle, "+"), StyleIfTerminal(keyStyle, e.Key))
+			fmt.Printf("    %s\n", StyleIfTerminal(valueStyle, e.NewValue))
 		}
 		fmt.Println()
 	}
 
-	// Print modified
 	if len(modified) > 0 {
-		fmt.Println(modifiedStyle.Render(fmt.Sprintf("Modified (%d):", len(modified))))
+		fmt.Println(StyleIfTerminal(modifiedStyle, fmt.Sprintf("Modified (%d):", len(modified))))
 		for _, e := range modified {
-			fmt.Printf("  %s %s\n", modifiedStyle.Render("~"), keyStyle.Render(e.Key))
-			fmt.Printf("    %sold: %s\n", oldValueStyle.Render("  "), oldValueStyle.Render(e.OldValue))
-			fmt.Printf("    %snew: %s\n", newValueStyle.Render("  "), newValueStyle.Render(e.NewValue))
+			fmt.Printf("  %s %s\n", StyleIfTerminal(modifiedStyle, "~"), StyleIfTerminal(keyStyle, e.Key))
+			fmt.Printf("    %sold: %s\n", StyleIfTerminal(oldValueStyle, "  "), StyleIfTerminal(oldValueStyle, e.OldValue))
+			fmt.Printf("    %snew: %s\n", StyleIfTerminal(newValueStyle, "  "), StyleIfTerminal(newValueStyle, e.NewValue))
 		}
 		fmt.Println()
 	}
 
-	// Print deleted
 	if len(deleted) > 0 {
-		fmt.Println(deletedStyle.Render(fmt.Sprintf("Deleted (%d):", len(deleted))))
+		fmt.Println(StyleIfTerminal(deletedStyle, fmt.Sprintf("Deleted (%d):", len(deleted))))
 		for _, e := range deleted {
-			fmt.Printf("  %s %s\n", deletedStyle.Render("-"), keyStyle.Render(e.Key))
-			fmt.Printf("    %s\n", oldValueStyle.Render(e.OldValue))
+			fmt.Printf("  %s %s\n", StyleIfTerminal(deletedStyle, "-"), StyleIfTerminal(keyStyle, e.Key))
+			fmt.Printf("    %s\n", StyleIfTerminal(oldValueStyle, e.OldValue))
 		}
 		fmt.Println()
 	}
 
-	// Print unchanged if requested
 	if len(unchanged) > 0 {
-		fmt.Println(unchangedStyle.Render(fmt.Sprintf("Unchanged (%d):", len(unchanged))))
+		fmt.Println(StyleIfTerminal(unchangedStyle, fmt.Sprintf("Unchanged (%d):", len(unchanged))))
 		for _, e := range unchanged {
-			fmt.Printf("  %s %s\n", unchangedStyle.Render("="), keyStyle.Render(e.Key))
+			fmt.Printf("  %s %s\n", StyleIfTerminal(unchangedStyle, "="), StyleIfTerminal(keyStyle, e.Key))
 		}
 		fmt.Println()
 	}
@@ -207,20 +204,20 @@ func printDiffTable(result *DiffResult, showUnchanged bool) error {
 
 	for i, e := range entries {
 		var status string
-		var statusStyle lipgloss.Style
+		var sStyle lipgloss.Style
 		switch e.Status {
 		case DiffStatusAdded:
 			status = "+"
-			statusStyle = addedStyle
+			sStyle = addedStyle
 		case DiffStatusModified:
 			status = "~"
-			statusStyle = modifiedStyle
+			sStyle = modifiedStyle
 		case DiffStatusDeleted:
 			status = "-"
-			statusStyle = deletedStyle
+			sStyle = deletedStyle
 		case DiffStatusUnchanged:
 			status = "="
-			statusStyle = unchangedStyle
+			sStyle = unchangedStyle
 		}
 
 		oldVal := e.OldValue
@@ -233,10 +230,10 @@ func printDiffTable(result *DiffResult, showUnchanged bool) error {
 		}
 
 		rows[i] = []string{
-			statusStyle.Render(status),
+			StyleIfTerminal(sStyle, status),
 			e.Key,
-			oldValueStyle.Render(oldVal),
-			newValueStyle.Render(newVal),
+			StyleIfTerminal(oldValueStyle, oldVal),
+			StyleIfTerminal(newValueStyle, newVal),
 		}
 	}
 

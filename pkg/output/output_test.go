@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/testutil"
 	"github.com/kazuma-desu/etu/pkg/validator"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPrintConfigPairs(t *testing.T) {
