@@ -378,6 +378,70 @@ func (c *Client) DeletePrefix(ctx context.Context, prefix string) (int64, error)
 	return resp.Deleted, nil
 }
 
+func (c *Client) Watch(ctx context.Context, key string, opts *WatchOptions) WatchChan {
+	watchChan := make(WatchChan)
+
+	go func() {
+		defer close(watchChan)
+
+		var clientOpts []clientv3.OpOption
+		if opts != nil {
+			if opts.Prefix {
+				clientOpts = append(clientOpts, clientv3.WithPrefix())
+			}
+			if opts.Revision > 0 {
+				clientOpts = append(clientOpts, clientv3.WithRev(opts.Revision))
+			}
+			if opts.PrevKV {
+				clientOpts = append(clientOpts, clientv3.WithPrevKV())
+			}
+		}
+
+		watcher := c.client.Watch(ctx, key, clientOpts...)
+
+		for watchResp := range watcher {
+			if watchResp.Err() != nil {
+				watchChan <- WatchResponse{Err: watchResp.Err()}
+				return
+			}
+
+			if watchResp.CompactRevision > 0 {
+				watchChan <- WatchResponse{CompactRevision: watchResp.CompactRevision}
+				return
+			}
+
+			events := make([]WatchEvent, 0, len(watchResp.Events))
+			for _, ev := range watchResp.Events {
+				event := WatchEvent{
+					Key:            string(ev.Kv.Key),
+					Value:          string(ev.Kv.Value),
+					Revision:       ev.Kv.ModRevision,
+					CreateRevision: ev.Kv.CreateRevision,
+					ModRevision:    ev.Kv.ModRevision,
+					Version:        ev.Kv.Version,
+				}
+
+				switch ev.Type {
+				case clientv3.EventTypePut:
+					event.Type = WatchEventPut
+				case clientv3.EventTypeDelete:
+					event.Type = WatchEventDelete
+				}
+
+				if ev.PrevKv != nil {
+					event.PrevValue = string(ev.PrevKv.Value)
+				}
+
+				events = append(events, event)
+			}
+
+			watchChan <- WatchResponse{Events: events}
+		}
+	}()
+
+	return watchChan
+}
+
 func (c *Client) Close() error {
 	return c.client.Close()
 }
