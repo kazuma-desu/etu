@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -184,7 +185,7 @@ This is a long description with multiple words`,
 			require.NoError(t, err, "Failed to create temp file")
 
 			parser := &EtcdctlParser{}
-			got, err := parser.Parse(tmpFile)
+			got, err := parser.Parse(context.Background(), tmpFile)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -213,13 +214,13 @@ This is a long description with multiple words`,
 
 func TestEtcdctlParser_ParseNonExistentFile(t *testing.T) {
 	parser := &EtcdctlParser{}
-	_, err := parser.Parse("/nonexistent/file/that/does/not/exist.txt")
+	_, err := parser.Parse(context.Background(), "/nonexistent/file/that/does/not/exist.txt")
 	assert.Error(t, err, "Expected error for non-existent file")
 }
 
 func TestEtcdctlParser_ParseInvalidPath(t *testing.T) {
 	parser := &EtcdctlParser{}
-	_, err := parser.Parse("")
+	_, err := parser.Parse(context.Background(), "")
 	assert.Error(t, err, "Expected error for empty path")
 }
 
@@ -361,6 +362,6 @@ myapp
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = parser.Parse(tmpfile.Name())
+		_, _ = parser.Parse(context.Background(), tmpfile.Name())
 	}
 }

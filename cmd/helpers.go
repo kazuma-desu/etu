@@ -56,7 +56,7 @@ func getParserForFile(filePath string, format models.FormatType) (parsers.Parser
 	return parser, format, nil
 }
 
-func parseConfigFile(filePath string, flagFormat models.FormatType, appCfg *config.Config) ([]*models.ConfigPair, error) {
+func parseConfigFile(ctx context.Context, filePath string, flagFormat models.FormatType, appCfg *config.Config) ([]*models.ConfigPair, error) {
 	format := resolveFormat(flagFormat, appCfg)
 	parser, format, err := getParserForFile(filePath, format)
 	if err != nil {
@@ -64,7 +64,7 @@ func parseConfigFile(filePath string, flagFormat models.FormatType, appCfg *conf
 	}
 
 	logVerbose("Parsing configuration", "file", filePath, "format", format)
-	pairs, err := parser.Parse(filePath)
+	pairs, err := parser.Parse(ctx, filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse file: %w", err)
 	}

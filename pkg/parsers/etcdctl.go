@@ -2,6 +2,7 @@ package parsers
 
 import (
 	"bufio"
+	"context"
 	"os"
 	"regexp"
 	"strconv"
@@ -28,8 +29,8 @@ func (p *EtcdctlParser) FormatName() string {
 	return "etcdctl"
 }
 
-// Parse reads and parses an etcdctl format file
-func (p *EtcdctlParser) Parse(path string) ([]*models.ConfigPair, error) {
+// Parse reads and parses an etcdctl format file with cancellation support
+func (p *EtcdctlParser) Parse(ctx context.Context, path string) ([]*models.ConfigPair, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -54,6 +55,11 @@ func (p *EtcdctlParser) Parse(path string) ([]*models.ConfigPair, error) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		// Check for cancellation
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		line := scanner.Text()
 		trimmed := strings.TrimSpace(line)
 

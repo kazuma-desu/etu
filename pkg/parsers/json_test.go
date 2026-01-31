@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -225,7 +226,7 @@ func TestJSONParser_RootArrayError(t *testing.T) {
 	require.NoError(t, err)
 
 	parser := &JSONParser{}
-	_, err = parser.Parse(tmpFile)
+	_, err = parser.Parse(context.Background(), tmpFile)
 
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrRootNotObject)
@@ -240,7 +241,7 @@ func TestJSONParser_RootScalarError(t *testing.T) {
 	require.NoError(t, err)
 
 	parser := &JSONParser{}
-	_, err = parser.Parse(tmpFile)
+	_, err = parser.Parse(context.Background(), tmpFile)
 
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrRootNotObject)
@@ -276,7 +277,7 @@ func TestJSONParser_SpecialCharactersInKeys(t *testing.T) {
 
 func TestJSONParser_FileNotFound(t *testing.T) {
 	parser := &JSONParser{}
-	_, err := parser.Parse("/nonexistent/file.json")
+	_, err := parser.Parse(context.Background(), "/nonexistent/file.json")
 
 	assert.Error(t, err)
 }
@@ -290,7 +291,7 @@ func TestJSONParser_InvalidJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	parser := &JSONParser{}
-	_, err = parser.Parse(tmpFile)
+	_, err = parser.Parse(context.Background(), tmpFile)
 
 	assert.Error(t, err)
 }
@@ -367,7 +368,7 @@ func parseJSON(t *testing.T, content string) []*models.ConfigPair {
 	require.NoError(t, err)
 
 	parser := &JSONParser{}
-	pairs, err := parser.Parse(tmpFile)
+	pairs, err := parser.Parse(context.Background(), tmpFile)
 	require.NoError(t, err)
 
 	return pairs

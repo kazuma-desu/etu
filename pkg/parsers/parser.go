@@ -2,6 +2,7 @@ package parsers
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,8 +14,9 @@ import (
 // Parser defines the interface that all configuration parsers must implement
 // This allows for extensibility - new parsers can be added by implementing this interface
 type Parser interface {
-	// Parse reads a configuration file and returns a slice of ConfigPairs
-	Parse(path string) ([]*models.ConfigPair, error)
+	// Parse reads a configuration file with cancellation support
+	// This enables cancellation of long-running parsing operations for large files or slow filesystems
+	Parse(ctx context.Context, path string) ([]*models.ConfigPair, error)
 
 	// FormatName returns the name of the format this parser handles
 	FormatName() string

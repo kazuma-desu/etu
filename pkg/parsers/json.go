@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,7 +18,12 @@ func (p *JSONParser) FormatName() string {
 	return "json"
 }
 
-func (p *JSONParser) Parse(path string) ([]*models.ConfigPair, error) {
+func (p *JSONParser) Parse(ctx context.Context, path string) ([]*models.ConfigPair, error) {
+	// Check for cancellation before reading file
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -25,6 +31,11 @@ func (p *JSONParser) Parse(path string) ([]*models.ConfigPair, error) {
 
 	if len(data) == 0 {
 		return nil, nil
+	}
+
+	// Check for cancellation before unmarshaling
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	var root any

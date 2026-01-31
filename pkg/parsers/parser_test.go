@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -472,7 +473,7 @@ type mockParser struct {
 	name string
 }
 
-func (m *mockParser) Parse(_ string) ([]*models.ConfigPair, error) {
+func (m *mockParser) Parse(_ context.Context, _ string) ([]*models.ConfigPair, error) {
 	return nil, nil
 }
 

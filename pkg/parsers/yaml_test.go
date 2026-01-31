@@ -2,6 +2,7 @@ package parsers
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -234,7 +235,7 @@ func TestYAMLParser_RootArrayError(t *testing.T) {
 	require.NoError(t, err)
 
 	parser := &YAMLParser{}
-	_, err = parser.Parse(tmpFile)
+	_, err = parser.Parse(context.Background(), tmpFile)
 
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrRootNotMap)
@@ -344,7 +345,7 @@ emoji: 🚀
 
 func TestYAMLParser_FileNotFound(t *testing.T) {
 	parser := &YAMLParser{}
-	_, err := parser.Parse("/nonexistent/file.yaml")
+	_, err := parser.Parse(context.Background(), "/nonexistent/file.yaml")
 
 	assert.Error(t, err)
 }
@@ -360,7 +361,7 @@ invalid: [unclosed bracket
 	require.NoError(t, err)
 
 	parser := &YAMLParser{}
-	_, err = parser.Parse(tmpFile)
+	_, err = parser.Parse(context.Background(), tmpFile)
 
 	assert.Error(t, err)
 }
@@ -435,7 +436,7 @@ func parseYAML(t *testing.T, content string) []*models.ConfigPair {
 	require.NoError(t, err)
 
 	parser := &YAMLParser{}
-	pairs, err := parser.Parse(tmpFile)
+	pairs, err := parser.Parse(context.Background(), tmpFile)
 	require.NoError(t, err)
 
 	return pairs

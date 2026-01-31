@@ -44,9 +44,12 @@ func init() {
 }
 
 func runParse(_ *cobra.Command, _ []string) error {
+	ctx, cancel := getOperationContext()
+	defer cancel()
+
 	appCfg := loadAppConfig()
 
-	pairs, err := parseConfigFile(parseOpts.FilePath, parseOpts.Format, appCfg)
+	pairs, err := parseConfigFile(ctx, parseOpts.FilePath, parseOpts.Format, appCfg)
 	if err != nil {
 		return err
 	}
