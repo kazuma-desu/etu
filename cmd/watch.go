@@ -83,7 +83,7 @@ func runWatch(_ *cobra.Command, args []string) error {
 			logger.Log.Info("Stopping watch...")
 			cancel()
 		case <-ctx.Done():
-			// Context cancelled elsewhere, exit cleanly
+			// Context canceled elsewhere, exit cleanly
 		}
 	}()
 
