@@ -8,7 +8,11 @@ import (
 
 // FormatValue converts a value to a display string.
 // Supports: string, int, int64, float64, map[string]any, fmt.Stringer, and nil.
-// Returns empty string for nil values.
+// FormatValue converts a value to a human-readable string.
+// For a nil input it returns an empty string. Strings are returned unchanged.
+// Integer and unsigned integer types are formatted as decimal; floats use default float formatting; booleans are formatted as "true" or "false".
+// For map[string]any an empty map yields an empty string; otherwise entries are rendered as "key: value" lines with keys sorted lexicographically.
+// If the value implements fmt.Stringer its String method is used; all other types are formatted with the default %#v representation.
 func FormatValue(val any) string {
 	if val == nil {
 		return ""

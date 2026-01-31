@@ -28,6 +28,7 @@ func init() {
 	rootCmd.AddCommand(editCmd)
 }
 
+// It returns an error if any step fails (connecting to etcd, reading or writing the temp file, launching the editor, or updating etcd).
 func runEdit(_ *cobra.Command, args []string) error {
 	key := args[0]
 

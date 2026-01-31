@@ -82,6 +82,8 @@ func Execute() {
 	}
 }
 
+// configureLogging sets the effective log level for the application.
+// It uses the default "warn" level, overrides it with a non-empty value from the loaded config if available, and finally overrides with the CLI `logLevel` flag if provided (flag takes highest precedence).
 func configureLogging() {
 	effectiveLogLevel := "warn"
 
@@ -97,7 +99,8 @@ func configureLogging() {
 	logger.SetLevel(effectiveLogLevel)
 }
 
-// formatNames returns all available output format names for flag help.
+// formatNames returns the string names of all available output formats.
+// The returned slice preserves the order of output.AllFormats().
 func formatNames() []string {
 	formats := output.AllFormats()
 	names := make([]string, len(formats))

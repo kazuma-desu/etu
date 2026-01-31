@@ -38,6 +38,12 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 }
 
+// runVersion prints CLI version information either as indented JSON to stdout
+// or as a human-readable block. When the package-level Version is "dev", it
+// attempts to enrich Version, Commit, and BuildDate from the module build
+// information (vcs.revision and vcs.time) if available. If JSON output is
+// selected via outputFormat, it returns any error produced by the encoder;
+// otherwise it returns nil.
 func runVersion(_ *cobra.Command, _ []string) error {
 	info := versionInfo{
 		Version:   Version,

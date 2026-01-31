@@ -70,6 +70,11 @@ func init() {
 	configCmd.AddCommand(viewConfigCmd)
 }
 
+// runGetContexts lists configured contexts and displays them in the selected output format.
+// It loads the current configuration and, if no contexts exist, prints an informational
+// message and returns. Otherwise it validates the requested output format (allowing
+// "simple", "json", or "table") and prints the contexts, returning an error if loading
+// the configuration, normalizing the format, or printing the contexts fails.
 func runGetContexts(_ *cobra.Command, _ []string) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -193,6 +198,12 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 	return nil
 }
 
+// runViewConfig loads the current configuration, formats it using the selected output
+// format (supports "simple", "json", and "table"), and writes the formatted view to
+// standard output.
+//
+// It returns an error if loading the configuration fails, if the requested output
+// format is invalid, or if printing the configuration fails.
 func runViewConfig(_ *cobra.Command, _ []string) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {

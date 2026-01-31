@@ -90,6 +90,14 @@ func init() {
 		"show metadata (revisions, version, lease) in output")
 }
 
+// runGet executes the CLI "get" command: it connects to etcd, retrieves the specified key or key range
+// using options populated from command flags, and renders the results using the selected output format.
+//
+// The first positional argument is the request key; a second optional argument is interpreted as the range end.
+// If the CountOnly option is set, the command prints the number of matching keys and exits.
+// For prefix/from-key/range queries an empty result is treated as success and returns no error; for a single-key
+// lookup an empty result returns an error indicating the key was not found.
+// Errors are returned for connection or fetch failures and for invalid output formats.
 func runGet(_ *cobra.Command, args []string) error {
 	ctx, cancel := getOperationContext()
 	defer cancel()
@@ -166,6 +174,11 @@ func runGet(_ *cobra.Command, args []string) error {
 	}
 }
 
+// printSimple prints each key-value pair from resp according to the global getOpts flags.
+// When getOpts.printValue is set it prints only the value; when getOpts.keysOnly is set it
+// prints only the key; when getOpts.showMetadata is set it emits the key, value, and a
+// metadata collection via output.KeyValueWithMetadata; otherwise it prints the key followed
+// by the value on the next line.
 func printSimple(resp *client.GetResponse) {
 	for _, kv := range resp.Kvs {
 		switch {
@@ -228,6 +241,11 @@ func printJSON(resp *client.GetResponse) error {
 	return nil
 }
 
+// printTable renders the response key-value pairs as a formatted table and writes it to standard output.
+// When getOpts.keysOnly is set the table contains only a "KEY" column. When getOpts.showMetadata is set the
+// table contains columns "KEY", "VALUE", "CREATE_REV", "MOD_REV", "VERSION", and "LEASE". Otherwise the table
+// contains "KEY" and "VALUE". Values are truncated for display (30 characters when showing metadata, 50 characters otherwise).
+// The formatted table string is printed and the function returns nil.
 func printTable(resp *client.GetResponse) error {
 	var headers []string
 	var rows [][]string
@@ -271,6 +289,12 @@ func printTable(resp *client.GetResponse) error {
 	return nil
 }
 
+// printFields writes each key-value from resp to the output renderer along with creation,
+// modification and version metadata.
+//
+// For every KV in resp.Kvs it emits the key, the value (omitted when getOpts.keysOnly is true),
+// and metadata entries for CreateRevision, ModRevision, and Version. If the KV has a lease
+// (> 0) a Lease metadata entry is also included.
 func printFields(resp *client.GetResponse) {
 	for _, kv := range resp.Kvs {
 		meta := [][2]string{

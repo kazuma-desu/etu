@@ -36,7 +36,10 @@ type DiffResult struct {
 	Unchanged int
 }
 
-// PrintDiffResult prints the diff result in the specified format
+// PrintDiffResult prints the diff result using the specified output format.
+// Supported formats are "simple", "json", and "table"; the function dispatches
+// to the corresponding printer and returns any error produced. If the format
+// is unsupported it returns an error describing the allowed formats.
 func PrintDiffResult(result *DiffResult, format string, showUnchanged bool) error {
 	switch format {
 	case FormatSimple.String():
@@ -50,7 +53,10 @@ func PrintDiffResult(result *DiffResult, format string, showUnchanged bool) erro
 	}
 }
 
-// printDiffSimple prints diff in simple human-readable format
+// printDiffSimple prints a human-readable, grouped summary of a DiffResult to standard output.
+// It emits a header with counts, groups entries into Added, Modified, Deleted (and Unchanged when showUnchanged is true),
+// prints each group with keys and their old/new values as appropriate, and prints a final summary line.
+// It returns nil on success.
 func printDiffSimple(result *DiffResult, showUnchanged bool) error {
 	Info(fmt.Sprintf("Diff result: +%d ~%d -%d", result.Added, result.Modified, result.Deleted))
 	fmt.Println()
@@ -181,7 +187,16 @@ func printDiffJSON(result *DiffResult, showUnchanged bool) error {
 	return encoder.Encode(output)
 }
 
-// printDiffTable prints diff as a table
+// printDiffTable prints the diff result as a formatted table to standard output.
+// 
+// It shows a row per DiffEntry with columns for status, key, old value, and new value.
+// When showUnchanged is false, entries with status DiffStatusUnchanged are omitted.
+// Long old/new values are truncated to 40 characters for table display.
+// Styling is applied conditionally when output is a terminal. After the table it
+// prints a blank line and a summary line with counts for added, modified, deleted,
+// (optionally unchanged) and the total number of entries.
+// 
+// The function returns nil on success.
 func printDiffTable(result *DiffResult, showUnchanged bool) error {
 	var entries []*DiffEntry
 	if showUnchanged {

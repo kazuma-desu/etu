@@ -8,7 +8,10 @@ import (
 	"github.com/kazuma-desu/etu/pkg/client"
 )
 
-// PrintDryRunOperations displays recorded operations from dry-run mode.
+// PrintDryRunOperations prints the recorded dry-run operations using the specified output format.
+// Supported formats are FormatJSON, FormatSimple, and FormatTable. For JSON it writes the encoded
+// operations to stdout and may return an encoding error; for simple/table it emits a human-readable
+// summary. Returns an error if the format is unsupported or if JSON encoding fails.
 func PrintDryRunOperations(ops []client.Operation, format string) error {
 	switch format {
 	case FormatJSON.String():
@@ -20,6 +23,11 @@ func PrintDryRunOperations(ops []client.Operation, format string) error {
 	}
 }
 
+// printDryRunSimple prints a human-readable, styled summary of the provided dry-run operations.
+// It prints a header showing the total count, then for each operation prints a progress marker like
+// "[i/n] ACTION → key" and, if present, the operation value on the following line, and finally a completion message.
+// The ops slice contains the operations to display.
+// It always returns nil.
 func printDryRunSimple(ops []client.Operation) error {
 	title := StyleIfTerminal(warningStyle, fmt.Sprintf("DRY RUN - Would perform %d operations", len(ops)))
 	fmt.Println(StyleIfTerminal(warningPanelStyle, title))

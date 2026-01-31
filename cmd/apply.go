@@ -55,6 +55,11 @@ func init() {
 	registerFileCompletion(applyCmd, "file")
 }
 
+// runApply parses the provided configuration file, optionally validates it, and applies the resulting key/value pairs to etcd (or simulates the operation in dry-run).
+//
+// The function resolves validation and strictness options from applyOpts and the command flags, loads and parses the configuration file, and — unless validation is skipped — validates the parsed items. It creates either a real etcd client or a dry-run client, applies all pairs with optional per-item progress reporting (when using simple output and not in dry-run), and prints results or recorded operations according to the chosen output format.
+//
+// Errors are returned when configuration parsing fails, validation fails, an etcd client cannot be created, or the apply operation fails (partial successes are reported to output before returning an error).
 func runApply(cmd *cobra.Command, _ []string) error {
 	ctx, cancel := getOperationContext()
 	defer cancel()

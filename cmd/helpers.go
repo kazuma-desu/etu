@@ -170,6 +170,9 @@ func newEtcdClientOrDryRun(dryRun bool) (client.EtcdClient, func(), error) {
 	return newEtcdClient()
 }
 
+// normalizeOutputFormat resolves the canonical output format from the global output setting
+// constrained to the provided supported formats.
+// It validates that the resulting format is one of supportedFormats and returns an error if it is not.
 func normalizeOutputFormat(supportedFormats []string) (string, error) {
 	return output.NormalizeFormat(outputFormat, supportedFormats)
 }
@@ -188,10 +191,12 @@ var (
 	}
 )
 
+// isQuietOutput reports whether the current output format is JSON.
 func isQuietOutput() bool {
 	return outputFormat == output.FormatJSON.String()
 }
 
+// logVerbose logs an info-level message with optional key/value pairs unless quiet output is active.
 func logVerbose(msg string, keyvals ...any) {
 	if !isQuietOutput() {
 		logger.Log.Info(msg, keyvals...)

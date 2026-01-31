@@ -46,6 +46,11 @@ Use --full with --prefix to compare all keys under a prefix (server-scoped diff)
 	}
 )
 
+// init registers the diff command with the root command and configures its flags and shell completion.
+// 
+// It adds flags for specifying the configuration file, output format, whether to show unchanged keys,
+// a key prefix filter, and a full-prefix comparison mode. It also marks the "file" flag as required
+// and registers file-path completion for the command.
 func init() {
 	rootCmd.AddCommand(diffCmd)
 

@@ -30,6 +30,7 @@ var allFormats = []Format{
 // Initialized in init() to ensure it stays in sync with allFormats.
 var formatSet map[Format]struct{}
 
+// init populates the internal formatSet map with all supported Format values for O(1) validation.
 func init() {
 	formatSet = make(map[Format]struct{}, len(allFormats))
 	for _, f := range allFormats {
@@ -37,7 +38,8 @@ func init() {
 	}
 }
 
-// AllFormats returns a copy of all supported formats.
+// AllFormats returns a copy of the supported output formats.
+// Modifying the returned slice does not affect the package's internal list.
 func AllFormats() []Format {
 	out := make([]Format, len(allFormats))
 	copy(out, allFormats)
@@ -56,7 +58,9 @@ func (f Format) IsValid() bool {
 }
 
 // ParseFormat parses a string into Format, validating it.
-// Maintains backward-compatible error message format.
+// ParseFormat parses s into a Format and validates that it is one of the supported formats.
+// If s is not supported, it returns an error formatted as "invalid output format: <value> (use <list>)"
+// where <list> is a comma-separated list of all valid formats.
 func ParseFormat(s string) (Format, error) {
 	f := Format(s)
 	if !f.IsValid() {

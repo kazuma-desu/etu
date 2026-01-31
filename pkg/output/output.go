@@ -18,7 +18,10 @@ import (
 
 // All styles are now defined in styles.go
 
-// PrintConfigPairs prints configuration pairs in a human-readable format
+// PrintConfigPairs prints configuration pairs to stdout in a styled, human-readable layout.
+// If jsonOutput is true, it writes the pairs as indented JSON; otherwise it prints each key
+// followed by its formatted value on separate lines. It returns any error encountered while
+// producing JSON output.
 func PrintConfigPairs(pairs []*models.ConfigPair, jsonOutput bool) error {
 	if jsonOutput {
 		return printJSON(pairs)
@@ -36,7 +39,9 @@ func PrintConfigPairs(pairs []*models.ConfigPair, jsonOutput bool) error {
 	return nil
 }
 
-// PrintConfigPairsWithFormat prints configuration pairs in the specified format
+// PrintConfigPairsWithFormat prints configuration pairs using the specified format.
+// Supported formats are "simple", "json", "table", and "tree".
+// Returns an error if the provided format is not supported.
 func PrintConfigPairsWithFormat(pairs []*models.ConfigPair, format string) error {
 	switch format {
 	case FormatSimple.String():
@@ -80,7 +85,8 @@ func printConfigPairsTable(pairs []*models.ConfigPair) error {
 	return nil
 }
 
-// PrintValidationResult prints validation results with styling
+// PrintValidationResult prints validation results to stdout using styled sections.
+// It displays a success panel when there are no issues; otherwise it prints a summary of error and warning counts, each issue on its own line prefixed by its severity and key, and a final verdict message. When `strict` is true, warnings are treated as failures if there are no errors.
 func PrintValidationResult(result *validator.ValidationResult, strict bool) {
 	if len(result.Issues) == 0 {
 		msg := StyleIfTerminal(successStyle, "✓ Validation passed - no issues found")
@@ -144,7 +150,10 @@ func PrintValidationResult(result *validator.ValidationResult, strict bool) {
 	}
 }
 
-// PrintValidationWithFormat prints validation results in the specified format
+// PrintValidationWithFormat prints validation results using the specified output format.
+// Supported formats are "simple", "json", and "table". The `strict` flag causes warnings
+// to be treated as failures when true. Returns an error if the format is unsupported or
+// if the chosen formatter fails.
 func PrintValidationWithFormat(result *validator.ValidationResult, strict bool, format string) error {
 	switch format {
 	case FormatSimple.String():
@@ -224,7 +233,10 @@ func hasOnlyWarnings(result *validator.ValidationResult) bool {
 	return true
 }
 
-// PrintDryRun prints what would be applied in a dry run
+// PrintDryRun writes a summary of the configuration items that would be applied without making any changes.
+// 
+// Each item is displayed with a progress indicator, an action label ("PUT"), the item's key, and its formatted value.
+// After listing all items a final message indicates that no changes were made to etcd.
 func PrintDryRun(pairs []*models.ConfigPair) {
 	title := StyleIfTerminal(warningStyle, fmt.Sprintf("DRY RUN - Would apply %d configuration items", len(pairs)))
 	fmt.Println(StyleIfTerminal(warningPanelStyle, title))
@@ -243,21 +255,26 @@ func PrintDryRun(pairs []*models.ConfigPair) {
 	fmt.Println(StyleIfTerminal(warningStyle, "DRY RUN complete - no changes made to etcd"))
 }
 
-// PrintApplyProgress prints progress during apply operation
+// PrintApplyProgress logs the apply operation progress as a "[current/total]" prefix followed by the key being applied.
+// The key is styled when running in a terminal.
 func PrintApplyProgress(current, total int, key string) {
 	progress := fmt.Sprintf("[%d/%d]", current, total)
 	k := StyleIfTerminal(keyStyle, key)
 	logger.Log.Info(fmt.Sprintf("%s Applying %s", progress, k))
 }
 
-// PrintApplySuccess prints success message after apply
+// PrintApplySuccess prints a styled success message indicating how many items were applied to etcd.
 func PrintApplySuccess(count int) {
 	msg := StyleIfTerminal(successStyle, fmt.Sprintf("✓ Successfully applied %d items to etcd", count))
 	fmt.Println()
 	fmt.Println(StyleIfTerminal(successPanelStyle, msg))
 }
 
-// PrintApplyResultsWithFormat prints apply results in the specified format
+// PrintApplyResultsWithFormat prints the results of an apply operation using the given output format.
+// 
+// For the "simple" format it prints a dry-run listing when dryRun is true or a success summary otherwise.
+// For "json" and "table" formats it delegates to the respective JSON/table renderers.
+// Returns an error when the chosen format is unsupported or when a delegated renderer reports an error.
 func PrintApplyResultsWithFormat(pairs []*models.ConfigPair, format string, dryRun bool) error {
 	switch format {
 	case FormatSimple.String():
@@ -333,7 +350,8 @@ func printApplyTable(pairs []*models.ConfigPair, dryRun bool) error {
 	return nil
 }
 
-// PrintContextsWithFormat prints contexts in the specified format
+// PrintContextsWithFormat prints contexts using the given format ("simple", "json", "table").
+// It returns an error if the provided format is unsupported.
 func PrintContextsWithFormat(contexts map[string]*config.ContextConfig, currentContext string, format string) error {
 	switch format {
 	case FormatSimple.String():
@@ -439,7 +457,7 @@ func printContextsTable(contexts map[string]*config.ContextConfig, currentContex
 	return nil
 }
 
-// PrintConfigViewWithFormat prints config view in the specified format
+// Supported formats are "simple", "json", and "table". It returns an error if the format is unsupported.
 func PrintConfigViewWithFormat(cfg *config.Config, format string) error {
 	switch format {
 	case FormatSimple.String():
@@ -520,13 +538,15 @@ func printConfigViewTable(cfg *config.Config) error {
 	return nil
 }
 
-// PrintError prints an error message
+// PrintError prints the provided error inside a styled error panel prefixed with a cross.
+// Applies terminal styling when supported.
 func PrintError(err error) {
 	msg := StyleIfTerminal(errorStyle, fmt.Sprintf("✗ Error: %v", err))
 	fmt.Println(StyleIfTerminal(errorPanelStyle, msg))
 }
 
-// formatValue is a package-local alias to models.FormatValue for backward compatibility.
+// formatValue formats val for display using models.FormatValue.
+// It exists as a package-local alias retained for backward compatibility.
 func formatValue(val any) string {
 	return models.FormatValue(val)
 }
@@ -546,12 +566,12 @@ func printJSON(pairs []*models.ConfigPair) error {
 	return enc.Encode(output)
 }
 
-// Info prints an info message
+// Info prints an informational message prefixed with an ellipsis and styled for terminal output when supported.
 func Info(msg string) {
 	fmt.Println(StyleIfTerminal(valueStyle, "⋯ "+msg))
 }
 
-// Success prints a success message
+// Success prints a success message prefixed with a checkmark, applying terminal styling when appropriate.
 func Success(msg string) {
 	fmt.Println(StyleIfTerminal(successStyle, "✓ "+msg))
 }
@@ -561,17 +581,19 @@ func Error(msg string) {
 	fmt.Println(StyleIfTerminal(errorStyle, "✗ "+msg))
 }
 
-// Warning prints a warning message
+// Warning prints a warning message prefixed with a warning symbol.
+// When output is a terminal, the message is rendered with warning styling; otherwise it is printed as plain text.
 func Warning(msg string) {
 	fmt.Println(StyleIfTerminal(warningStyle, "⚠ "+msg))
 }
 
-// Prompt prints a styled prompt
+// Prompt writes a prompt message to standard output prefixed by a styled "? " indicator.
+// The message is written without a trailing newline; styling is applied only when output is a terminal.
 func Prompt(msg string) {
 	fmt.Print(StyleIfTerminal(keyStyle, "? ") + msg)
 }
 
-// PrintSecurityWarning prints the password storage security warning
+// - restrict config file permissions (e.g., 0600).
 func PrintSecurityWarning() {
 	fmt.Println()
 	Warning("Security Warning:")
@@ -592,7 +614,10 @@ func PrintTree(pairs []*models.ConfigPair) error {
 	return nil
 }
 
-// buildEtcdTree builds a lipgloss tree from config pairs
+// buildEtcdTree builds a hierarchical tree representing the provided etcd-style key/value pairs for display.
+// It arranges pairs into folder nodes for intermediate path segments and leaf nodes that show keys with formatted values.
+// Styling and enumerator appearance are applied when output is a terminal.
+// It returns the root tree ready for rendering.
 func buildEtcdTree(pairs []*models.ConfigPair) *tree.Tree {
 	root := tree.Root("/").
 		Enumerator(tree.RoundedEnumerator)

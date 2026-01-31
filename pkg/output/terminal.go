@@ -8,13 +8,14 @@ import (
 )
 
 // IsTerminal returns true if stdout is a terminal (TTY).
-// Uses go-isatty for cross-platform detection including Windows ConPTY.
+// It returns true for POSIX terminals and for Windows ConPTY/Cygwin terminals.
 func IsTerminal() bool {
 	fd := os.Stdout.Fd()
 	return isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)
 }
 
-// StyleIfTerminal applies the style only if output is to a terminal.
+// StyleIfTerminal applies the provided lipgloss.Style to the content when stdout is a terminal.
+// If stdout is not a terminal, it returns the content unchanged.
 func StyleIfTerminal(style lipgloss.Style, content string) string {
 	if IsTerminal() {
 		return style.Render(content)
