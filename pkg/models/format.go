@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -46,9 +47,14 @@ func FormatValue(val any) string {
 		if len(v) == 0 {
 			return ""
 		}
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
 		var lines []string
-		for k, val := range v {
-			lines = append(lines, fmt.Sprintf("%s: %v", k, val))
+		for _, k := range keys {
+			lines = append(lines, fmt.Sprintf("%s: %v", k, v[k]))
 		}
 		return strings.Join(lines, "\n")
 	case fmt.Stringer:

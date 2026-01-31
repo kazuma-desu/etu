@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +47,7 @@ func TestFormatValue(t *testing.T) {
 		// Maps
 		{"empty map", map[string]any{}, ""},
 		{"map with values", map[string]any{"a": "1", "b": "2"}, "a: 1\nb: 2"},
-		{"map with mixed types", map[string]any{"x": 1, "y": "hello"}, ""},
+		{"map with mixed types", map[string]any{"x": 1, "y": "hello"}, "x: 1\ny: hello"},
 
 		// fmt.Stringer
 		{"Stringer", testStringer("custom"), "custom"},
@@ -61,15 +60,7 @@ func TestFormatValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := FormatValue(tt.input)
-			// For maps with multiple keys, just verify output contains expected parts
-			// since iteration order is non-deterministic
-			if m, ok := tt.input.(map[string]any); ok && len(m) > 1 {
-				for k, v := range m {
-					assert.Contains(t, got, fmt.Sprintf("%s: %v", k, v))
-				}
-			} else {
-				assert.Equal(t, tt.expected, got)
-			}
+			assert.Equal(t, tt.expected, got)
 		})
 	}
 }
