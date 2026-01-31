@@ -1,56 +1,38 @@
 package logger
 
 import (
-	"fmt"
 	"os"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"github.com/charmbracelet/log"
 )
 
-var Log *zap.SugaredLogger
+var Log *log.Logger
 
 func init() {
-	config := zap.NewProductionConfig()
-	config.EncoderConfig.TimeKey = ""
-	config.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	config.Encoding = "console"
-	config.Level = zap.NewAtomicLevelAt(zapcore.WarnLevel)
-
-	logger, err := config.Build()
-	if err != nil {
-		logger = zap.NewNop()
-		fmt.Fprintf(os.Stderr, "Warning: failed to initialize logger: %v\n", err)
-	}
-	Log = logger.Sugar()
+	Log = log.NewWithOptions(os.Stderr, log.Options{
+		ReportTimestamp: false,
+		Level:           log.WarnLevel,
+	})
 }
 
+// SetLevel changes the log level atomically.
+// Valid levels: debug, info, warn, error, fatal.
+// Invalid levels default to warn.
 func SetLevel(level string) {
-	var zapLevel zapcore.Level
-	switch level {
-	case "debug":
-		zapLevel = zapcore.DebugLevel
-	case "info":
-		zapLevel = zapcore.InfoLevel
-	case "warn":
-		zapLevel = zapcore.WarnLevel
-	case "error":
-		zapLevel = zapcore.ErrorLevel
-	default:
-		zapLevel = zapcore.WarnLevel
-	}
-
-	config := zap.NewProductionConfig()
-	config.EncoderConfig.TimeKey = ""
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	config.Encoding = "console"
-	config.Level = zap.NewAtomicLevelAt(zapLevel)
-
-	logger, err := config.Build()
+	lvl, err := log.ParseLevel(level)
 	if err != nil {
-		logger = zap.NewNop()
-		fmt.Fprintf(os.Stderr, "Warning: failed to set log level: %v\n", err)
+		lvl = log.WarnLevel
 	}
-	Log = logger.Sugar()
+	Log.SetLevel(lvl)
+}
+
+// GetLevel returns the current log level as a string.
+func GetLevel() string {
+	return Log.GetLevel().String()
+}
+
+// SetFormatter allows switching between text/JSON/logfmt for CI environments.
+// Available formatters: log.TextFormatter, log.JSONFormatter, log.LogfmtFormatter
+func SetFormatter(f log.Formatter) {
+	Log.SetFormatter(f)
 }

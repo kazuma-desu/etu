@@ -125,7 +125,7 @@ func runGet(_ *cobra.Command, args []string) error {
 	}
 
 	// Execute get
-	logger.Log.Debugw("Fetching keys", "key", key, "options", opts)
+	logger.Log.Debug("Fetching keys", "key", key, "options", opts)
 	resp, err := etcdClient.GetWithOptions(ctx, key, opts)
 	if err != nil {
 		return err

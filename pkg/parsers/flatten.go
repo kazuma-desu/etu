@@ -40,7 +40,7 @@ func flattenValue(key string, value any, pairs *[]*models.ConfigPair) {
 		}
 		serialized, err := json.Marshal(v)
 		if err != nil {
-			logger.Log.Warnf("failed to marshal array at key %s: %v", key, err)
+			logger.Log.Warn("failed to marshal array", "key", key, "error", err)
 			return
 		}
 		*pairs = append(*pairs, &models.ConfigPair{
@@ -91,7 +91,7 @@ func flattenValue(key string, value any, pairs *[]*models.ConfigPair) {
 	default:
 		serialized, err := json.Marshal(v)
 		if err != nil {
-			logger.Log.Warnf("failed to marshal value at key %s: %v", key, err)
+			logger.Log.Warn("failed to marshal value", "key", key, "error", err)
 			return
 		}
 		*pairs = append(*pairs, &models.ConfigPair{
