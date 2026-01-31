@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,6 +64,20 @@ func TestFormatValue(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+func TestFormatValueMapExact(t *testing.T) {
+	// Verify map formatting produces exactly the expected lines (sorted by key)
+	m := map[string]any{"z": "last", "a": "first", "m": "middle"}
+	got := FormatValue(m)
+
+	// Since keys are sorted, output should be deterministic
+	expected := "a: first\nm: middle\nz: last"
+	assert.Equal(t, expected, got)
+
+	// Verify no extra lines by splitting and counting
+	lines := strings.Split(got, "\n")
+	assert.Len(t, lines, 3, "should have exactly 3 lines for 3 map entries")
 }
 
 // testStringer implements fmt.Stringer for testing

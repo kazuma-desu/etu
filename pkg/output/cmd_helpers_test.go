@@ -11,14 +11,14 @@ import (
 
 func TestKeyValue(t *testing.T) {
 	tests := []struct {
-		name  string
-		key   string
-		value string
+		name           string
+		key            string
+		value          string
+		expectedSubstr []string
 	}{
-		{"simple", "/app/name", "myapp"},
-		{"empty value", "/app/empty", ""},
-		{"with spaces", "/app/config", "hello world"},
-		{"special chars", "/app/key", "value-with-dash_underscore"},
+		{"simple", "/app/name", "myapp", []string{"/app/name", "myapp"}},
+		{"with spaces", "/app/config", "hello world", []string{"/app/config", "hello world"}},
+		{"special chars", "/app/key", "value-with-dash_underscore", []string{"/app/key", "value-with-dash_underscore"}},
 	}
 
 	for _, tt := range tests {
@@ -28,10 +28,23 @@ func TestKeyValue(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			assert.Contains(t, output, tt.key)
-			assert.Contains(t, output, tt.value)
+			for _, substr := range tt.expectedSubstr {
+				assert.Contains(t, output, substr)
+			}
 		})
 	}
+}
+
+func TestKeyValueEmptyValue(t *testing.T) {
+	output, err := testutil.CaptureStdoutFunc(func() {
+		KeyValue("/app/empty", "")
+	})
+	require.NoError(t, err)
+
+	// Should contain the key
+	assert.Contains(t, output, "/app/empty")
+	// Format is: key\n<value>\n\n - so for empty value: "/app/empty\n\n\n"
+	assert.Equal(t, "/app/empty\n\n\n", output)
 }
 
 func TestKeyValueWithMetadata(t *testing.T) {
