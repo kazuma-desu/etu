@@ -92,8 +92,17 @@ func runGetContexts(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
 
+	// Convert config contexts to output view types
+	contextViews := make(map[string]*output.ContextView, len(cfg.Contexts))
+	for name, ctx := range cfg.Contexts {
+		contextViews[name] = &output.ContextView{
+			Username:  ctx.Username,
+			Endpoints: ctx.Endpoints,
+		}
+	}
+
 	// Print contexts in requested format
-	if err := output.PrintContextsWithFormat(cfg.Contexts, cfg.CurrentContext, normalizedFormat); err != nil {
+	if err := output.PrintContextsWithFormat(contextViews, cfg.CurrentContext, normalizedFormat); err != nil {
 		return fmt.Errorf("failed to print contexts: %w", err)
 	}
 
@@ -210,8 +219,27 @@ func runViewConfig(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
 
+	// Convert config contexts to output view types
+	contextViews := make(map[string]*output.ContextView, len(cfg.Contexts))
+	for name, ctx := range cfg.Contexts {
+		contextViews[name] = &output.ContextView{
+			Username:  ctx.Username,
+			Endpoints: ctx.Endpoints,
+		}
+	}
+
+	// Convert config to output view type
+	configView := &output.ConfigView{
+		CurrentContext: cfg.CurrentContext,
+		LogLevel:       cfg.LogLevel,
+		DefaultFormat:  cfg.DefaultFormat,
+		Strict:         cfg.Strict,
+		NoValidate:     cfg.NoValidate,
+		Contexts:       contextViews,
+	}
+
 	// Print config in requested format
-	if err := output.PrintConfigViewWithFormat(cfg, normalizedFormat); err != nil {
+	if err := output.PrintConfigViewWithFormat(configView, normalizedFormat); err != nil {
 		return fmt.Errorf("failed to print configuration: %w", err)
 	}
 

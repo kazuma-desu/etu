@@ -10,7 +10,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/tree"
 
-	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/validator"
@@ -334,7 +333,7 @@ func printApplyTable(pairs []*models.ConfigPair, dryRun bool) error {
 }
 
 // PrintContextsWithFormat prints contexts in the specified format
-func PrintContextsWithFormat(contexts map[string]*config.ContextConfig, currentContext string, format string) error {
+func PrintContextsWithFormat(contexts map[string]*ContextView, currentContext string, format string) error {
 	switch format {
 	case FormatSimple.String():
 		return printContextsSimple(contexts, currentContext)
@@ -347,7 +346,7 @@ func PrintContextsWithFormat(contexts map[string]*config.ContextConfig, currentC
 	}
 }
 
-func printContextsSimple(contexts map[string]*config.ContextConfig, currentContext string) error {
+func printContextsSimple(contexts map[string]*ContextView, currentContext string) error {
 	if len(contexts) == 0 {
 		Info("No contexts found")
 		return nil
@@ -369,7 +368,7 @@ func printContextsSimple(contexts map[string]*config.ContextConfig, currentConte
 	return nil
 }
 
-func printContextsJSON(contexts map[string]*config.ContextConfig, currentContext string) error {
+func printContextsJSON(contexts map[string]*ContextView, currentContext string) error {
 	type contextOutput struct {
 		Name      string   `json:"name"`
 		Username  string   `json:"username,omitempty"`
@@ -397,7 +396,7 @@ func printContextsJSON(contexts map[string]*config.ContextConfig, currentContext
 	return encoder.Encode(output)
 }
 
-func printContextsTable(contexts map[string]*config.ContextConfig, currentContext string) error {
+func printContextsTable(contexts map[string]*ContextView, currentContext string) error {
 	if len(contexts) == 0 {
 		Info("No contexts found")
 		return nil
@@ -440,7 +439,7 @@ func printContextsTable(contexts map[string]*config.ContextConfig, currentContex
 }
 
 // PrintConfigViewWithFormat prints config view in the specified format
-func PrintConfigViewWithFormat(cfg *config.Config, format string) error {
+func PrintConfigViewWithFormat(cfg *ConfigView, format string) error {
 	switch format {
 	case FormatSimple.String():
 		return printConfigViewSimple(cfg)
@@ -453,7 +452,7 @@ func PrintConfigViewWithFormat(cfg *config.Config, format string) error {
 	}
 }
 
-func printConfigViewSimple(cfg *config.Config) error {
+func printConfigViewSimple(cfg *ConfigView) error {
 	fmt.Printf("current-context: %s\n", cfg.CurrentContext)
 	fmt.Printf("log-level: %s\n", cfg.LogLevel)
 	fmt.Printf("default-format: %s\n", cfg.DefaultFormat)
@@ -463,7 +462,7 @@ func printConfigViewSimple(cfg *config.Config) error {
 	return nil
 }
 
-func printConfigViewJSON(cfg *config.Config) error {
+func printConfigViewJSON(cfg *ConfigView) error {
 	// Create a sanitized version without passwords
 	type sanitizedContext struct {
 		Username  string   `json:"username,omitempty"`
@@ -491,7 +490,7 @@ func printConfigViewJSON(cfg *config.Config) error {
 	return encoder.Encode(output)
 }
 
-func printConfigViewTable(cfg *config.Config) error {
+func printConfigViewTable(cfg *ConfigView) error {
 	// Settings table
 	fmt.Println("Settings:")
 	settingsHeaders := []string{"SETTING", "VALUE"}
