@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -19,7 +20,12 @@ func (p *YAMLParser) FormatName() string {
 	return "yaml"
 }
 
-func (p *YAMLParser) Parse(path string) ([]*models.ConfigPair, error) {
+func (p *YAMLParser) Parse(ctx context.Context, path string) ([]*models.ConfigPair, error) {
+	// Check for cancellation before opening file
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -32,6 +38,11 @@ func (p *YAMLParser) Parse(path string) ([]*models.ConfigPair, error) {
 	docCount := 0
 
 	for {
+		// Check for cancellation before each decode
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		var raw any
 		err := decoder.Decode(&raw)
 		if errors.Is(err, io.EOF) {
