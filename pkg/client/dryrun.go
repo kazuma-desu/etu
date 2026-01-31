@@ -106,7 +106,7 @@ func (d *DryRunClient) Status(_ context.Context, _ string) (*StatusResponse, err
 	return nil, fmt.Errorf("dry-run mode: status check not available")
 }
 
-func (d *DryRunClient) Watch(ctx context.Context, key string, opts *WatchOptions) WatchChan {
+func (d *DryRunClient) Watch(_ context.Context, _ string, _ *WatchOptions) WatchChan {
 	// In dry-run mode, return a closed channel immediately
 	ch := make(WatchChan)
 	close(ch)
