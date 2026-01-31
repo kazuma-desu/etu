@@ -86,6 +86,73 @@ type Logger interface {
 // Parameters: current (1-indexed), total count, and the key just written.
 type ProgressFunc func(current, total int, key string)
 
+// WatchEventType represents the type of watch event.
+type WatchEventType string
+
+const (
+	// WatchEventPut indicates a key was created or updated.
+	WatchEventPut WatchEventType = "PUT"
+	// WatchEventDelete indicates a key was deleted.
+	WatchEventDelete WatchEventType = "DELETE"
+)
+
+// WatchEvent represents a single event from a watch operation.
+type WatchEvent struct {
+	// Type is the type of event (PUT or DELETE).
+	Type WatchEventType
+
+	// Key is the key that was affected.
+	Key string
+
+	// Value is the new value (for PUT events).
+	Value string
+
+	// PrevValue is the previous value (if available).
+	PrevValue string
+
+	// Revision is the revision of the event.
+	Revision int64
+
+	// CreateRevision is the revision when the key was created.
+	CreateRevision int64
+
+	// ModRevision is the revision when the key was last modified.
+	ModRevision int64
+
+	// Version is the version of the key.
+	Version int64
+}
+
+// WatchResponse contains the response from a watch operation.
+type WatchResponse struct {
+	// Events is the list of events that occurred.
+	Events []WatchEvent
+
+	// CompactRevision is the compaction revision if the watcher was cancelled
+	// due to compaction.
+	CompactRevision int64
+
+	// Err is set if the watch encountered an error.
+	Err error
+}
+
+// WatchChan is a channel that receives watch responses.
+type WatchChan chan WatchResponse
+
+// WatchOptions configures watch behavior.
+type WatchOptions struct {
+	// Prefix watches all keys with the given prefix.
+	Prefix bool
+
+	// Revision is the revision to start watching from.
+	// If 0, watches from the current revision.
+	Revision int64
+
+	// PrevKV indicates whether to include the previous key-value pair
+	// in the watch response.
+	PrevKV bool
+}
+
 // EtcdReader defines read operations on etcd.
 // Implementations must be safe for concurrent use.
 type EtcdReader interface {
@@ -95,6 +162,12 @@ type EtcdReader interface {
 
 	// GetWithOptions retrieves keys with advanced options (prefix, sort, etc.)
 	GetWithOptions(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error)
+
+	// Watch watches for changes on a key or prefix.
+	// Returns a channel that receives watch responses.
+	// The channel is closed when the watch is cancelled or encounters an error.
+	// Use the context to cancel the watch.
+	Watch(ctx context.Context, key string, opts *WatchOptions) WatchChan
 }
 
 // EtcdWriter defines write operations on etcd.
