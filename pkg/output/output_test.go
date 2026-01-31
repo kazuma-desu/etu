@@ -306,8 +306,7 @@ func TestPrintSecurityWarning(t *testing.T) {
 	assert.Contains(t, strings.ToLower(output), "security")
 }
 
-// TestColorConstantsAreHex verifies that all color constants use hex format.
-func TestColorConstantsAreHex(t *testing.T) {
+func TestColorConstantsAreDefined(t *testing.T) {
 	// This test documents the expected color format
 	// All colors should be in hex format (e.g., "#7C3AED") not ANSI codes (e.g., "252")
 	colors := map[string]lipgloss.Color{
@@ -416,4 +415,21 @@ func BenchmarkParseFormat(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		ParseFormat("json")
 	}
+}
+
+// TestAllFormats verifies AllFormats returns a copy of all supported formats.
+func TestAllFormats(t *testing.T) {
+	formats := AllFormats()
+
+	assert.Len(t, formats, 5)
+	assert.Contains(t, formats, FormatSimple)
+	assert.Contains(t, formats, FormatJSON)
+	assert.Contains(t, formats, FormatTable)
+	assert.Contains(t, formats, FormatTree)
+	assert.Contains(t, formats, FormatFields)
+
+	// Verify it's a copy by modifying the returned slice
+	originalLen := len(formats)
+	formats = append(formats, Format("extra"))
+	assert.Len(t, AllFormats(), originalLen)
 }

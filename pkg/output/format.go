@@ -27,13 +27,19 @@ var formatSet = map[Format]struct{}{
 	FormatFields: {},
 }
 
-// AllFormats contains all supported formats.
-var AllFormats = []Format{
+var allFormats = []Format{
 	FormatSimple,
 	FormatJSON,
 	FormatTable,
 	FormatTree,
 	FormatFields,
+}
+
+// AllFormats returns a copy of all supported formats.
+func AllFormats() []Format {
+	out := make([]Format, len(allFormats))
+	copy(out, allFormats)
+	return out
 }
 
 // String returns the string representation.
