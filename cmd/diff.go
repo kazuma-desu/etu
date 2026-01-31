@@ -51,7 +51,7 @@ func init() {
 
 	diffCmd.Flags().StringVarP(&diffOpts.FilePath, "file", "f", "",
 		"path to configuration file (required)")
-	diffCmd.Flags().StringVar(&diffOpts.Format, "format", "simple",
+	diffCmd.Flags().StringVar(&diffOpts.Format, "format", output.FormatSimple.String(),
 		"output format: simple, json, table")
 	diffCmd.Flags().BoolVar(&diffOpts.ShowUnchanged, "show-unchanged", false,
 		"show keys that are unchanged")

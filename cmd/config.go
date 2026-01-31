@@ -82,7 +82,11 @@ func runGetContexts(_ *cobra.Command, _ []string) error {
 	}
 
 	// Normalize format (tree not supported for config get-contexts)
-	supportedFormats := []string{"simple", "json", "table"}
+	supportedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatTable.String(),
+	}
 	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
 	if err != nil {
 		return fmt.Errorf("invalid output format: %w", err)
@@ -196,7 +200,11 @@ func runViewConfig(_ *cobra.Command, _ []string) error {
 	}
 
 	// Normalize format (tree not supported for config view)
-	supportedFormats := []string{"simple", "json", "table"}
+	supportedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatTable.String(),
+	}
 	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
 	if err != nil {
 		return fmt.Errorf("invalid output format: %w", err)

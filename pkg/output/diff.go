@@ -39,11 +39,11 @@ type DiffResult struct {
 // PrintDiffResult prints the diff result in the specified format
 func PrintDiffResult(result *DiffResult, format string, showUnchanged bool) error {
 	switch format {
-	case "simple":
+	case FormatSimple.String():
 		return printDiffSimple(result, showUnchanged)
-	case "json":
+	case FormatJSON.String():
 		return printDiffJSON(result, showUnchanged)
-	case "table":
+	case FormatTable.String():
 		return printDiffTable(result, showUnchanged)
 	default:
 		return fmt.Errorf("unsupported format: %s (use simple, json, or table)", format)

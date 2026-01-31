@@ -11,9 +11,9 @@ import (
 // PrintDryRunOperations displays recorded operations from dry-run mode.
 func PrintDryRunOperations(ops []client.Operation, format string) error {
 	switch format {
-	case "json":
+	case FormatJSON.String():
 		return printDryRunJSON(ops)
-	case "simple", "table":
+	case FormatSimple.String(), FormatTable.String():
 		return printDryRunSimple(ops)
 	default:
 		return fmt.Errorf("unsupported format for dry-run: %s", format)

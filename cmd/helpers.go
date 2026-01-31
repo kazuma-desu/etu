@@ -175,12 +175,21 @@ func normalizeOutputFormat(supportedFormats []string) (string, error) {
 }
 
 var (
-	formatsWithoutTree = []string{"simple", "json", "table"}
-	formatsWithTree    = []string{"simple", "json", "table", "tree"}
+	formatsWithoutTree = []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatTable.String(),
+	}
+	formatsWithTree = []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatTable.String(),
+		output.FormatTree.String(),
+	}
 )
 
 func isQuietOutput() bool {
-	return outputFormat == "json"
+	return outputFormat == output.FormatJSON.String()
 }
 
 func logVerbose(msg string, keyvals ...any) {

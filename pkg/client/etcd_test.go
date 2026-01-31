@@ -265,7 +265,7 @@ func TestFormatValueUnit(t *testing.T) {
 		{"int64", int64(42), "42"},
 		{"float64", 3.14, "3.140000"},
 		{"bool", true, "true"},
-		{"nil", nil, "<nil>"},
+		{"nil", nil, ""},
 	}
 
 	for _, tt := range tests {

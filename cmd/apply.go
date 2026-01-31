@@ -106,7 +106,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	logVerboseInfo(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
 
 	var onProgress client.ProgressFunc
-	if normalizedFormat == "simple" && !applyOpts.DryRun {
+	if normalizedFormat == output.FormatSimple.String() && !applyOpts.DryRun {
 		onProgress = func(current, total int, key string) {
 			output.PrintApplyProgress(current, total, key)
 		}

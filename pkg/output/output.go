@@ -39,13 +39,13 @@ func PrintConfigPairs(pairs []*models.ConfigPair, jsonOutput bool) error {
 // PrintConfigPairsWithFormat prints configuration pairs in the specified format
 func PrintConfigPairsWithFormat(pairs []*models.ConfigPair, format string) error {
 	switch format {
-	case "simple":
+	case FormatSimple.String():
 		return PrintConfigPairs(pairs, false)
-	case "json":
+	case FormatJSON.String():
 		return printJSON(pairs)
-	case "table":
+	case FormatTable.String():
 		return printConfigPairsTable(pairs)
-	case "tree":
+	case FormatTree.String():
 		return PrintTree(pairs)
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
@@ -147,12 +147,12 @@ func PrintValidationResult(result *validator.ValidationResult, strict bool) {
 // PrintValidationWithFormat prints validation results in the specified format
 func PrintValidationWithFormat(result *validator.ValidationResult, strict bool, format string) error {
 	switch format {
-	case "simple":
+	case FormatSimple.String():
 		PrintValidationResult(result, strict)
 		return nil
-	case "json":
+	case FormatJSON.String():
 		return printValidationJSON(result, strict)
-	case "table":
+	case FormatTable.String():
 		return printValidationTable(result, strict)
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
@@ -262,16 +262,16 @@ func PrintApplySuccess(count int) {
 // PrintApplyResultsWithFormat prints apply results in the specified format
 func PrintApplyResultsWithFormat(pairs []*models.ConfigPair, format string, dryRun bool) error {
 	switch format {
-	case "simple":
+	case FormatSimple.String():
 		if dryRun {
 			PrintDryRun(pairs)
 			return nil
 		}
 		PrintApplySuccess(len(pairs))
 		return nil
-	case "json":
+	case FormatJSON.String():
 		return printApplyJSON(pairs, dryRun)
-	case "table":
+	case FormatTable.String():
 		return printApplyTable(pairs, dryRun)
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
@@ -338,11 +338,11 @@ func printApplyTable(pairs []*models.ConfigPair, dryRun bool) error {
 // PrintContextsWithFormat prints contexts in the specified format
 func PrintContextsWithFormat(contexts map[string]*config.ContextConfig, currentContext string, format string) error {
 	switch format {
-	case "simple":
+	case FormatSimple.String():
 		return printContextsSimple(contexts, currentContext)
-	case "json":
+	case FormatJSON.String():
 		return printContextsJSON(contexts, currentContext)
-	case "table":
+	case FormatTable.String():
 		return printContextsTable(contexts, currentContext)
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
@@ -444,11 +444,11 @@ func printContextsTable(contexts map[string]*config.ContextConfig, currentContex
 // PrintConfigViewWithFormat prints config view in the specified format
 func PrintConfigViewWithFormat(cfg *config.Config, format string) error {
 	switch format {
-	case "simple":
+	case FormatSimple.String():
 		return printConfigViewSimple(cfg)
-	case "json":
+	case FormatJSON.String():
 		return printConfigViewJSON(cfg)
-	case "table":
+	case FormatTable.String():
 		return printConfigViewTable(cfg)
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
@@ -528,20 +528,9 @@ func PrintError(err error) {
 	fmt.Println(errorPanelStyle.Render(msg))
 }
 
-// formatValue converts a value to a display string
+// formatValue is a package-local alias to models.FormatValue for backward compatibility.
 func formatValue(val any) string {
-	switch v := val.(type) {
-	case string:
-		return v
-	case map[string]any:
-		var lines []string
-		for k, val := range v {
-			lines = append(lines, fmt.Sprintf("%s: %v", k, val))
-		}
-		return strings.Join(lines, "\n")
-	default:
-		return fmt.Sprintf("%v", v)
-	}
+	return models.FormatValue(val)
 }
 
 // printJSON outputs configuration as JSON

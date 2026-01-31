@@ -5,10 +5,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
-
-	"github.com/spf13/cobra"
+	"github.com/kazuma-desu/etu/pkg/output"
 )
 
 const defaultOperationTimeout = 30 * time.Second
@@ -41,7 +42,7 @@ func init() {
 		"log level (debug, info, warn, error) - overrides config file")
 	rootCmd.PersistentFlags().StringVar(&contextName, "context", "",
 		"context to use for etcd connection (overrides current context)")
-	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "simple",
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", output.FormatSimple.String(),
 		"output format (simple, json, table, tree)")
 	rootCmd.PersistentFlags().DurationVar(&operationTimeout, "timeout", defaultOperationTimeout,
 		"timeout for etcd operations (e.g., 30s, 1m, 2m30s)")

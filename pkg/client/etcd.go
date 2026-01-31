@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -387,23 +386,9 @@ func (c *Client) Status(ctx context.Context, endpoint string) (*clientv3.StatusR
 	return c.client.Status(ctx, endpoint)
 }
 
+// formatValue is a package-local alias to models.FormatValue for backward compatibility.
 func formatValue(val any) string {
-	switch v := val.(type) {
-	case string:
-		return v
-	case int, int64:
-		return fmt.Sprintf("%d", v)
-	case float64:
-		return fmt.Sprintf("%f", v)
-	case map[string]any:
-		var lines []string
-		for k, val := range v {
-			lines = append(lines, fmt.Sprintf("%s: %v", k, val))
-		}
-		return strings.Join(lines, "\n")
-	default:
-		return fmt.Sprintf("%v", v)
-	}
+	return models.FormatValue(val)
 }
 
 // Compile-time verification that Client implements EtcdClient

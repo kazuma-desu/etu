@@ -149,16 +149,16 @@ func runGet(_ *cobra.Command, args []string) error {
 
 	// Output results based on format
 	switch outputFormat {
-	case "simple":
+	case output.FormatSimple.String():
 		printSimple(resp)
 		return nil
-	case "json":
+	case output.FormatJSON.String():
 		return printJSON(resp)
-	case "table":
+	case output.FormatTable.String():
 		return printTable(resp)
-	case "tree":
+	case output.FormatTree.String():
 		return printTree(resp)
-	case "fields":
+	case output.FormatFields.String():
 		printFields(resp)
 		return nil
 	default:
