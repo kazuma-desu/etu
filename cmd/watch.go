@@ -63,6 +63,11 @@ func init() {
 func runWatch(_ *cobra.Command, args []string) error {
 	key := args[0]
 
+	// Validate revision is non-negative
+	if watchOpts.rev < 0 {
+		return fmt.Errorf("invalid --rev: must be non-negative")
+	}
+
 	etcdClient, cleanup, err := newEtcdClient()
 	if err != nil {
 		return err
