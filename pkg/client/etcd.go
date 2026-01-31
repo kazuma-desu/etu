@@ -429,7 +429,8 @@ func (c *Client) Watch(ctx context.Context, key string, opts *WatchOptions) Watc
 				}
 
 				if ev.PrevKv != nil {
-					event.PrevValue = string(ev.PrevKv.Value)
+					prevVal := string(ev.PrevKv.Value)
+					event.PrevValue = &prevVal
 				}
 
 				events = append(events, event)

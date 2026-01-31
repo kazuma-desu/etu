@@ -108,7 +108,8 @@ type WatchEvent struct {
 	Value string
 
 	// PrevValue is the previous value (if available).
-	PrevValue string
+	// nil indicates no previous value was provided.
+	PrevValue *string
 
 	// Revision is the revision of the event.
 	Revision int64
@@ -128,7 +129,7 @@ type WatchResponse struct {
 	// Events is the list of events that occurred.
 	Events []WatchEvent
 
-	// CompactRevision is the compaction revision if the watcher was cancelled
+	// CompactRevision is the compaction revision if the watcher was canceled
 	// due to compaction.
 	CompactRevision int64
 
@@ -165,7 +166,7 @@ type EtcdReader interface {
 
 	// Watch watches for changes on a key or prefix.
 	// Returns a channel that receives watch responses.
-	// The channel is closed when the watch is cancelled or encounters an error.
+	// The channel is closed when the watch is canceled or encounters an error.
 	// Use the context to cancel the watch.
 	Watch(ctx context.Context, key string, opts *WatchOptions) WatchChan
 }
