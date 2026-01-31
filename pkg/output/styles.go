@@ -11,25 +11,38 @@ var (
 	colorInfo      = lipgloss.Color("#3B82F6") // Blue
 	colorMuted     = lipgloss.Color("#6B7280") // Gray
 	colorHighlight = lipgloss.Color("#06B6D4") // Cyan
+
+	// Table row colors - hex format for consistency
+	colorTableOdd  = lipgloss.Color("#FCFCFA") // Light gray
+	colorTableEven = lipgloss.Color("#A0A0A0") // Medium gray
 )
 
-// Text styles
 var (
+	// keyStyle renders configuration keys with high contrast for visibility.
+	// Used for: config keys, tree nodes, primary identifiers.
 	keyStyle = lipgloss.NewStyle().
 			Foreground(colorHighlight).
 			Bold(true)
 
+	// valueStyle renders configuration values in muted tone for secondary information.
+	// Used for: config values, progress indicators, supporting text.
 	valueStyle = lipgloss.NewStyle().
 			Foreground(colorMuted)
 
+	// errorStyle renders error messages with high visibility.
+	// Used for: error messages, failure indicators, critical alerts.
 	errorStyle = lipgloss.NewStyle().
 			Foreground(colorError).
 			Bold(true)
 
+	// warningStyle renders warning messages with attention-grabbing color.
+	// Used for: warning messages, caution indicators, dry-run notices.
 	warningStyle = lipgloss.NewStyle().
 			Foreground(colorWarning).
 			Bold(true)
 
+	// successStyle renders success messages with positive emphasis.
+	// Used for: success messages, completion indicators, confirmation.
 	successStyle = lipgloss.NewStyle().
 			Foreground(colorSuccess).
 			Bold(true)
@@ -79,11 +92,11 @@ var (
 				Padding(0, 1)
 
 	tableOddRowStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("252")).
+				Foreground(colorTableOdd).
 				Padding(0, 1)
 
 	tableEvenRowStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("246")).
+				Foreground(colorTableEven).
 				Padding(0, 1)
 
 	tableBorderStyle = lipgloss.NewStyle().

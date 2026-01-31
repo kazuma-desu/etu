@@ -3,12 +3,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
-
-	"github.com/spf13/cobra"
+	"github.com/kazuma-desu/etu/pkg/output"
 )
 
 const defaultOperationTimeout = 30 * time.Second
@@ -41,8 +43,8 @@ func init() {
 		"log level (debug, info, warn, error) - overrides config file")
 	rootCmd.PersistentFlags().StringVar(&contextName, "context", "",
 		"context to use for etcd connection (overrides current context)")
-	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "simple",
-		"output format (simple, json, table, tree)")
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", output.FormatSimple.String(),
+		fmt.Sprintf("output format (%s)", strings.Join(formatNames(), ", ")))
 	rootCmd.PersistentFlags().DurationVar(&operationTimeout, "timeout", defaultOperationTimeout,
 		"timeout for etcd operations (e.g., 30s, 1m, 2m30s)")
 
@@ -93,4 +95,14 @@ func configureLogging() {
 	}
 
 	logger.SetLevel(effectiveLogLevel)
+}
+
+// formatNames returns all available output format names for flag help.
+func formatNames() []string {
+	formats := output.AllFormats()
+	names := make([]string, len(formats))
+	for i, f := range formats {
+		names[i] = f.String()
+	}
+	return names
 }

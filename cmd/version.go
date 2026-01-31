@@ -8,6 +8,8 @@ import (
 	"runtime/debug"
 
 	"github.com/spf13/cobra"
+
+	"github.com/kazuma-desu/etu/pkg/output"
 )
 
 // Version info - set via ldflags at build time
@@ -64,7 +66,7 @@ func runVersion(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	if outputFormat == "json" {
+	if outputFormat == output.FormatJSON.String() {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		return enc.Encode(info)

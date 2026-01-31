@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/kazuma-desu/etu/pkg/output"
 )
 
 var (
@@ -104,7 +106,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 
 	if finalModTime.Equal(initialModTime) {
 		logVerboseInfo("No changes detected, skipping update")
-		fmt.Println("No changes made.")
+		output.Info("No changes made")
 		return nil
 	}
 
@@ -123,7 +125,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 	}
 
 	logVerbose("Successfully updated key", "key", key)
-	fmt.Printf("Successfully updated %s\n", key)
+	output.Success(fmt.Sprintf("Updated %s", key))
 
 	return nil
 }

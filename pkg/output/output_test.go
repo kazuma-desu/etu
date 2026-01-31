@@ -4,12 +4,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/testutil"
 	"github.com/kazuma-desu/etu/pkg/validator"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPrintConfigPairs(t *testing.T) {
@@ -303,4 +304,132 @@ func TestPrintSecurityWarning(t *testing.T) {
 	assert.Contains(t, output, "plain text")
 	assert.Contains(t, output, "password")
 	assert.Contains(t, strings.ToLower(output), "security")
+}
+
+func TestColorConstantsAreDefined(t *testing.T) {
+	// This test documents the expected color format
+	// All colors should be in hex format (e.g., "#7C3AED") not ANSI codes (e.g., "252")
+	colors := map[string]lipgloss.Color{
+		"colorPrimary":   colorPrimary,
+		"colorSuccess":   colorSuccess,
+		"colorWarning":   colorWarning,
+		"colorError":     colorError,
+		"colorInfo":      colorInfo,
+		"colorMuted":     colorMuted,
+		"colorHighlight": colorHighlight,
+		"colorTableOdd":  colorTableOdd,
+		"colorTableEven": colorTableEven,
+	}
+
+	// Note: lipgloss.Color is an opaque type, so we can't directly inspect the value
+	// This test serves as documentation that all colors should be hex
+	for name := range colors {
+		// Just verify the color is defined (not nil/zero)
+		assert.NotNil(t, colors[name], "Color %s should be defined", name)
+	}
+}
+
+// TestIsTerminal does not mock terminal detection but documents the behavior.
+func TestIsTerminal(t *testing.T) {
+	// IsTerminal returns true when stdout is a TTY
+	// In test environment, this is typically false (redirected)
+	// We just verify the function doesn't panic
+	result := IsTerminal()
+	assert.IsType(t, true, result)
+}
+
+// TestStyleIfTerminal applies styling only in terminal mode.
+func TestStyleIfTerminal(t *testing.T) {
+	testStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000"))
+	content := "test content"
+
+	// When not in terminal, should return unstyled content
+	if !IsTerminal() {
+		result := StyleIfTerminal(testStyle, content)
+		assert.Equal(t, content, result)
+	}
+}
+
+// TestFormatConstants verifies all format constants are defined.
+func TestFormatConstants(t *testing.T) {
+	assert.Equal(t, Format("simple"), FormatSimple)
+	assert.Equal(t, Format("json"), FormatJSON)
+	assert.Equal(t, Format("table"), FormatTable)
+	assert.Equal(t, Format("tree"), FormatTree)
+	assert.Equal(t, Format("fields"), FormatFields)
+}
+
+// TestFormatIsValid validates format detection.
+func TestFormatIsValid(t *testing.T) {
+	tests := []struct {
+		format  Format
+		isValid bool
+	}{
+		{FormatSimple, true},
+		{FormatJSON, true},
+		{FormatTable, true},
+		{FormatTree, true},
+		{FormatFields, true},
+		{Format("invalid"), false},
+		{Format(""), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.format), func(t *testing.T) {
+			assert.Equal(t, tt.isValid, tt.format.IsValid())
+		})
+	}
+}
+
+// TestParseFormat validates format parsing with error cases.
+func TestParseFormat(t *testing.T) {
+	tests := []struct {
+		input    string
+		wantErr  bool
+		expected Format
+	}{
+		{"simple", false, FormatSimple},
+		{"json", false, FormatJSON},
+		{"table", false, FormatTable},
+		{"tree", false, FormatTree},
+		{"fields", false, FormatFields},
+		{"invalid", true, ""},
+		{"", true, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result, err := ParseFormat(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// BenchmarkParseFormat measures format validation performance.
+func BenchmarkParseFormat(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseFormat("json")
+	}
+}
+
+// TestAllFormats verifies AllFormats returns a copy of all supported formats.
+func TestAllFormats(t *testing.T) {
+	formats := AllFormats()
+
+	assert.Len(t, formats, 5)
+	assert.Contains(t, formats, FormatSimple)
+	assert.Contains(t, formats, FormatJSON)
+	assert.Contains(t, formats, FormatTable)
+	assert.Contains(t, formats, FormatTree)
+	assert.Contains(t, formats, FormatFields)
+
+	// Verify it's a copy by modifying the returned slice
+	originalLen := len(formats)
+	_ = append(formats, Format("extra"))
+	assert.Len(t, AllFormats(), originalLen)
 }

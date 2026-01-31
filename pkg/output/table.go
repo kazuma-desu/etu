@@ -16,21 +16,21 @@ type TableConfig struct {
 func RenderTable(config TableConfig) string {
 	t := table.New().
 		Border(lipgloss.RoundedBorder()).
-		BorderStyle(tableBorderStyle).
 		Headers(config.Headers...).
-		Rows(config.Rows...).
-		StyleFunc(func(row, _ int) lipgloss.Style {
-			// Header row (row 0 in lipgloss table is the header)
-			if row == 0 {
-				return tableHeaderStyle
-			}
+		Rows(config.Rows...)
 
-			// Alternate row colors for data rows
-			if row%2 == 0 {
-				return tableEvenRowStyle
-			}
-			return tableOddRowStyle
-		})
+	if IsTerminal() {
+		t = t.BorderStyle(tableBorderStyle).
+			StyleFunc(func(row, _ int) lipgloss.Style {
+				if row == 0 {
+					return tableHeaderStyle
+				}
+				if row%2 == 0 {
+					return tableEvenRowStyle
+				}
+				return tableOddRowStyle
+			})
+	}
 
 	return t.Render()
 }

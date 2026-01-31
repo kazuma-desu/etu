@@ -7,6 +7,68 @@ import (
 	"strings"
 )
 
+// Format represents a supported output format.
+type Format string
+
+const (
+	FormatSimple Format = "simple"
+	FormatJSON   Format = "json"
+	FormatTable  Format = "table"
+	FormatTree   Format = "tree"
+	FormatFields Format = "fields"
+)
+
+var allFormats = []Format{
+	FormatSimple,
+	FormatJSON,
+	FormatTable,
+	FormatTree,
+	FormatFields,
+}
+
+// formatSet is derived from allFormats for O(1) validation lookup.
+// Initialized in init() to ensure it stays in sync with allFormats.
+var formatSet map[Format]struct{}
+
+func init() {
+	formatSet = make(map[Format]struct{}, len(allFormats))
+	for _, f := range allFormats {
+		formatSet[f] = struct{}{}
+	}
+}
+
+// AllFormats returns a copy of all supported formats.
+func AllFormats() []Format {
+	out := make([]Format, len(allFormats))
+	copy(out, allFormats)
+	return out
+}
+
+// String returns the string representation.
+func (f Format) String() string {
+	return string(f)
+}
+
+// IsValid checks if the format is supported (O(1) lookup).
+func (f Format) IsValid() bool {
+	_, ok := formatSet[f]
+	return ok
+}
+
+// ParseFormat parses a string into Format, validating it.
+// Maintains backward-compatible error message format.
+func ParseFormat(s string) (Format, error) {
+	f := Format(s)
+	if !f.IsValid() {
+		validFormats := make([]string, len(allFormats))
+		for i, format := range allFormats {
+			validFormats[i] = string(format)
+		}
+		return "", fmt.Errorf("invalid output format: %s (use %s)", s, strings.Join(validFormats, ", "))
+	}
+	return f, nil
+}
+
 // NormalizeFormat validates and normalizes the requested output format.
 // If the format is not supported, it attempts to fall back to a compatible format
 // and prints a warning to stderr.
