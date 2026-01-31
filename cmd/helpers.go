@@ -189,18 +189,30 @@ var (
 )
 
 func isQuietOutput() bool {
-	return outputFormat == output.FormatJSON.String()
+	// Check global output format (used by most commands)
+	if outputFormat == output.FormatJSON.String() {
+		return true
+	}
+	// Check diff command's format (diff uses its own format option)
+	if diffOpts.Format == output.FormatJSON.String() {
+		return true
+	}
+	return false
 }
 
 func logVerbose(msg string, keyvals ...any) {
 	if !isQuietOutput() {
-		logger.Log.Info(msg, keyvals...)
+		// Format keyvals into message if provided
+		if len(keyvals) > 0 {
+			msg = fmt.Sprintf("%s %v", msg, keyvals)
+		}
+		output.Info(msg)
 	}
 }
 
 func logVerboseInfo(msg string) {
 	if !isQuietOutput() {
-		logger.Log.Info(msg)
+		output.Info(msg)
 	}
 }
 
