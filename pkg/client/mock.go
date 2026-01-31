@@ -31,6 +31,7 @@ type MockClient struct {
 	DeletePrefixFunc       func(ctx context.Context, prefix string) (int64, error)
 	CloseFunc              func() error
 	StatusFunc             func(ctx context.Context, endpoint string) (*StatusResponse, error)
+	WatchFunc              func(ctx context.Context, key string, opts *WatchOptions) WatchChan
 
 	PutCalls                []PutCall
 	PutAllCalls             [][]*models.ConfigPair
@@ -40,7 +41,13 @@ type MockClient struct {
 	DeleteCalls             []string
 	DeletePrefixCalls       []string
 	StatusCalls             []string
+	WatchCalls              []WatchCall
 	CloseCalled             bool
+}
+
+type WatchCall struct {
+	Key  string
+	Opts *WatchOptions
 }
 
 func NewMockClient() *MockClient {
@@ -53,6 +60,7 @@ func NewMockClient() *MockClient {
 		DeleteCalls:             make([]string, 0),
 		DeletePrefixCalls:       make([]string, 0),
 		StatusCalls:             make([]string, 0),
+		WatchCalls:              make([]WatchCall, 0),
 	}
 }
 
@@ -154,6 +162,24 @@ func (m *MockClient) Status(ctx context.Context, endpoint string) (*StatusRespon
 	return &StatusResponse{}, nil
 }
 
+func (m *MockClient) Watch(ctx context.Context, key string, opts *WatchOptions) WatchChan {
+	var optsCopy *WatchOptions
+	if opts != nil {
+		copied := *opts
+		optsCopy = &copied
+	}
+	m.WatchCalls = append(m.WatchCalls, WatchCall{Key: key, Opts: optsCopy})
+
+	if m.WatchFunc != nil {
+		return m.WatchFunc(ctx, key, opts)
+	}
+
+	// Return a closed channel by default
+	ch := make(chan WatchResponse)
+	close(ch)
+	return ch
+}
+
 func (m *MockClient) Reset() {
 	m.PutCalls = make([]PutCall, 0)
 	m.PutAllCalls = make([][]*models.ConfigPair, 0)
@@ -163,6 +189,7 @@ func (m *MockClient) Reset() {
 	m.DeleteCalls = make([]string, 0)
 	m.DeletePrefixCalls = make([]string, 0)
 	m.StatusCalls = make([]string, 0)
+	m.WatchCalls = make([]WatchCall, 0)
 	m.CloseCalled = false
 }
 
