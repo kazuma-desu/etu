@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"github.com/kazuma-desu/etu/pkg/client"
 )
 
 // PrintDryRunOperations displays recorded operations from dry-run mode.
-func PrintDryRunOperations(ops []client.Operation, format string) error {
+func PrintDryRunOperations(ops []DryRunOperation, format string) error {
 	switch format {
 	case FormatJSON.String():
 		return printDryRunJSON(ops)
@@ -20,7 +18,7 @@ func PrintDryRunOperations(ops []client.Operation, format string) error {
 	}
 }
 
-func printDryRunSimple(ops []client.Operation) error {
+func printDryRunSimple(ops []DryRunOperation) error {
 	title := StyleIfTerminal(warningStyle, fmt.Sprintf("DRY RUN - Would perform %d operations", len(ops)))
 	fmt.Println(StyleIfTerminal(warningPanelStyle, title))
 	fmt.Println()
@@ -47,7 +45,7 @@ func printDryRunSimple(ops []client.Operation) error {
 	return nil
 }
 
-func printDryRunJSON(ops []client.Operation) error {
+func printDryRunJSON(ops []DryRunOperation) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(ops)

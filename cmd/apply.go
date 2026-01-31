@@ -122,7 +122,17 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	}
 
 	if recorder, ok := etcdClient.(client.OperationRecorder); ok {
-		return output.PrintDryRunOperations(recorder.Operations(), normalizedFormat)
+		// Convert client operations to output view type
+		ops := recorder.Operations()
+		viewOps := make([]output.DryRunOperation, len(ops))
+		for i, op := range ops {
+			viewOps[i] = output.DryRunOperation{
+				Type:  op.Type,
+				Key:   op.Key,
+				Value: op.Value,
+			}
+		}
+		return output.PrintDryRunOperations(viewOps, normalizedFormat)
 	}
 
 	return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, applyOpts.DryRun)

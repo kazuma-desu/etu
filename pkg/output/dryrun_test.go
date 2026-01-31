@@ -7,12 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/testutil"
 )
 
 func TestPrintDryRunOperations(t *testing.T) {
-	ops := []client.Operation{
+	ops := []DryRunOperation{
 		{Type: "PUT", Key: "/key1", Value: "value1"},
 		{Type: "DELETE", Key: "/key2"},
 	}
@@ -24,7 +23,7 @@ func TestPrintDryRunOperations(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		var decoded []client.Operation
+		var decoded []DryRunOperation
 		err = json.Unmarshal([]byte(output), &decoded)
 		require.NoError(t, err)
 
@@ -60,7 +59,7 @@ func TestPrintDryRunOperations(t *testing.T) {
 
 	t.Run("empty operations", func(t *testing.T) {
 		output, err := testutil.CaptureStdout(func() error {
-			return PrintDryRunOperations([]client.Operation{}, "simple")
+			return PrintDryRunOperations([]DryRunOperation{}, "simple")
 		})
 
 		assert.NoError(t, err)
