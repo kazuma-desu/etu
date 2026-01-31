@@ -41,7 +41,7 @@ Press Ctrl+C to stop watching.`,
   etu watch /config/app/ --prefix --rev 100
 
   # JSON output for scripting
-  etu watch /config/app/ --prefix -o json`,
+  etu watch /config/app/ --prefix -o`,
 		Args: cobra.ExactArgs(1),
 		RunE: runWatch,
 	}
@@ -77,9 +77,14 @@ func runWatch(_ *cobra.Command, args []string) error {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		<-sigChan
-		logger.Log.Info("Stopping watch...")
-		cancel()
+		defer signal.Stop(sigChan)
+		select {
+		case <-sigChan:
+			logger.Log.Info("Stopping watch...")
+			cancel()
+		case <-ctx.Done():
+			// Context cancelled elsewhere, exit cleanly
+		}
 	}()
 
 	opts := &client.WatchOptions{
