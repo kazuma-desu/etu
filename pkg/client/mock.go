@@ -175,7 +175,7 @@ func (m *MockClient) Watch(ctx context.Context, key string, opts *WatchOptions) 
 	}
 
 	// Return a closed channel by default
-	ch := make(WatchChan)
+	ch := make(chan WatchResponse)
 	close(ch)
 	return ch
 }

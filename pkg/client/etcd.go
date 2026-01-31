@@ -379,10 +379,10 @@ func (c *Client) DeletePrefix(ctx context.Context, prefix string) (int64, error)
 }
 
 func (c *Client) Watch(ctx context.Context, key string, opts *WatchOptions) WatchChan {
-	watchChan := make(WatchChan)
+	ch := make(chan WatchResponse)
 
 	go func() {
-		defer close(watchChan)
+		defer close(ch)
 
 		var clientOpts []clientv3.OpOption
 		if opts != nil {
@@ -401,12 +401,12 @@ func (c *Client) Watch(ctx context.Context, key string, opts *WatchOptions) Watc
 
 		for watchResp := range watcher {
 			if watchResp.Err() != nil {
-				watchChan <- WatchResponse{Err: watchResp.Err()}
+				ch <- WatchResponse{Err: watchResp.Err()}
 				return
 			}
 
 			if watchResp.CompactRevision > 0 {
-				watchChan <- WatchResponse{CompactRevision: watchResp.CompactRevision}
+				ch <- WatchResponse{CompactRevision: watchResp.CompactRevision}
 				return
 			}
 
@@ -436,11 +436,11 @@ func (c *Client) Watch(ctx context.Context, key string, opts *WatchOptions) Watc
 				events = append(events, event)
 			}
 
-			watchChan <- WatchResponse{Events: events}
+			ch <- WatchResponse{Events: events}
 		}
 	}()
 
-	return watchChan
+	return ch
 }
 
 func (c *Client) Close() error {

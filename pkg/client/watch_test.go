@@ -26,7 +26,7 @@ func TestMockClient_Watch(t *testing.T) {
 
 	t.Run("custom function is called", func(t *testing.T) {
 		mock := NewMockClient()
-		customCh := make(WatchChan, 1)
+		customCh := make(chan WatchResponse, 1)
 		customCh <- WatchResponse{
 			Events: []WatchEvent{
 				{Type: WatchEventPut, Key: "/test/key", Value: "value"},

@@ -108,7 +108,7 @@ func (d *DryRunClient) Status(_ context.Context, _ string) (*StatusResponse, err
 
 func (d *DryRunClient) Watch(_ context.Context, _ string, _ *WatchOptions) WatchChan {
 	// In dry-run mode, return a closed channel immediately
-	ch := make(WatchChan)
+	ch := make(chan WatchResponse)
 	close(ch)
 	return ch
 }

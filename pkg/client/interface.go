@@ -138,7 +138,8 @@ type WatchResponse struct {
 }
 
 // WatchChan is a channel that receives watch responses.
-type WatchChan chan WatchResponse
+// Consumers should only receive from this channel.
+type WatchChan <-chan WatchResponse
 
 // WatchOptions configures watch behavior.
 type WatchOptions struct {
