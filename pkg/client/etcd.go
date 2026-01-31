@@ -382,8 +382,22 @@ func (c *Client) Close() error {
 	return c.client.Close()
 }
 
-func (c *Client) Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error) {
-	return c.client.Status(ctx, endpoint)
+func (c *Client) Status(ctx context.Context, endpoint string) (*StatusResponse, error) {
+	resp, err := c.client.Status(ctx, endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	return &StatusResponse{
+		Version:          resp.Version,
+		DbSize:           resp.DbSize,
+		Leader:           resp.Leader,
+		RaftIndex:        resp.RaftIndex,
+		RaftTerm:         resp.RaftTerm,
+		RaftAppliedIndex: resp.RaftAppliedIndex,
+		Errors:           resp.Errors,
+		IsLearner:        resp.IsLearner,
+	}, nil
 }
 
 // formatValue is a package-local alias to models.FormatValue for backward compatibility.

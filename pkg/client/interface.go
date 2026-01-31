@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	clientv3 "go.etcd.io/etcd/client/v3"
-
 	"github.com/kazuma-desu/etu/pkg/models"
 )
 
@@ -109,6 +107,34 @@ type EtcdWriter interface {
 	DeletePrefix(ctx context.Context, prefix string) (int64, error)
 }
 
+// StatusResponse contains the status information for an etcd cluster member.
+// This is a wrapper type to avoid exposing etcd SDK types directly.
+type StatusResponse struct {
+	// Version is the etcd server version.
+	Version string
+
+	// DbSize is the size of the database in bytes.
+	DbSize int64
+
+	// Leader is the member ID of the leader.
+	Leader uint64
+
+	// RaftIndex is the current raft index.
+	RaftIndex uint64
+
+	// RaftTerm is the current raft term.
+	RaftTerm uint64
+
+	// RaftAppliedIndex is the last applied raft index.
+	RaftAppliedIndex uint64
+
+	// Errors contains any errors from the cluster.
+	Errors []string
+
+	// IsLearner indicates if this member is a learner.
+	IsLearner bool
+}
+
 // EtcdClient combines read and write operations with lifecycle management.
 // This is the primary interface that commands should depend on.
 type EtcdClient interface {
@@ -119,7 +145,7 @@ type EtcdClient interface {
 	Close() error
 
 	// Status returns cluster status for the given endpoint.
-	Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error)
+	Status(ctx context.Context, endpoint string) (*StatusResponse, error)
 }
 
 // OperationRecorder is implemented by clients that record operations

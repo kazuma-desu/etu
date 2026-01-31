@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 
-	clientv3 "go.etcd.io/etcd/client/v3"
-
 	"github.com/kazuma-desu/etu/pkg/models"
 )
 
@@ -32,7 +30,7 @@ type MockClient struct {
 	DeleteFunc             func(ctx context.Context, key string) (int64, error)
 	DeletePrefixFunc       func(ctx context.Context, prefix string) (int64, error)
 	CloseFunc              func() error
-	StatusFunc             func(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error)
+	StatusFunc             func(ctx context.Context, endpoint string) (*StatusResponse, error)
 
 	PutCalls                []PutCall
 	PutAllCalls             [][]*models.ConfigPair
@@ -148,12 +146,12 @@ func (m *MockClient) Close() error {
 	return nil
 }
 
-func (m *MockClient) Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error) {
+func (m *MockClient) Status(ctx context.Context, endpoint string) (*StatusResponse, error) {
 	m.StatusCalls = append(m.StatusCalls, endpoint)
 	if m.StatusFunc != nil {
 		return m.StatusFunc(ctx, endpoint)
 	}
-	return &clientv3.StatusResponse{}, nil
+	return &StatusResponse{}, nil
 }
 
 func (m *MockClient) Reset() {
