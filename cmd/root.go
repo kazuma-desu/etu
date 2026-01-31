@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -43,7 +44,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&contextName, "context", "",
 		"context to use for etcd connection (overrides current context)")
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", output.FormatSimple.String(),
-		"output format (simple, json, table, tree)")
+		fmt.Sprintf("output format (%s)", strings.Join(formatNames(), ", ")))
 	rootCmd.PersistentFlags().DurationVar(&operationTimeout, "timeout", defaultOperationTimeout,
 		"timeout for etcd operations (e.g., 30s, 1m, 2m30s)")
 
@@ -94,4 +95,14 @@ func configureLogging() {
 	}
 
 	logger.SetLevel(effectiveLogLevel)
+}
+
+// formatNames returns all available output format names for flag help.
+func formatNames() []string {
+	formats := output.AllFormats()
+	names := make([]string, len(formats))
+	for i, f := range formats {
+		names[i] = f.String()
+	}
+	return names
 }
