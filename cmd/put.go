@@ -139,7 +139,7 @@ func validateKeyValue(key, value string) error {
 	if !result.Valid {
 		var errMsgs []string
 		for _, issue := range result.Issues {
-			if issue.Level == "error" {
+			if issue.Level == validator.LevelError {
 				errMsgs = append(errMsgs, issue.Message)
 			}
 		}
