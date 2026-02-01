@@ -106,6 +106,21 @@ func TestValidationResult_HasWarnings(t *testing.T) {
 	}
 }
 
+func TestValidator_ValidateKey_NilPair(t *testing.T) {
+	result := &ValidationResult{Issues: []ValidationIssue{}}
+	KeyFormatValidator(nil, result)
+
+	assert.True(t, result.HasErrors(), "Expected error for nil ConfigPair")
+	found := false
+	for _, issue := range result.Issues {
+		if strings.Contains(issue.Message, "nil ConfigPair passed to KeyFormatValidator") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected specific error message for nil ConfigPair")
+}
+
 func TestValidator_ValidateKey(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -199,6 +214,21 @@ func TestValidator_ValidateKey(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidator_ValidateValue_NilPair(t *testing.T) {
+	result := &ValidationResult{Issues: []ValidationIssue{}}
+	ValueValidator(nil, result)
+
+	assert.True(t, result.HasErrors(), "Expected error for nil ConfigPair")
+	found := false
+	for _, issue := range result.Issues {
+		if strings.Contains(issue.Message, "nil ConfigPair passed to ValueValidator") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected specific error message for nil ConfigPair")
 }
 
 func TestValidator_ValidateValue(t *testing.T) {
@@ -363,6 +393,21 @@ func TestValidator_Validate(t *testing.T) {
 	}
 }
 
+func TestValidator_StructuredDataValidation_NilPair(t *testing.T) {
+	result := &ValidationResult{Issues: []ValidationIssue{}}
+	StructuredDataValidator(nil, result)
+
+	assert.True(t, result.HasErrors(), "Expected error for nil ConfigPair")
+	found := false
+	for _, issue := range result.Issues {
+		if strings.Contains(issue.Message, "nil ConfigPair passed to StructuredDataValidator") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected specific error message for nil ConfigPair")
+}
+
 func TestValidator_StructuredDataValidation(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -389,6 +434,21 @@ func TestValidator_StructuredDataValidation(t *testing.T) {
 		{
 			name:       "nil value",
 			pair:       &models.ConfigPair{Key: "/app/nil", Value: nil},
+			expectWarn: false,
+		},
+		{
+			name:       "map value - not a string, no warning",
+			pair:       &models.ConfigPair{Key: "/app/config", Value: map[string]string{"key": "value"}},
+			expectWarn: false,
+		},
+		{
+			name:       "slice value - not a string, no warning",
+			pair:       &models.ConfigPair{Key: "/app/config", Value: []string{"item1", "item2"}},
+			expectWarn: false,
+		},
+		{
+			name:       "integer value - not a string, no warning",
+			pair:       &models.ConfigPair{Key: "/app/port", Value: 8080},
 			expectWarn: false,
 		},
 	}
@@ -485,6 +545,21 @@ func TestValidator_IsValidStructuredData(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestValidator_ValidateURL_NilPair(t *testing.T) {
+	result := &ValidationResult{Issues: []ValidationIssue{}}
+	URLValidator(nil, result)
+
+	assert.True(t, result.HasErrors(), "Expected error for nil ConfigPair")
+	found := false
+	for _, issue := range result.Issues {
+		if strings.Contains(issue.Message, "nil ConfigPair passed to URLValidator") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected specific error message for nil ConfigPair")
 }
 
 func TestValidator_ValidateURL(t *testing.T) {
