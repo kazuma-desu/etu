@@ -34,22 +34,22 @@ func TestValidationResult_HasErrors(t *testing.T) {
 		{
 			name: "only warnings",
 			issues: []ValidationIssue{
-				{Level: "warning", Key: "/test", Message: "test warning"},
+				{Level: LevelWarning, Key: "/test", Message: "test warning"},
 			},
 			expected: false,
 		},
 		{
 			name: "has errors",
 			issues: []ValidationIssue{
-				{Level: "error", Key: "/test", Message: "test error"},
+				{Level: LevelError, Key: "/test", Message: "test error"},
 			},
 			expected: true,
 		},
 		{
 			name: "mixed errors and warnings",
 			issues: []ValidationIssue{
-				{Level: "warning", Key: "/test1", Message: "test warning"},
-				{Level: "error", Key: "/test2", Message: "test error"},
+				{Level: LevelWarning, Key: "/test1", Message: "test warning"},
+				{Level: LevelError, Key: "/test2", Message: "test error"},
 			},
 			expected: true,
 		},
@@ -77,22 +77,22 @@ func TestValidationResult_HasWarnings(t *testing.T) {
 		{
 			name: "only errors",
 			issues: []ValidationIssue{
-				{Level: "error", Key: "/test", Message: "test error"},
+				{Level: LevelError, Key: "/test", Message: "test error"},
 			},
 			expected: false,
 		},
 		{
 			name: "has warnings",
 			issues: []ValidationIssue{
-				{Level: "warning", Key: "/test", Message: "test warning"},
+				{Level: LevelWarning, Key: "/test", Message: "test warning"},
 			},
 			expected: true,
 		},
 		{
 			name: "mixed errors and warnings",
 			issues: []ValidationIssue{
-				{Level: "warning", Key: "/test1", Message: "test warning"},
-				{Level: "error", Key: "/test2", Message: "test error"},
+				{Level: LevelWarning, Key: "/test1", Message: "test warning"},
+				{Level: LevelError, Key: "/test2", Message: "test error"},
 			},
 			expected: true,
 		},

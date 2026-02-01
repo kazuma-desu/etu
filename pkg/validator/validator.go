@@ -154,11 +154,15 @@ func isValidStructuredData(s string) bool {
 	return false
 }
 
-// ValidationIssue represents a single validation issue
+const (
+	LevelError   = "error"
+	LevelWarning = "warning"
+)
+
 type ValidationIssue struct {
 	Key     string
 	Message string
-	Level   string // "error" or "warning"
+	Level   string
 }
 
 // ValidationResult contains the results of validation
@@ -170,7 +174,7 @@ type ValidationResult struct {
 // HasErrors returns true if there are any error-level issues
 func (v *ValidationResult) HasErrors() bool {
 	for _, issue := range v.Issues {
-		if issue.Level == "error" {
+		if issue.Level == LevelError {
 			return true
 		}
 	}
@@ -180,7 +184,7 @@ func (v *ValidationResult) HasErrors() bool {
 // HasWarnings returns true if there are any warning-level issues
 func (v *ValidationResult) HasWarnings() bool {
 	for _, issue := range v.Issues {
-		if issue.Level == "warning" {
+		if issue.Level == LevelWarning {
 			return true
 		}
 	}
@@ -246,16 +250,15 @@ func (v *Validator) Validate(pairs []*models.ConfigPair) *ValidationResult {
 // addError adds an error-level issue
 func (v *ValidationResult) addError(key, message string) {
 	v.Issues = append(v.Issues, ValidationIssue{
-		Level:   "error",
+		Level:   LevelError,
 		Key:     key,
 		Message: message,
 	})
 }
 
-// addWarning adds a warning-level issue
 func (v *ValidationResult) addWarning(key, message string) {
 	v.Issues = append(v.Issues, ValidationIssue{
-		Level:   "warning",
+		Level:   LevelWarning,
 		Key:     key,
 		Message: message,
 	})
