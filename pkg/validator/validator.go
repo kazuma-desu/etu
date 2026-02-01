@@ -99,6 +99,7 @@ func URLValidator(pair *models.ConfigPair, result *ValidationResult) {
 
 	str, ok := pair.Value.(string)
 	if !ok {
+		result.addWarning(pair.Key, fmt.Sprintf("value for key containing 'url' is not a string (actual type: %T)", pair.Value))
 		return
 	}
 
@@ -225,6 +226,12 @@ func (v *Validator) Validate(pairs []*models.ConfigPair) *ValidationResult {
 	seenKeys := make(map[string]bool)
 
 	for _, pair := range pairs {
+		// Guard against nil config pair
+		if pair == nil {
+			result.addError("", "nil config pair")
+			continue
+		}
+
 		// Check for duplicates
 		if seenKeys[pair.Key] {
 			result.addError(pair.Key, "duplicate key found")
