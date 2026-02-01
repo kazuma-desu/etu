@@ -3,8 +3,10 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
@@ -89,6 +91,18 @@ func TestWrapContextError(t *testing.T) {
 			err:     errors.New("some other error"),
 			wantNil: false,
 			wantMsg: "some other error",
+		},
+		{
+			name:    "wrapped deadline exceeded is detected",
+			err:     fmt.Errorf("wrapped: %w", context.DeadlineExceeded),
+			wantNil: false,
+			wantMsg: "operation timed out",
+		},
+		{
+			name:    "wrapped context canceled is detected",
+			err:     fmt.Errorf("wrapped: %w", context.Canceled),
+			wantNil: false,
+			wantMsg: "operation canceled by user",
 		},
 	}
 
@@ -580,4 +594,41 @@ func TestNewEtcdClientOrDryRun_DryRun(t *testing.T) {
 	}
 	// Should not panic
 	cleanup()
+}
+
+func TestOperationTimeoutBehavior(t *testing.T) {
+	originalTimeout := operationTimeout
+	defer func() {
+		operationTimeout = originalTimeout
+	}()
+
+	operationTimeout = 100 * time.Millisecond
+
+	ctx, cancel := getOperationContext()
+	defer cancel()
+
+	deadline, hasDeadline := ctx.Deadline()
+	if !hasDeadline {
+		t.Fatal("context should have a deadline")
+	}
+
+	expectedDeadline := time.Now().Add(operationTimeout)
+	deadlineDiff := deadline.Sub(expectedDeadline)
+	if deadlineDiff > time.Second || deadlineDiff < -time.Second {
+		t.Errorf("deadline should be approximately %v from now, got diff %v", operationTimeout, deadlineDiff)
+	}
+}
+
+func BenchmarkWrapContextError(b *testing.B) {
+	errs := []error{
+		nil,
+		context.DeadlineExceeded,
+		context.Canceled,
+		errors.New("some error"),
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = wrapContextError(errs[i%len(errs)])
+	}
 }
