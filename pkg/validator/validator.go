@@ -28,6 +28,11 @@ type Func func(pair *models.ConfigPair, result *ValidationResult)
 
 // KeyFormatValidator validates the format of an etcd key
 func KeyFormatValidator(pair *models.ConfigPair, result *ValidationResult) {
+	if pair == nil {
+		result.addError("", "nil ConfigPair passed to KeyFormatValidator")
+		return
+	}
+
 	key := pair.Key
 
 	if !strings.HasPrefix(key, "/") {
@@ -51,6 +56,11 @@ func KeyFormatValidator(pair *models.ConfigPair, result *ValidationResult) {
 
 // ValueValidator validates the value of a configuration pair
 func ValueValidator(pair *models.ConfigPair, result *ValidationResult) {
+	if pair == nil {
+		result.addError("", "nil ConfigPair passed to ValueValidator")
+		return
+	}
+
 	if pair.Value == nil {
 		result.addError(pair.Key, "value cannot be nil")
 		return
@@ -72,11 +82,19 @@ func ValueValidator(pair *models.ConfigPair, result *ValidationResult) {
 
 // StructuredDataValidator validates structured data (JSON/YAML)
 func StructuredDataValidator(pair *models.ConfigPair, result *ValidationResult) {
+	if pair == nil {
+		result.addError("", "nil ConfigPair passed to StructuredDataValidator")
+		return
+	}
+
 	if pair.Value == nil {
 		return
 	}
 
-	valueStr := fmt.Sprintf("%v", pair.Value)
+	valueStr, ok := pair.Value.(string)
+	if !ok {
+		return
+	}
 
 	if !looksLikeStructuredData(valueStr) {
 		return
@@ -89,6 +107,11 @@ func StructuredDataValidator(pair *models.ConfigPair, result *ValidationResult) 
 
 // URLValidator validates URL values in keys containing "url"
 func URLValidator(pair *models.ConfigPair, result *ValidationResult) {
+	if pair == nil {
+		result.addError("", "nil ConfigPair passed to URLValidator")
+		return
+	}
+
 	if pair.Value == nil {
 		return
 	}
