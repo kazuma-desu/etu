@@ -420,12 +420,11 @@ func TestValidator_StructuredDataValidation(t *testing.T) {
 
 func TestNewValidator_CustomValidators(t *testing.T) {
 	customCalled := false
-	customValidator := func(pair *models.ConfigPair, result *ValidationResult) error {
+	customValidator := func(pair *models.ConfigPair, result *ValidationResult) {
 		customCalled = true
 		if pair.Value == "forbidden" {
 			result.addError(pair.Key, "forbidden value")
 		}
-		return nil
 	}
 
 	v := NewValidator(false, customValidator)

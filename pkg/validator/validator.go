@@ -24,120 +24,99 @@ var (
 )
 
 // Func defines a validation function that can be plugged into the validator.
-type Func func(pair *models.ConfigPair, result *ValidationResult) error
+type Func func(pair *models.ConfigPair, result *ValidationResult)
 
 // KeyFormatValidator validates the format of an etcd key
-func KeyFormatValidator(pair *models.ConfigPair, result *ValidationResult) error {
+func KeyFormatValidator(pair *models.ConfigPair, result *ValidationResult) {
 	key := pair.Key
 
-	// Must start with /
 	if !strings.HasPrefix(key, "/") {
 		result.addError(key, "key must start with '/'")
-		return nil
+		return
 	}
 
-	// Check key length
 	if len(key) > maxKeyLength {
 		result.addError(key, fmt.Sprintf("key length exceeds maximum of %d characters", maxKeyLength))
 	}
 
-	// Check key depth
 	depth := strings.Count(key, "/") - 1
 	if depth > maxKeyDepth {
 		result.addError(key, fmt.Sprintf("key depth exceeds maximum of %d levels", maxKeyDepth))
 	}
 
-	// Check valid characters
 	if !validKeyRE.MatchString(key) {
 		result.addError(key, "key contains invalid characters (allowed: a-z, A-Z, 0-9, /, _, -, .)")
 	}
-
-	return nil
 }
 
 // ValueValidator validates the value of a configuration pair
-func ValueValidator(pair *models.ConfigPair, result *ValidationResult) error {
-	// Check for nil value
+func ValueValidator(pair *models.ConfigPair, result *ValidationResult) {
 	if pair.Value == nil {
 		result.addError(pair.Key, "value cannot be nil")
-		return nil
+		return
 	}
 
-	// Convert value to string for size check
 	valueStr := fmt.Sprintf("%v", pair.Value)
 
-	// Check if value is empty string
 	if valueStr == "" {
 		result.addWarning(pair.Key, "value is empty string")
 	}
 
-	// Check value size
 	size := len(valueStr)
 	if size > maxValueSize {
 		result.addError(pair.Key, fmt.Sprintf("value size (%d bytes) exceeds maximum of %d bytes", size, maxValueSize))
 	} else if size > warnValueSize {
 		result.addWarning(pair.Key, fmt.Sprintf("value size (%d bytes) exceeds recommended size of %d bytes", size, warnValueSize))
 	}
-
-	return nil
 }
 
 // StructuredDataValidator validates structured data (JSON/YAML)
-func StructuredDataValidator(pair *models.ConfigPair, result *ValidationResult) error {
+func StructuredDataValidator(pair *models.ConfigPair, result *ValidationResult) {
 	if pair.Value == nil {
-		return nil
+		return
 	}
 
 	valueStr := fmt.Sprintf("%v", pair.Value)
 
-	// Check if looks like structured data
 	if !looksLikeStructuredData(valueStr) {
-		return nil
+		return
 	}
 
-	// Validate it's proper JSON/YAML
 	if !isValidStructuredData(valueStr) {
 		result.addWarning(pair.Key, "value looks like structured data but is not valid JSON or YAML")
 	}
-
-	return nil
 }
 
 // URLValidator validates URL values in keys containing "url"
-func URLValidator(pair *models.ConfigPair, result *ValidationResult) error {
+func URLValidator(pair *models.ConfigPair, result *ValidationResult) {
 	if pair.Value == nil {
-		return nil
+		return
 	}
 
-	// Only validate if key contains "url"
 	if !strings.Contains(strings.ToLower(pair.Key), "url") {
-		return nil
+		return
 	}
 
 	str, ok := pair.Value.(string)
 	if !ok {
-		return nil
+		return
 	}
 
 	if str == "" {
-		return nil
+		return
 	}
 
-	// Try parsing as-is
 	parsed, err := url.Parse(str)
 	if err != nil {
 		result.addWarning(pair.Key, fmt.Sprintf("value looks like URL but failed to parse: %v", err))
-		return nil
+		return
 	}
 
-	// Warn if scheme is missing
 	if parsed.Scheme == "" {
 		result.addWarning(pair.Key, "URL is missing scheme (http:// or https:// recommended)")
 	} else if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		result.addWarning(pair.Key, fmt.Sprintf("URL has unusual scheme: %s", parsed.Scheme))
 	}
-
-	return nil
 }
 
 // looksLikeStructuredData checks if a string looks like JSON or YAML
@@ -251,7 +230,7 @@ func (v *Validator) Validate(pairs []*models.ConfigPair) *ValidationResult {
 
 		// Run all validators
 		for _, validator := range v.validators {
-			_ = validator(pair, result)
+			validator(pair, result)
 		}
 	}
 
