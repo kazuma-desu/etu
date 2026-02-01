@@ -612,10 +612,10 @@ func TestOperationTimeoutBehavior(t *testing.T) {
 		t.Fatal("context should have a deadline")
 	}
 
-	expectedDeadline := time.Now().Add(operationTimeout)
-	deadlineDiff := deadline.Sub(expectedDeadline)
-	if deadlineDiff > time.Second || deadlineDiff < -time.Second {
-		t.Errorf("deadline should be approximately %v from now, got diff %v", operationTimeout, deadlineDiff)
+	tolerance := 50 * time.Millisecond
+	remaining := time.Until(deadline)
+	if remaining > operationTimeout+tolerance || remaining < operationTimeout-tolerance {
+		t.Errorf("deadline should be approximately %v from now, got %v", operationTimeout, remaining)
 	}
 }
 
