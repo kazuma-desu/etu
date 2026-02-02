@@ -34,22 +34,22 @@ func TestValidationResult_HasErrors(t *testing.T) {
 		{
 			name: "only warnings",
 			issues: []ValidationIssue{
-				{Level: "warning", Key: "/test", Message: "test warning"},
+				{Level: LevelWarning, Key: "/test", Message: "test warning"},
 			},
 			expected: false,
 		},
 		{
 			name: "has errors",
 			issues: []ValidationIssue{
-				{Level: "error", Key: "/test", Message: "test error"},
+				{Level: LevelError, Key: "/test", Message: "test error"},
 			},
 			expected: true,
 		},
 		{
 			name: "mixed errors and warnings",
 			issues: []ValidationIssue{
-				{Level: "warning", Key: "/test1", Message: "test warning"},
-				{Level: "error", Key: "/test2", Message: "test error"},
+				{Level: LevelWarning, Key: "/test1", Message: "test warning"},
+				{Level: LevelError, Key: "/test2", Message: "test error"},
 			},
 			expected: true,
 		},
@@ -77,22 +77,22 @@ func TestValidationResult_HasWarnings(t *testing.T) {
 		{
 			name: "only errors",
 			issues: []ValidationIssue{
-				{Level: "error", Key: "/test", Message: "test error"},
+				{Level: LevelError, Key: "/test", Message: "test error"},
 			},
 			expected: false,
 		},
 		{
 			name: "has warnings",
 			issues: []ValidationIssue{
-				{Level: "warning", Key: "/test", Message: "test warning"},
+				{Level: LevelWarning, Key: "/test", Message: "test warning"},
 			},
 			expected: true,
 		},
 		{
 			name: "mixed errors and warnings",
 			issues: []ValidationIssue{
-				{Level: "warning", Key: "/test1", Message: "test warning"},
-				{Level: "error", Key: "/test2", Message: "test error"},
+				{Level: LevelWarning, Key: "/test1", Message: "test warning"},
+				{Level: LevelError, Key: "/test2", Message: "test error"},
 			},
 			expected: true,
 		},
@@ -104,6 +104,21 @@ func TestValidationResult_HasWarnings(t *testing.T) {
 			assert.Equal(t, tt.expected, result.HasWarnings())
 		})
 	}
+}
+
+func TestValidator_ValidateKey_NilPair(t *testing.T) {
+	result := &ValidationResult{Issues: []ValidationIssue{}}
+	KeyFormatValidator(nil, result)
+
+	assert.True(t, result.HasErrors(), "Expected error for nil ConfigPair")
+	found := false
+	for _, issue := range result.Issues {
+		if strings.Contains(issue.Message, "nil ConfigPair passed to KeyFormatValidator") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected specific error message for nil ConfigPair")
 }
 
 func TestValidator_ValidateKey(t *testing.T) {
@@ -177,10 +192,10 @@ func TestValidator_ValidateKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := NewValidator(false)
 			result := &ValidationResult{Issues: []ValidationIssue{}}
+			pair := &models.ConfigPair{Key: tt.key, Value: "test"}
 
-			v.validateKey(tt.key, result)
+			KeyFormatValidator(pair, result)
 
 			if tt.expectError {
 				assert.True(t, len(result.Issues) > 0, "Expected validation error")
@@ -199,6 +214,21 @@ func TestValidator_ValidateKey(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidator_ValidateValue_NilPair(t *testing.T) {
+	result := &ValidationResult{Issues: []ValidationIssue{}}
+	ValueValidator(nil, result)
+
+	assert.True(t, result.HasErrors(), "Expected error for nil ConfigPair")
+	found := false
+	for _, issue := range result.Issues {
+		if strings.Contains(issue.Message, "nil ConfigPair passed to ValueValidator") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected specific error message for nil ConfigPair")
 }
 
 func TestValidator_ValidateValue(t *testing.T) {
@@ -247,47 +277,13 @@ func TestValidator_ValidateValue(t *testing.T) {
 			expectWarn:   true,
 			messageMatch: "exceeds recommended size",
 		},
-		{
-			name:        "valid JSON value",
-			pair:        &models.ConfigPair{Key: "/app/config", Value: `{"key": "value"}`},
-			expectError: false,
-			expectWarn:  false,
-		},
-		{
-			name:         "invalid JSON-like value",
-			pair:         &models.ConfigPair{Key: "/app/config", Value: `{invalid json`},
-			expectError:  false,
-			expectWarn:   true,
-			messageMatch: "not valid JSON or YAML",
-		},
-		{
-			name:        "valid URL",
-			pair:        &models.ConfigPair{Key: "/app/api_url", Value: "https://example.com"},
-			expectError: false,
-			expectWarn:  false,
-		},
-		{
-			name:         "URL without scheme",
-			pair:         &models.ConfigPair{Key: "/app/url", Value: "example.com"},
-			expectError:  false,
-			expectWarn:   true,
-			messageMatch: "missing scheme",
-		},
-		{
-			name:         "URL with unusual scheme",
-			pair:         &models.ConfigPair{Key: "/app/url", Value: "ftp://example.com"},
-			expectError:  false,
-			expectWarn:   true,
-			messageMatch: "unusual scheme",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := NewValidator(false)
 			result := &ValidationResult{Issues: []ValidationIssue{}}
 
-			v.validateValue(tt.pair, result)
+			ValueValidator(tt.pair, result)
 
 			if tt.expectError {
 				assert.True(t, result.HasErrors(), "Expected validation error")
@@ -397,9 +393,115 @@ func TestValidator_Validate(t *testing.T) {
 	}
 }
 
-func TestValidator_LooksLikeStructuredData(t *testing.T) {
-	v := NewValidator(false)
+func TestValidator_StructuredDataValidation_NilPair(t *testing.T) {
+	result := &ValidationResult{Issues: []ValidationIssue{}}
+	StructuredDataValidator(nil, result)
 
+	assert.True(t, result.HasErrors(), "Expected error for nil ConfigPair")
+	found := false
+	for _, issue := range result.Issues {
+		if strings.Contains(issue.Message, "nil ConfigPair passed to StructuredDataValidator") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected specific error message for nil ConfigPair")
+}
+
+func TestValidator_StructuredDataValidation(t *testing.T) {
+	tests := []struct {
+		name         string
+		pair         *models.ConfigPair
+		messageMatch string
+		expectWarn   bool
+	}{
+		{
+			name:       "valid JSON value",
+			pair:       &models.ConfigPair{Key: "/app/config", Value: `{"key": "value"}`},
+			expectWarn: false,
+		},
+		{
+			name:         "invalid JSON-like value",
+			pair:         &models.ConfigPair{Key: "/app/config", Value: `{invalid json`},
+			expectWarn:   true,
+			messageMatch: "not valid JSON or YAML",
+		},
+		{
+			name:       "plain string value",
+			pair:       &models.ConfigPair{Key: "/app/name", Value: "myapp"},
+			expectWarn: false,
+		},
+		{
+			name:       "nil value",
+			pair:       &models.ConfigPair{Key: "/app/nil", Value: nil},
+			expectWarn: false,
+		},
+		{
+			name:       "map value - not a string, no warning",
+			pair:       &models.ConfigPair{Key: "/app/config", Value: map[string]string{"key": "value"}},
+			expectWarn: false,
+		},
+		{
+			name:       "slice value - not a string, no warning",
+			pair:       &models.ConfigPair{Key: "/app/config", Value: []string{"item1", "item2"}},
+			expectWarn: false,
+		},
+		{
+			name:       "integer value - not a string, no warning",
+			pair:       &models.ConfigPair{Key: "/app/port", Value: 8080},
+			expectWarn: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := &ValidationResult{Issues: []ValidationIssue{}}
+
+			StructuredDataValidator(tt.pair, result)
+
+			if tt.expectWarn {
+				assert.True(t, result.HasWarnings(), "Expected validation warning")
+				if tt.messageMatch != "" {
+					found := false
+					for _, issue := range result.Issues {
+						if strings.Contains(issue.Message, tt.messageMatch) {
+							found = true
+							break
+						}
+					}
+					assert.True(t, found, "Expected message containing: %s", tt.messageMatch)
+				}
+			} else {
+				assert.False(t, result.HasWarnings(), "Expected no warnings")
+			}
+		})
+	}
+}
+
+func TestNewValidator_CustomValidators(t *testing.T) {
+	customCalled := false
+	customValidator := func(pair *models.ConfigPair, result *ValidationResult) {
+		customCalled = true
+		if pair.Value == "forbidden" {
+			result.addError(pair.Key, "forbidden value")
+		}
+	}
+
+	v := NewValidator(false, customValidator)
+	// 4 defaults + 1 custom
+	assert.Len(t, v.validators, 5)
+
+	pairs := []*models.ConfigPair{
+		{Key: "/app/test", Value: "forbidden"},
+	}
+	result := v.Validate(pairs)
+
+	assert.True(t, customCalled, "Custom validator should have been called")
+	assert.True(t, result.HasErrors(), "Custom validator should have added error")
+	assert.False(t, result.Valid)
+}
+
+func TestValidator_LooksLikeStructuredData(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -417,15 +519,13 @@ func TestValidator_LooksLikeStructuredData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := v.looksLikeStructuredData(tt.input)
+			result := looksLikeStructuredData(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
 
 func TestValidator_IsValidStructuredData(t *testing.T) {
-	v := NewValidator(false)
-
 	tests := []struct {
 		name     string
 		input    string
@@ -441,10 +541,25 @@ func TestValidator_IsValidStructuredData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := v.isValidStructuredData(tt.input)
+			result := isValidStructuredData(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestValidator_ValidateURL_NilPair(t *testing.T) {
+	result := &ValidationResult{Issues: []ValidationIssue{}}
+	URLValidator(nil, result)
+
+	assert.True(t, result.HasErrors(), "Expected error for nil ConfigPair")
+	found := false
+	for _, issue := range result.Issues {
+		if strings.Contains(issue.Message, "nil ConfigPair passed to URLValidator") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected specific error message for nil ConfigPair")
 }
 
 func TestValidator_ValidateURL(t *testing.T) {
@@ -491,10 +606,10 @@ func TestValidator_ValidateURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := NewValidator(false)
 			result := &ValidationResult{Issues: []ValidationIssue{}}
+			pair := &models.ConfigPair{Key: tt.key, Value: tt.url}
 
-			v.validateURL(tt.key, tt.url, result)
+			URLValidator(pair, result)
 
 			if tt.expectWarn {
 				assert.True(t, result.HasWarnings(), "Expected validation warning")

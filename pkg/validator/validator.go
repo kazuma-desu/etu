@@ -23,148 +23,128 @@ var (
 	validKeyRE = regexp.MustCompile(`^/[a-zA-Z0-9/_\-\.]+$`)
 )
 
-// ValidationIssue represents a single validation issue
-type ValidationIssue struct {
-	Key     string
-	Message string
-	Level   string // "error" or "warning"
-}
+// Func defines a validation function that can be plugged into the validator.
+type Func func(pair *models.ConfigPair, result *ValidationResult)
 
-// ValidationResult contains the results of validation
-type ValidationResult struct {
-	Issues []ValidationIssue
-	Valid  bool
-}
-
-// HasErrors returns true if there are any error-level issues
-func (v *ValidationResult) HasErrors() bool {
-	for _, issue := range v.Issues {
-		if issue.Level == "error" {
-			return true
-		}
-	}
-	return false
-}
-
-// HasWarnings returns true if there are any warning-level issues
-func (v *ValidationResult) HasWarnings() bool {
-	for _, issue := range v.Issues {
-		if issue.Level == "warning" {
-			return true
-		}
-	}
-	return false
-}
-
-// Validator validates etcd configuration pairs
-type Validator struct {
-	strict bool // If true, treat warnings as errors
-}
-
-// NewValidator creates a new validator
-func NewValidator(strict bool) *Validator {
-	return &Validator{strict: strict}
-}
-
-// Validate validates a slice of configuration pairs
-func (v *Validator) Validate(pairs []*models.ConfigPair) *ValidationResult {
-	result := &ValidationResult{
-		Valid:  true,
-		Issues: []ValidationIssue{},
+// KeyFormatValidator validates the format of an etcd key
+func KeyFormatValidator(pair *models.ConfigPair, result *ValidationResult) {
+	if pair == nil {
+		result.addError("", "nil ConfigPair passed to KeyFormatValidator")
+		return
 	}
 
-	seenKeys := make(map[string]bool)
+	key := pair.Key
 
-	for _, pair := range pairs {
-		// Check for duplicates
-		if seenKeys[pair.Key] {
-			result.addError(pair.Key, "duplicate key found")
-			continue
-		}
-		seenKeys[pair.Key] = true
-
-		// Validate key
-		v.validateKey(pair.Key, result)
-
-		// Validate value
-		v.validateValue(pair, result)
-	}
-
-	// Determine if validation passed
-	result.Valid = !result.HasErrors()
-	if v.strict && result.HasWarnings() {
-		result.Valid = false
-	}
-
-	return result
-}
-
-// validateKey validates an etcd key
-func (v *Validator) validateKey(key string, result *ValidationResult) {
-	// Must start with /
 	if !strings.HasPrefix(key, "/") {
 		result.addError(key, "key must start with '/'")
 		return
 	}
 
-	// Check key length
 	if len(key) > maxKeyLength {
 		result.addError(key, fmt.Sprintf("key length exceeds maximum of %d characters", maxKeyLength))
 	}
 
-	// Check key depth
 	depth := strings.Count(key, "/") - 1
 	if depth > maxKeyDepth {
 		result.addError(key, fmt.Sprintf("key depth exceeds maximum of %d levels", maxKeyDepth))
 	}
 
-	// Check valid characters
 	if !validKeyRE.MatchString(key) {
 		result.addError(key, "key contains invalid characters (allowed: a-z, A-Z, 0-9, /, _, -, .)")
 	}
 }
 
-// validateValue validates a configuration value
-func (v *Validator) validateValue(pair *models.ConfigPair, result *ValidationResult) {
-	// Check for nil value
+// ValueValidator validates the value of a configuration pair
+func ValueValidator(pair *models.ConfigPair, result *ValidationResult) {
+	if pair == nil {
+		result.addError("", "nil ConfigPair passed to ValueValidator")
+		return
+	}
+
 	if pair.Value == nil {
 		result.addError(pair.Key, "value cannot be nil")
 		return
 	}
 
-	// Convert value to string for size check
 	valueStr := fmt.Sprintf("%v", pair.Value)
 
-	// Check if value is empty string
 	if valueStr == "" {
 		result.addWarning(pair.Key, "value is empty string")
 	}
 
-	// Check value size
 	size := len(valueStr)
 	if size > maxValueSize {
 		result.addError(pair.Key, fmt.Sprintf("value size (%d bytes) exceeds maximum of %d bytes", size, maxValueSize))
 	} else if size > warnValueSize {
 		result.addWarning(pair.Key, fmt.Sprintf("value size (%d bytes) exceeds recommended size of %d bytes", size, warnValueSize))
 	}
+}
 
-	// Validate structured data (JSON/YAML)
-	if v.looksLikeStructuredData(valueStr) {
-		if !v.isValidStructuredData(valueStr) {
-			result.addWarning(pair.Key, "value looks like structured data but is not valid JSON or YAML")
-		}
+// StructuredDataValidator validates structured data (JSON/YAML)
+func StructuredDataValidator(pair *models.ConfigPair, result *ValidationResult) {
+	if pair == nil {
+		result.addError("", "nil ConfigPair passed to StructuredDataValidator")
+		return
 	}
 
-	// Validate URLs
-	if strings.Contains(strings.ToLower(pair.Key), "url") {
-		if str, ok := pair.Value.(string); ok {
-			v.validateURL(pair.Key, str, result)
-		}
+	if pair.Value == nil {
+		return
+	}
+
+	valueStr, ok := pair.Value.(string)
+	if !ok {
+		return
+	}
+
+	if !looksLikeStructuredData(valueStr) {
+		return
+	}
+
+	if !isValidStructuredData(valueStr) {
+		result.addWarning(pair.Key, "value looks like structured data but is not valid JSON or YAML")
+	}
+}
+
+// URLValidator validates URL values in keys containing "url"
+func URLValidator(pair *models.ConfigPair, result *ValidationResult) {
+	if pair == nil {
+		result.addError("", "nil ConfigPair passed to URLValidator")
+		return
+	}
+
+	if pair.Value == nil {
+		return
+	}
+
+	if !strings.Contains(strings.ToLower(pair.Key), "url") {
+		return
+	}
+
+	str, ok := pair.Value.(string)
+	if !ok {
+		result.addWarning(pair.Key, fmt.Sprintf("value for key containing 'url' is not a string (actual type: %T)", pair.Value))
+		return
+	}
+
+	if str == "" {
+		return
+	}
+
+	parsed, err := url.Parse(str)
+	if err != nil {
+		result.addWarning(pair.Key, fmt.Sprintf("value looks like URL but failed to parse: %v", err))
+		return
+	}
+
+	if parsed.Scheme == "" {
+		result.addWarning(pair.Key, "URL is missing scheme (http:// or https:// recommended)")
+	} else if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		result.addWarning(pair.Key, fmt.Sprintf("URL has unusual scheme: %s", parsed.Scheme))
 	}
 }
 
 // looksLikeStructuredData checks if a string looks like JSON or YAML
-func (v *Validator) looksLikeStructuredData(s string) bool {
+func looksLikeStructuredData(s string) bool {
 	s = strings.TrimSpace(s)
 	// Check for JSON
 	if strings.HasPrefix(s, "{") || strings.HasPrefix(s, "[") {
@@ -182,7 +162,7 @@ func (v *Validator) looksLikeStructuredData(s string) bool {
 }
 
 // isValidStructuredData checks if data is valid JSON or YAML
-func (v *Validator) isValidStructuredData(s string) bool {
+func isValidStructuredData(s string) bool {
 	// Try JSON
 	var jsonData any
 	if err := json.Unmarshal([]byte(s), &jsonData); err == nil {
@@ -198,40 +178,117 @@ func (v *Validator) isValidStructuredData(s string) bool {
 	return false
 }
 
-// validateURL validates a URL value
-func (v *Validator) validateURL(key, urlStr string, result *ValidationResult) {
-	if urlStr == "" {
-		return
+const (
+	LevelError   = "error"
+	LevelWarning = "warning"
+)
+
+type ValidationIssue struct {
+	Key     string
+	Message string
+	Level   string
+}
+
+// ValidationResult contains the results of validation
+type ValidationResult struct {
+	Issues []ValidationIssue
+	Valid  bool
+}
+
+// HasErrors returns true if there are any error-level issues
+func (v *ValidationResult) HasErrors() bool {
+	for _, issue := range v.Issues {
+		if issue.Level == LevelError {
+			return true
+		}
+	}
+	return false
+}
+
+// HasWarnings returns true if there are any warning-level issues
+func (v *ValidationResult) HasWarnings() bool {
+	for _, issue := range v.Issues {
+		if issue.Level == LevelWarning {
+			return true
+		}
+	}
+	return false
+}
+
+// Validator validates etcd configuration pairs
+type Validator struct {
+	strict     bool // If true, treat warnings as errors
+	validators []Func
+}
+
+// NewValidator creates a new validator with optional custom validators
+func NewValidator(strict bool, custom ...Func) *Validator {
+	validators := []Func{
+		KeyFormatValidator,
+		ValueValidator,
+		StructuredDataValidator,
+		URLValidator,
 	}
 
-	// Try parsing as-is
-	parsed, err := url.Parse(urlStr)
-	if err != nil {
-		result.addWarning(key, fmt.Sprintf("value looks like URL but failed to parse: %v", err))
-		return
+	// Append custom validators
+	validators = append(validators, custom...)
+
+	return &Validator{
+		strict:     strict,
+		validators: validators,
+	}
+}
+
+// Validate validates a slice of configuration pairs
+func (v *Validator) Validate(pairs []*models.ConfigPair) *ValidationResult {
+	result := &ValidationResult{
+		Valid:  true,
+		Issues: []ValidationIssue{},
 	}
 
-	// Warn if scheme is missing
-	if parsed.Scheme == "" {
-		result.addWarning(key, "URL is missing scheme (http:// or https:// recommended)")
-	} else if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		result.addWarning(key, fmt.Sprintf("URL has unusual scheme: %s", parsed.Scheme))
+	seenKeys := make(map[string]bool)
+
+	for _, pair := range pairs {
+		// Guard against nil config pair
+		if pair == nil {
+			result.addError("", "nil config pair")
+			continue
+		}
+
+		// Check for duplicates
+		if seenKeys[pair.Key] {
+			result.addError(pair.Key, "duplicate key found")
+			continue
+		}
+		seenKeys[pair.Key] = true
+
+		// Run all validators
+		for _, validator := range v.validators {
+			validator(pair, result)
+		}
 	}
+
+	// Determine if validation passed
+	result.Valid = !result.HasErrors()
+	if v.strict && result.HasWarnings() {
+		result.Valid = false
+	}
+
+	return result
 }
 
 // addError adds an error-level issue
 func (v *ValidationResult) addError(key, message string) {
 	v.Issues = append(v.Issues, ValidationIssue{
-		Level:   "error",
+		Level:   LevelError,
 		Key:     key,
 		Message: message,
 	})
 }
 
-// addWarning adds a warning-level issue
 func (v *ValidationResult) addWarning(key, message string) {
 	v.Issues = append(v.Issues, ValidationIssue{
-		Level:   "warning",
+		Level:   LevelWarning,
 		Key:     key,
 		Message: message,
 	})
