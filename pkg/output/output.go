@@ -80,23 +80,36 @@ func printConfigPairsTable(pairs []*models.ConfigPair) error {
 // PrintValidationResult prints validation results with styling
 func PrintValidationResult(result *validator.ValidationResult, strict bool) {
 	if len(result.Issues) == 0 {
-		msg := StyleIfTerminal(successStyle, "✓ Validation passed - no issues found")
-		fmt.Println(StyleIfTerminal(successPanelStyle, msg))
+		printValidationSuccess()
 		return
 	}
 
-	// Count errors and warnings
-	errorCount := 0
-	warningCount := 0
-	for _, issue := range result.Issues {
+	errorCount, warningCount := countIssues(result.Issues)
+	printValidationSummary(errorCount, warningCount)
+	printValidationIssues(result.Issues)
+	printValidationVerdict(result.Valid, strict, errorCount, warningCount)
+}
+
+// printValidationSuccess prints the success message when no issues are found.
+func printValidationSuccess() {
+	msg := StyleIfTerminal(successStyle, "✓ Validation passed - no issues found")
+	fmt.Println(StyleIfTerminal(successPanelStyle, msg))
+}
+
+// countIssues returns the number of errors and warnings in the issue list.
+func countIssues(issues []validator.ValidationIssue) (errors, warnings int) {
+	for _, issue := range issues {
 		if issue.Level == "error" {
-			errorCount++
+			errors++
 		} else {
-			warningCount++
+			warnings++
 		}
 	}
+	return
+}
 
-	// Print summary
+// printValidationSummary prints a summary of error and warning counts.
+func printValidationSummary(errorCount, warningCount int) {
 	var summary strings.Builder
 	if errorCount > 0 {
 		summary.WriteString(StyleIfTerminal(errorStyle, fmt.Sprintf("✗ %d error(s)", errorCount)))
@@ -110,34 +123,38 @@ func PrintValidationResult(result *validator.ValidationResult, strict bool) {
 
 	fmt.Println(StyleIfTerminal(infoPanelStyle, summary.String()))
 	fmt.Println()
+}
 
-	// Print each issue
-	for _, issue := range result.Issues {
-		var prefix string
-		var style lipgloss.Style
-		if issue.Level == "error" {
-			prefix = "✗"
-			style = errorStyle
-		} else {
-			prefix = "⚠"
-			style = warningStyle
-		}
-
+// printValidationIssues prints each validation issue with appropriate styling.
+func printValidationIssues(issues []validator.ValidationIssue) {
+	for _, issue := range issues {
+		prefix, style := getIssueStyle(issue.Level)
 		key := StyleIfTerminal(keyStyle, issue.Key)
 		msg := fmt.Sprintf("%s %s: %s", prefix, key, issue.Message)
 		fmt.Println(StyleIfTerminal(style, msg))
 	}
 	fmt.Println()
+}
 
-	// Print final verdict
-	if result.Valid {
+// getIssueStyle returns the prefix and style for a given issue level.
+func getIssueStyle(level string) (string, lipgloss.Style) {
+	if level == "error" {
+		return "✗", errorStyle
+	}
+	return "⚠", warningStyle
+}
+
+// printValidationVerdict prints the final validation verdict.
+func printValidationVerdict(valid, strict bool, errorCount, warningCount int) {
+	if valid {
 		fmt.Println(StyleIfTerminal(successStyle, "✓ Validation passed"))
+		return
+	}
+
+	if strict && warningCount > 0 && errorCount == 0 {
+		fmt.Println(StyleIfTerminal(errorStyle, "✗ Validation failed (strict mode: warnings treated as errors)"))
 	} else {
-		if strict && warningCount > 0 && errorCount == 0 {
-			fmt.Println(StyleIfTerminal(errorStyle, "✗ Validation failed (strict mode: warnings treated as errors)"))
-		} else {
-			fmt.Println(StyleIfTerminal(errorStyle, "✗ Validation failed"))
-		}
+		fmt.Println(StyleIfTerminal(errorStyle, "✗ Validation failed"))
 	}
 }
 
