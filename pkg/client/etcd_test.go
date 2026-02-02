@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -11,6 +12,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -397,6 +399,72 @@ func TestLoggerInterface(t *testing.T) {
 	assert.Equal(t, []string{"info message"}, tl.infoMsgs)
 	assert.Equal(t, []string{"warn message"}, tl.warnMsgs)
 	assert.Equal(t, []string{"error message"}, tl.errorMsgs)
+}
+
+func TestWarnLargeValues(t *testing.T) {
+	largeValue := strings.Repeat("x", WarnValueSize+1)
+	smallValue := "small"
+
+	t.Run("nil logger does not panic", func(t *testing.T) {
+		pairs := []*models.ConfigPair{{Key: "/big", Value: largeValue}}
+		assert.NotPanics(t, func() { warnLargeValues(nil, pairs) })
+	})
+
+	t.Run("no warning for values under threshold", func(t *testing.T) {
+		log := &testLogger{}
+		pairs := []*models.ConfigPair{
+			{Key: "/a", Value: smallValue},
+			{Key: "/b", Value: smallValue},
+		}
+		warnLargeValues(log, pairs)
+		assert.Empty(t, log.warnMsgs)
+	})
+
+	t.Run("warns for values exceeding threshold", func(t *testing.T) {
+		log := &testLogger{}
+		pairs := []*models.ConfigPair{
+			{Key: "/small", Value: smallValue},
+			{Key: "/big", Value: largeValue},
+		}
+		warnLargeValues(log, pairs)
+		require.Len(t, log.warnMsgs, 1)
+		assert.Equal(t, "large value may impact performance", log.warnMsgs[0])
+	})
+
+	t.Run("warns for each large value", func(t *testing.T) {
+		log := &testLogger{}
+		pairs := []*models.ConfigPair{
+			{Key: "/big1", Value: largeValue},
+			{Key: "/big2", Value: largeValue},
+		}
+		warnLargeValues(log, pairs)
+		assert.Len(t, log.warnMsgs, 2)
+	})
+
+	t.Run("exact threshold does not warn", func(t *testing.T) {
+		log := &testLogger{}
+		pairs := []*models.ConfigPair{
+			{Key: "/exact", Value: strings.Repeat("x", WarnValueSize)},
+		}
+		warnLargeValues(log, pairs)
+		assert.Empty(t, log.warnMsgs)
+	})
+}
+
+func TestDryRunClient_PutAllWithOptions_LargeValueWarning(t *testing.T) {
+	log := &testLogger{}
+	client := NewDryRunClient()
+	pairs := []*models.ConfigPair{
+		{Key: "/big", Value: strings.Repeat("x", WarnValueSize+1)},
+	}
+	opts := &BatchOptions{Logger: log}
+
+	result, err := client.PutAllWithOptions(context.Background(), pairs, nil, opts)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 1, result.Succeeded)
+	require.Len(t, log.warnMsgs, 1)
+	assert.Equal(t, "large value may impact performance", log.warnMsgs[0])
 }
 
 func TestBuildTLSConfig(t *testing.T) {
