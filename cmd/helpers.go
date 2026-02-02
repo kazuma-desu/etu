@@ -191,7 +191,7 @@ func readPasswordFromStdin() (string, error) {
 func newEtcdClientOrDryRun(dryRun bool) (client.EtcdClient, func(), error) {
 	if dryRun {
 		// DryRunClient has no resources to release, so cleanup is a no-op
-		return client.NewDryRunClient(), func() {}, nil
+		return client.NewDryRunClient(), func() { /* no-op: DryRunClient has no resources to release */ }, nil
 	}
 	return newEtcdClient()
 }
