@@ -163,19 +163,11 @@ func looksLikeStructuredData(s string) bool {
 
 // isValidStructuredData checks if data is valid JSON or YAML
 func isValidStructuredData(s string) bool {
-	// Try JSON
-	var jsonData any
-	if err := json.Unmarshal([]byte(s), &jsonData); err == nil {
+	var data any
+	if json.Unmarshal([]byte(s), &data) == nil {
 		return true
 	}
-
-	// Try YAML
-	var yamlData any
-	if err := yaml.Unmarshal([]byte(s), &yamlData); err == nil {
-		return true
-	}
-
-	return false
+	return yaml.Unmarshal([]byte(s), &data) == nil
 }
 
 const (
