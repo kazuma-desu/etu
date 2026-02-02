@@ -116,7 +116,7 @@ func (r *Registry) detectByContent(path string) models.FormatType {
 			break
 		}
 	}
-	if err := scanner.Err(); err != nil {
+	if scanner.Err() != nil {
 		return models.FormatAuto
 	}
 
