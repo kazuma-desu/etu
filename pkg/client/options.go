@@ -34,33 +34,10 @@ func buildClientOptions(opts *GetOptions) ([]clientv3.OpOption, error) {
 	}
 
 	if opts.SortOrder != "" || opts.SortTarget != "" {
-		var order clientv3.SortOrder
-		var target clientv3.SortTarget
-
-		switch opts.SortOrder {
-		case "ASCEND", "":
-			order = clientv3.SortAscend
-		case "DESCEND":
-			order = clientv3.SortDescend
-		default:
-			return nil, fmt.Errorf("invalid sort order: %s (use ASCEND or DESCEND)", opts.SortOrder)
+		order, target, err := resolveSortOptions(opts.SortOrder, opts.SortTarget)
+		if err != nil {
+			return nil, err
 		}
-
-		switch opts.SortTarget {
-		case "KEY", "":
-			target = clientv3.SortByKey
-		case "VERSION":
-			target = clientv3.SortByVersion
-		case "CREATE":
-			target = clientv3.SortByCreateRevision
-		case "MODIFY":
-			target = clientv3.SortByModRevision
-		case "VALUE":
-			target = clientv3.SortByValue
-		default:
-			return nil, fmt.Errorf("invalid sort target: %s", opts.SortTarget)
-		}
-
 		clientOpts = append(clientOpts, clientv3.WithSort(target, order))
 	}
 
@@ -86,4 +63,49 @@ func buildClientOptions(opts *GetOptions) ([]clientv3.OpOption, error) {
 	}
 
 	return clientOpts, nil
+}
+
+// resolveSortOptions converts string sort order and target to etcd client types.
+func resolveSortOptions(sortOrder, sortTarget string) (clientv3.SortOrder, clientv3.SortTarget, error) {
+	order, err := parseSortOrder(sortOrder)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	target, err := parseSortTarget(sortTarget)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return order, target, nil
+}
+
+// parseSortOrder converts a sort order string to etcd SortOrder.
+func parseSortOrder(order string) (clientv3.SortOrder, error) {
+	switch order {
+	case "ASCEND", "":
+		return clientv3.SortAscend, nil
+	case "DESCEND":
+		return clientv3.SortDescend, nil
+	default:
+		return 0, fmt.Errorf("invalid sort order: %s (use ASCEND or DESCEND)", order)
+	}
+}
+
+// parseSortTarget converts a sort target string to etcd SortTarget.
+func parseSortTarget(target string) (clientv3.SortTarget, error) {
+	switch target {
+	case "KEY", "":
+		return clientv3.SortByKey, nil
+	case "VERSION":
+		return clientv3.SortByVersion, nil
+	case "CREATE":
+		return clientv3.SortByCreateRevision, nil
+	case "MODIFY":
+		return clientv3.SortByModRevision, nil
+	case "VALUE":
+		return clientv3.SortByValue, nil
+	default:
+		return 0, fmt.Errorf("invalid sort target: %s", target)
+	}
 }
