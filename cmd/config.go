@@ -10,6 +10,8 @@ import (
 	"github.com/kazuma-desu/etu/pkg/output"
 )
 
+const errFailedToLoadConfiguration = "failed to load configuration: %w"
+
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage etu configuration",
@@ -73,7 +75,7 @@ func init() {
 func runGetContexts(_ *cobra.Command, _ []string) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return fmt.Errorf(errFailedToLoadConfiguration, err)
 	}
 
 	if len(cfg.Contexts) == 0 {
@@ -112,7 +114,7 @@ func runGetContexts(_ *cobra.Command, _ []string) error {
 func runCurrentContext(_ *cobra.Command, _ []string) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return fmt.Errorf(errFailedToLoadConfiguration, err)
 	}
 
 	if cfg.CurrentContext == "" {
@@ -152,7 +154,7 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return fmt.Errorf(errFailedToLoadConfiguration, err)
 	}
 
 	switch key {
@@ -205,7 +207,7 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 func runViewConfig(_ *cobra.Command, _ []string) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return fmt.Errorf(errFailedToLoadConfiguration, err)
 	}
 
 	// Normalize format (tree not supported for config view)
