@@ -49,8 +49,12 @@ func (d *DryRunClient) PutAllWithProgress(ctx context.Context, pairs []*models.C
 	return d.PutAllWithOptions(ctx, pairs, onProgress, nil)
 }
 
-func (d *DryRunClient) PutAllWithOptions(_ context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, _ *BatchOptions) (*PutAllResult, error) {
+func (d *DryRunClient) PutAllWithOptions(_ context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, opts *BatchOptions) (*PutAllResult, error) {
 	result := &PutAllResult{Total: len(pairs)}
+
+	if opts != nil {
+		warnLargeValues(opts.Logger, pairs)
+	}
 
 	for i, pair := range pairs {
 		d.operations = append(d.operations, Operation{

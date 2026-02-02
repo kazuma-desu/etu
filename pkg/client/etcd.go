@@ -24,10 +24,8 @@ const (
 	// DefaultMaxOpsPerTxn is etcd's server limit (embed.DefaultMaxTxnOps).
 	DefaultMaxOpsPerTxn = 128
 
-	// WarnValueSize threshold for performance warnings (100KB).
-	// TODO: Wire this into Put/PutAll methods to emit warnings when value sizes
-	// exceed this threshold. Reserved for future implementation of large value
-	// detection and performance optimization warnings.
+	// WarnValueSize is the threshold (100KB) above which PutAll emits a
+	// performance warning via BatchOptions.Logger.
 	WarnValueSize = 100 * 1024
 )
 
@@ -160,6 +158,8 @@ func (c *Client) PutAllWithOptions(ctx context.Context, pairs []*models.ConfigPa
 	if len(pairs) == 0 {
 		return result, nil
 	}
+
+	warnLargeValues(opts.Logger, pairs)
 
 	for i := 0; i < len(pairs); i += DefaultMaxOpsPerTxn {
 		end := min(i+DefaultMaxOpsPerTxn, len(pairs))
@@ -463,6 +463,19 @@ func (c *Client) Status(ctx context.Context, endpoint string) (*StatusResponse, 
 		Errors:           resp.Errors,
 		IsLearner:        resp.IsLearner,
 	}, nil
+}
+
+func warnLargeValues(log Logger, pairs []*models.ConfigPair) {
+	if log == nil {
+		return
+	}
+	for _, pair := range pairs {
+		size := len(formatValue(pair.Value))
+		if size > WarnValueSize {
+			log.Warn("large value may impact performance",
+				"key", pair.Key, "size_bytes", size, "threshold_bytes", WarnValueSize)
+		}
+	}
 }
 
 // formatValue is a package-local alias to models.FormatValue for backward compatibility.
