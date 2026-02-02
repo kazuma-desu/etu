@@ -55,9 +55,27 @@ func printDiffSimple(result *DiffResult, showUnchanged bool) error {
 	Info(fmt.Sprintf("Diff result: +%d ~%d -%d", result.Added, result.Modified, result.Deleted))
 	fmt.Println()
 
-	// Group by status
-	var added, modified, deleted, unchanged []*DiffEntry
-	for _, e := range result.Entries {
+	added, modified, deleted, unchanged := groupEntriesByStatus(result.Entries, showUnchanged)
+
+	if len(added) == 0 && len(modified) == 0 && len(deleted) == 0 {
+		Success("No changes detected")
+		if !showUnchanged {
+			return nil
+		}
+	}
+
+	printDiffEntries(added, DiffStatusAdded)
+	printDiffEntries(modified, DiffStatusModified)
+	printDiffEntries(deleted, DiffStatusDeleted)
+	printDiffEntries(unchanged, DiffStatusUnchanged)
+
+	printDiffSummary(result, showUnchanged)
+	return nil
+}
+
+// groupEntriesByStatus groups diff entries by their status.
+func groupEntriesByStatus(entries []*DiffEntry, showUnchanged bool) (added, modified, deleted, unchanged []*DiffEntry) {
+	for _, e := range entries {
 		switch e.Status {
 		case DiffStatusAdded:
 			added = append(added, e)
@@ -71,61 +89,64 @@ func printDiffSimple(result *DiffResult, showUnchanged bool) error {
 			}
 		}
 	}
+	return
+}
 
-	if len(added) == 0 && len(modified) == 0 && len(deleted) == 0 {
-		Success("No changes detected")
-		// If we only have unchanged items and showUnchanged is false, we might want to return here.
-		// But if showUnchanged is true, we proceed to print them.
-		if !showUnchanged {
-			return nil
-		}
+// printDiffEntries prints a group of diff entries with appropriate styling.
+func printDiffEntries(entries []*DiffEntry, status DiffStatus) {
+	if len(entries) == 0 {
+		return
 	}
 
-	// Print added
-	if len(added) > 0 {
-		fmt.Println(StyleIfTerminal(addedStyle, fmt.Sprintf("Added (%d):", len(added))))
-		for _, e := range added {
-			fmt.Printf("  %s %s\n", StyleIfTerminal(addedStyle, "+"), StyleIfTerminal(keyStyle, e.Key))
-			fmt.Printf("    %s\n", StyleIfTerminal(valueStyle, e.NewValue))
-		}
-		fmt.Println()
+	titleStyle, prefix, printFunc, title := getDiffPrintConfig(status)
+	fmt.Println(StyleIfTerminal(titleStyle, fmt.Sprintf("%s (%d):", title, len(entries))))
+	for _, e := range entries {
+		printFunc(prefix, e)
 	}
+	fmt.Println()
+}
 
-	if len(modified) > 0 {
-		fmt.Println(StyleIfTerminal(modifiedStyle, fmt.Sprintf("Modified (%d):", len(modified))))
-		for _, e := range modified {
-			fmt.Printf("  %s %s\n", StyleIfTerminal(modifiedStyle, "~"), StyleIfTerminal(keyStyle, e.Key))
-			fmt.Printf("    %sold: %s\n", StyleIfTerminal(oldValueStyle, "  "), StyleIfTerminal(oldValueStyle, e.OldValue))
-			fmt.Printf("    %snew: %s\n", StyleIfTerminal(newValueStyle, "  "), StyleIfTerminal(newValueStyle, e.NewValue))
-		}
-		fmt.Println()
+// getDiffPrintConfig returns the style, prefix, print function, and title for a given status.
+func getDiffPrintConfig(status DiffStatus) (lipgloss.Style, string, func(string, *DiffEntry), string) {
+	switch status {
+	case DiffStatusAdded:
+		return addedStyle, "+", printAddedEntry, "Added"
+	case DiffStatusModified:
+		return modifiedStyle, "~", printModifiedEntry, "Modified"
+	case DiffStatusDeleted:
+		return deletedStyle, "-", printDeletedEntry, "Deleted"
+	default:
+		return unchangedStyle, "=", printUnchangedEntry, "Unchanged"
 	}
+}
 
-	if len(deleted) > 0 {
-		fmt.Println(StyleIfTerminal(deletedStyle, fmt.Sprintf("Deleted (%d):", len(deleted))))
-		for _, e := range deleted {
-			fmt.Printf("  %s %s\n", StyleIfTerminal(deletedStyle, "-"), StyleIfTerminal(keyStyle, e.Key))
-			fmt.Printf("    %s\n", StyleIfTerminal(oldValueStyle, e.OldValue))
-		}
-		fmt.Println()
-	}
+func printAddedEntry(prefix string, e *DiffEntry) {
+	fmt.Printf("  %s %s\n", StyleIfTerminal(addedStyle, prefix), StyleIfTerminal(keyStyle, e.Key))
+	fmt.Printf("    %s\n", StyleIfTerminal(valueStyle, e.NewValue))
+}
 
-	if len(unchanged) > 0 {
-		fmt.Println(StyleIfTerminal(unchangedStyle, fmt.Sprintf("Unchanged (%d):", len(unchanged))))
-		for _, e := range unchanged {
-			fmt.Printf("  %s %s\n", StyleIfTerminal(unchangedStyle, "="), StyleIfTerminal(keyStyle, e.Key))
-		}
-		fmt.Println()
-	}
+func printModifiedEntry(prefix string, e *DiffEntry) {
+	fmt.Printf("  %s %s\n", StyleIfTerminal(modifiedStyle, prefix), StyleIfTerminal(keyStyle, e.Key))
+	fmt.Printf("    %sold: %s\n", StyleIfTerminal(oldValueStyle, "  "), StyleIfTerminal(oldValueStyle, e.OldValue))
+	fmt.Printf("    %snew: %s\n", StyleIfTerminal(newValueStyle, "  "), StyleIfTerminal(newValueStyle, e.NewValue))
+}
 
-	// Summary
+func printDeletedEntry(prefix string, e *DiffEntry) {
+	fmt.Printf("  %s %s\n", StyleIfTerminal(deletedStyle, prefix), StyleIfTerminal(keyStyle, e.Key))
+	fmt.Printf("    %s\n", StyleIfTerminal(oldValueStyle, e.OldValue))
+}
+
+func printUnchangedEntry(prefix string, e *DiffEntry) {
+	fmt.Printf("  %s %s\n", StyleIfTerminal(unchangedStyle, prefix), StyleIfTerminal(keyStyle, e.Key))
+}
+
+// printDiffSummary prints the diff summary line.
+func printDiffSummary(result *DiffResult, showUnchanged bool) {
 	fmt.Printf("Summary: +%d ~%d -%d", result.Added, result.Modified, result.Deleted)
 	if showUnchanged {
 		fmt.Printf(" =%d", result.Unchanged)
 	}
 	fmt.Printf(" = %d total\n", len(result.Entries))
-
-	return nil
 }
 
 // printDiffJSON prints diff as JSON
