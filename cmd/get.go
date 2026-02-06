@@ -232,12 +232,23 @@ func printJSON(resp *client.GetResponse) error {
 }
 
 func printYAML(resp *client.GetResponse) error {
-	pairs := make([]*models.ConfigPair, len(resp.Kvs))
-	for i, kv := range resp.Kvs {
-		pairs[i] = &models.ConfigPair{
+	pairs := make([]*models.ConfigPair, 0, len(resp.Kvs))
+	var emptyValueKeys []string
+
+	for _, kv := range resp.Kvs {
+		if kv.Value == "" {
+			emptyValueKeys = append(emptyValueKeys, kv.Key)
+			continue
+		}
+		pairs = append(pairs, &models.ConfigPair{
 			Key:   kv.Key,
 			Value: kv.Value,
-		}
+		})
+	}
+
+	if len(emptyValueKeys) > 0 {
+		fmt.Fprintf(os.Stderr, "Warning: %d key(s) with empty values omitted from YAML output: %v\n",
+			len(emptyValueKeys), emptyValueKeys)
 	}
 
 	nested, err := parsers.UnflattenMap(pairs)
@@ -250,7 +261,7 @@ func printYAML(resp *client.GetResponse) error {
 		return fmt.Errorf("failed to serialize YAML: %w", err)
 	}
 
-	fmt.Println(string(yamlBytes))
+	fmt.Print(string(yamlBytes))
 	return nil
 }
 

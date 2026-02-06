@@ -41,6 +41,8 @@ func resolveFormat(flagFormat models.FormatType, appCfg *config.Config) models.F
 func getParserForFile(filePath string, format models.FormatType) (parsers.Parser, models.FormatType, error) {
 	registry := parsers.NewRegistry()
 
+	userExplicitFormat := format != models.FormatAuto
+
 	if format == models.FormatAuto {
 		var err error
 		format, err = registry.DetectFormat(filePath)
@@ -50,7 +52,13 @@ func getParserForFile(filePath string, format models.FormatType) (parsers.Parser
 		logger.Log.Debug("Auto-detected format", "format", format)
 	}
 
-	parser, err := registry.GetParser(format)
+	var parser parsers.Parser
+	var err error
+	if userExplicitFormat {
+		parser, err = registry.GetParserWithDeprecationCheck(format)
+	} else {
+		parser, err = registry.GetParser(format)
+	}
 	if err != nil {
 		return nil, "", err
 	}

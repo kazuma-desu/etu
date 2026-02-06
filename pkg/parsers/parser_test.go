@@ -226,7 +226,7 @@ func TestDetectFormat_ByContent(t *testing.T) {
 	}
 }
 
-func TestDetectFormat_FallbackToEtcdctl(t *testing.T) {
+func TestDetectFormat_FallbackToYAML(t *testing.T) {
 	tests := []struct {
 		name    string
 		content string

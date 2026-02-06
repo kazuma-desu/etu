@@ -20,6 +20,10 @@ func UnflattenMap(pairs []*models.ConfigPair) (map[string]any, error) {
 	result := make(map[string]any)
 
 	for _, pair := range pairs {
+		if pair == nil {
+			continue
+		}
+
 		// Skip empty string values
 		if strVal, ok := pair.Value.(string); ok && strVal == "" {
 			continue

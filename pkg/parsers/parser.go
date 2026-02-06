@@ -45,16 +45,24 @@ func (r *Registry) Register(format models.FormatType, parser Parser) {
 	r.parsers[format] = parser
 }
 
-// GetParser returns the parser for the specified format
+// GetParser returns the parser for the specified format.
+// Use this for internal lookups where deprecation warnings are not needed.
 func (r *Registry) GetParser(format models.FormatType) (Parser, error) {
-	if format == models.FormatEtcdctl || format == models.FormatJSON {
-		fmt.Fprintf(os.Stderr, "Warning: '%s' format is deprecated. Consider migrating to YAML using 'etu convert'.\n", format)
-	}
 	parser, ok := r.parsers[format]
 	if !ok {
 		return nil, fmt.Errorf("no parser registered for format: %s", format)
 	}
 	return parser, nil
+}
+
+// GetParserWithDeprecationCheck returns the parser for the specified format,
+// emitting a deprecation warning to stderr for deprecated formats.
+// Use this for user-facing CLI entry points where the format was explicitly provided.
+func (r *Registry) GetParserWithDeprecationCheck(format models.FormatType) (Parser, error) {
+	if format == models.FormatEtcdctl || format == models.FormatJSON {
+		fmt.Fprintf(os.Stderr, "Warning: '%s' format is deprecated. Consider migrating to YAML using 'etu convert'.\n", format)
+	}
+	return r.GetParser(format)
 }
 
 // DetectFormat detects file format from extension, falling back to content analysis.
