@@ -73,6 +73,10 @@ func LoadConfig() (*Config, error) {
 		cfg.Contexts = make(map[string]*ContextConfig)
 	}
 
+	if cfg.DefaultFormat == "etcdctl" || cfg.DefaultFormat == "json" {
+		fmt.Fprintf(os.Stderr, "Warning: '%s' format is deprecated. Consider migrating to YAML using 'etu convert'.\n", cfg.DefaultFormat)
+	}
+
 	return &cfg, nil
 }
 
