@@ -112,3 +112,11 @@ func TestSerializeYAML_Deterministic(t *testing.T) {
 	expected := "a: 2\nm: 3\nz: 1\n"
 	assert.Equal(t, expected, string(output))
 }
+
+func TestSerializeYAML_EmptyMap(t *testing.T) {
+	input := map[string]any{}
+	output, err := SerializeYAML(input)
+	require.NoError(t, err)
+	// Empty map produces "{}\n" in YAML
+	assert.Equal(t, "{}\n", string(output))
+}
