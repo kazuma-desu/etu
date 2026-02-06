@@ -36,6 +36,16 @@ func UnflattenMap(pairs []*models.ConfigPair) (map[string]any, error) {
 		}
 
 		parts := strings.Split(key, "/")
+
+		// Filter empty parts (handles consecutive slashes like /a//b)
+		filtered := parts[:0]
+		for _, p := range parts {
+			if p != "" {
+				filtered = append(filtered, p)
+			}
+		}
+		parts = filtered
+
 		current := result
 
 		for i, part := range parts {

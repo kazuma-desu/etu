@@ -155,3 +155,39 @@ func TestUnflattenMap_NoLeadingSlash(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "myapp", app["name"])
 }
+
+func TestUnflattenMap_NilEntry(t *testing.T) {
+	pairs := []*models.ConfigPair{
+		nil,
+		{Key: "/valid", Value: "value"},
+		nil,
+	}
+	result, err := UnflattenMap(pairs)
+	require.NoError(t, err)
+	assert.Equal(t, "value", result["valid"])
+}
+
+func TestUnflattenMap_ConsecutiveSlashes(t *testing.T) {
+	pairs := []*models.ConfigPair{
+		{Key: "/a//b/c", Value: "val"},
+	}
+	result, err := UnflattenMap(pairs)
+	require.NoError(t, err)
+	// Should produce {"a": {"b": {"c": "val"}}} not {"a": {"": {"b": {"c": "val"}}}}
+	a := result["a"].(map[string]any)
+	b := a["b"].(map[string]any)
+	assert.Equal(t, "val", b["c"])
+	_, hasEmpty := a[""]
+	assert.False(t, hasEmpty, "should not have empty string key")
+}
+
+func TestUnflattenMap_NilValue(t *testing.T) {
+	pairs := []*models.ConfigPair{
+		{Key: "/key", Value: nil},
+	}
+	result, err := UnflattenMap(pairs)
+	require.NoError(t, err)
+	// nil values should be included (not skipped like empty strings)
+	assert.Contains(t, result, "key")
+	assert.Nil(t, result["key"])
+}
