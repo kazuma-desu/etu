@@ -58,7 +58,7 @@ func (r *Registry) GetParser(format models.FormatType) (Parser, error) {
 }
 
 // DetectFormat detects file format from extension, falling back to content analysis.
-// Priority: extension > content signature > default (etcdctl)
+// Priority: extension > content signature > default (yaml)
 func (r *Registry) DetectFormat(path string) (models.FormatType, error) {
 	// 1. Extension-based detection (fastest)
 	format := r.detectByExtension(path)
@@ -89,7 +89,7 @@ func (r *Registry) detectByExtension(path string) models.FormatType {
 	case ".json":
 		return models.FormatJSON
 	case ".txt":
-		return models.FormatEtcdctl
+		return models.FormatAuto
 	default:
 		return models.FormatAuto
 	}
@@ -124,7 +124,7 @@ func (r *Registry) detectByContent(path string) models.FormatType {
 	}
 
 	if firstNonEmptyLine == "" {
-		return models.FormatEtcdctl
+		return models.FormatAuto
 	}
 
 	// JSON detection: starts with { or [
