@@ -13,6 +13,7 @@ import (
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
+	"github.com/kazuma-desu/etu/pkg/parsers"
 )
 
 var (
@@ -154,6 +155,8 @@ func runGet(_ *cobra.Command, args []string) error {
 		return nil
 	case output.FormatJSON.String():
 		return printJSON(resp)
+	case output.FormatYAML.String():
+		return printYAML(resp)
 	case output.FormatTable.String():
 		return printTable(resp)
 	case output.FormatTree.String():
@@ -162,7 +165,7 @@ func runGet(_ *cobra.Command, args []string) error {
 		printFields(resp)
 		return nil
 	default:
-		return fmt.Errorf("invalid output format: %s (use simple, json, table, tree, or fields)", outputFormat)
+		return fmt.Errorf("invalid output format: %s (use simple, json, yaml, table, tree, or fields)", outputFormat)
 	}
 }
 
@@ -225,6 +228,29 @@ func printJSON(resp *client.GetResponse) error {
 		return err
 	}
 	fmt.Println(string(jsonBytes))
+	return nil
+}
+
+func printYAML(resp *client.GetResponse) error {
+	pairs := make([]*models.ConfigPair, len(resp.Kvs))
+	for i, kv := range resp.Kvs {
+		pairs[i] = &models.ConfigPair{
+			Key:   kv.Key,
+			Value: kv.Value,
+		}
+	}
+
+	nested, err := parsers.UnflattenMap(pairs)
+	if err != nil {
+		return fmt.Errorf("failed to unflatten keys: %w", err)
+	}
+
+	yamlBytes, err := output.SerializeYAML(nested)
+	if err != nil {
+		return fmt.Errorf("failed to serialize YAML: %w", err)
+	}
+
+	fmt.Println(string(yamlBytes))
 	return nil
 }
 
