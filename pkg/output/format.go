@@ -13,6 +13,7 @@ type Format string
 const (
 	FormatSimple Format = "simple"
 	FormatJSON   Format = "json"
+	FormatYAML   Format = "yaml"
 	FormatTable  Format = "table"
 	FormatTree   Format = "tree"
 	FormatFields Format = "fields"
@@ -21,6 +22,7 @@ const (
 var allFormats = []Format{
 	FormatSimple,
 	FormatJSON,
+	FormatYAML,
 	FormatTable,
 	FormatTree,
 	FormatFields,

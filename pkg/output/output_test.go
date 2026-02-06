@@ -354,6 +354,7 @@ func TestStyleIfTerminal(t *testing.T) {
 func TestFormatConstants(t *testing.T) {
 	assert.Equal(t, Format("simple"), FormatSimple)
 	assert.Equal(t, Format("json"), FormatJSON)
+	assert.Equal(t, Format("yaml"), FormatYAML)
 	assert.Equal(t, Format("table"), FormatTable)
 	assert.Equal(t, Format("tree"), FormatTree)
 	assert.Equal(t, Format("fields"), FormatFields)
@@ -367,6 +368,7 @@ func TestFormatIsValid(t *testing.T) {
 	}{
 		{FormatSimple, true},
 		{FormatJSON, true},
+		{FormatYAML, true},
 		{FormatTable, true},
 		{FormatTree, true},
 		{FormatFields, true},
@@ -390,6 +392,7 @@ func TestParseFormat(t *testing.T) {
 	}{
 		{"simple", false, FormatSimple},
 		{"json", false, FormatJSON},
+		{"yaml", false, FormatYAML},
 		{"table", false, FormatTable},
 		{"tree", false, FormatTree},
 		{"fields", false, FormatFields},
@@ -421,9 +424,10 @@ func BenchmarkParseFormat(b *testing.B) {
 func TestAllFormats(t *testing.T) {
 	formats := AllFormats()
 
-	assert.Len(t, formats, 5)
+	assert.Len(t, formats, 6)
 	assert.Contains(t, formats, FormatSimple)
 	assert.Contains(t, formats, FormatJSON)
+	assert.Contains(t, formats, FormatYAML)
 	assert.Contains(t, formats, FormatTable)
 	assert.Contains(t, formats, FormatTree)
 	assert.Contains(t, formats, FormatFields)
