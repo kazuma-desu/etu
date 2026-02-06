@@ -47,6 +47,9 @@ func (r *Registry) Register(format models.FormatType, parser Parser) {
 
 // GetParser returns the parser for the specified format
 func (r *Registry) GetParser(format models.FormatType) (Parser, error) {
+	if format == models.FormatEtcdctl || format == models.FormatJSON {
+		fmt.Fprintf(os.Stderr, "Warning: '%s' format is deprecated. Consider migrating to YAML using 'etu convert'.\n", format)
+	}
 	parser, ok := r.parsers[format]
 	if !ok {
 		return nil, fmt.Errorf("no parser registered for format: %s", format)
@@ -74,7 +77,7 @@ func (r *Registry) DetectFormat(path string) (models.FormatType, error) {
 	}
 
 	// 3. Default fallback
-	return models.FormatEtcdctl, nil
+	return models.FormatYAML, nil
 }
 
 // detectByExtension returns format based on file extension
