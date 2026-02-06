@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kazuma-desu/etu/pkg/models"
 )
 
 func TestUnflattenMap_SimpleKeyValue(t *testing.T) {

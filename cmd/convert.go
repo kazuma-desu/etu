@@ -39,7 +39,7 @@ func init() {
 
 	convertCmd.Flags().StringVarP(&convertOpts.FilePath, "file", "f", "",
 		"path to configuration file (supports stdin via '-')")
-	convertCmd.Flags().StringVar((*string)(&convertOpts.Format), "format", "",
+	convertCmd.Flags().StringVar(&convertOpts.Format, "format", "",
 		"input format: auto, etcdctl, json, yaml")
 }
 
