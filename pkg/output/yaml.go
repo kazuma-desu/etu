@@ -68,7 +68,9 @@ func sliceToNode(val []any) (*yaml.Node, error) {
 }
 
 func stringToNode(val string) *yaml.Node {
-	style := yaml.FlowStyle
+	// Use default style (0) for single-line scalars - yaml.v3 handles quoting automatically
+	// Use LiteralStyle for multi-line strings to render as block scalars (|)
+	var style yaml.Style
 	if strings.Contains(val, "\n") {
 		style = yaml.LiteralStyle
 	}

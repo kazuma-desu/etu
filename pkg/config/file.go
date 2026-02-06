@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
+
+var deprecationWarningOnce sync.Once
 
 // ContextConfig represents configuration for a single context
 type ContextConfig struct {
@@ -74,7 +77,9 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if cfg.DefaultFormat == "etcdctl" || cfg.DefaultFormat == "json" {
-		fmt.Fprintf(os.Stderr, "Warning: '%s' format is deprecated. Consider migrating to YAML using 'etu convert'.\n", cfg.DefaultFormat)
+		deprecationWarningOnce.Do(func() {
+			fmt.Fprintf(os.Stderr, "Warning: '%s' format is deprecated. Consider migrating to YAML using 'etu convert'.\n", cfg.DefaultFormat)
+		})
 	}
 
 	return &cfg, nil

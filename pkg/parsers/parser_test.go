@@ -271,7 +271,7 @@ func TestDetectFormat_DefaultsToYAML(t *testing.T) {
 		{
 			name:     "unknown extension",
 			filename: "config.unknown",
-			content:  "key: value",
+			content:  "some plain text without any format markers",
 		},
 	}
 
