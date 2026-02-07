@@ -1,6 +1,8 @@
 module github.com/kazuma-desu/etu
 
-go 1.24.13
+go 1.24.2
+
+toolchain go1.24.13
 
 require (
 	github.com/charmbracelet/huh v0.8.0

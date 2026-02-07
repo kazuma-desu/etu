@@ -3,6 +3,7 @@ package output
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -18,9 +19,6 @@ func SerializeYAML(data map[string]any) ([]byte, error) {
 	return yaml.Marshal(node)
 }
 
-// toNode converts a Go value to a yaml.Node, applying specific formatting rules:
-// - Strings with newlines are set to LiteralStyle (block scalar "|")
-// - Maps keys are sorted
 func toNode(v any) (*yaml.Node, error) {
 	switch val := v.(type) {
 	case map[string]any:
@@ -29,9 +27,21 @@ func toNode(v any) (*yaml.Node, error) {
 		return sliceToNode(val)
 	case string:
 		return stringToNode(val), nil
+	case bool:
+		return scalarNode("!!bool", strconv.FormatBool(val)), nil
+	case int:
+		return scalarNode("!!int", strconv.Itoa(val)), nil
+	case float64:
+		return scalarNode("!!float", strconv.FormatFloat(val, 'f', -1, 64)), nil
+	case nil:
+		return scalarNode("!!null", "null"), nil
 	default:
 		return fallbackToNode(val)
 	}
+}
+
+func scalarNode(tag, value string) *yaml.Node {
+	return &yaml.Node{Kind: yaml.ScalarNode, Tag: tag, Value: value}
 }
 
 func mapToNode(val map[string]any) (*yaml.Node, error) {
@@ -68,14 +78,17 @@ func sliceToNode(val []any) (*yaml.Node, error) {
 }
 
 func stringToNode(val string) *yaml.Node {
-	// Use default style (0) for single-line scalars - yaml.v3 handles quoting automatically
+	// Use default style (0) for single-line scalars
 	// Use LiteralStyle for multi-line strings to render as block scalars (|)
+	// Always set Tag: "!!str" so values like "true", "yes", "null" are emitted
+	// as quoted strings rather than being re-parsed as booleans/nulls
 	var style yaml.Style
 	if strings.Contains(val, "\n") {
 		style = yaml.LiteralStyle
 	}
 	return &yaml.Node{
 		Kind:  yaml.ScalarNode,
+		Tag:   "!!str",
 		Value: val,
 		Style: style,
 	}

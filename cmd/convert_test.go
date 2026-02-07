@@ -11,7 +11,14 @@ import (
 	"github.com/kazuma-desu/etu/pkg/testutil"
 )
 
+func resetConvertOpts() {
+	convertOpts.FilePath = ""
+	convertOpts.Format = ""
+}
+
 func TestConvertCommand(t *testing.T) {
+	t.Cleanup(resetConvertOpts)
+
 	t.Run("Valid etcdctl file to YAML", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		testFile := filepath.Join(tmpDir, "test.txt")

@@ -91,9 +91,5 @@ func runConvert(_ *cobra.Command, _ []string) error {
 }
 
 func hasStdinData() bool {
-	stat, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return (stat.Mode() & os.ModeCharDevice) == 0
+	return isStdinPiped()
 }

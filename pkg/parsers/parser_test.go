@@ -561,9 +561,9 @@ func TestGetParserWithDeprecationCheck_Warning(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Capture stderr
 			oldStderr := os.Stderr
-			r, w, _ := os.Pipe()
+			r, w, err := os.Pipe()
+			require.NoError(t, err)
 			os.Stderr = w
 
 			registry := NewRegistry()

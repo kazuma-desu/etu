@@ -556,7 +556,7 @@ func printConfigPairsYAML(pairs []*models.ConfigPair) error {
 	validPairs := make([]*models.ConfigPair, 0, len(pairs))
 
 	for _, pair := range pairs {
-		if pair.Value == "" {
+		if strVal, ok := pair.Value.(string); ok && strVal == "" {
 			emptyValueKeys = append(emptyValueKeys, pair.Key)
 			continue
 		}

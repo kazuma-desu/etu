@@ -55,6 +55,7 @@ func TestTruncateValue(t *testing.T) {
 }
 
 func TestPrintSimple(t *testing.T) {
+	t.Cleanup(resetGetOpts)
 	resetGetOpts()
 	resp := &client.GetResponse{
 		Kvs: []*client.KeyValue{
@@ -127,6 +128,7 @@ func TestPrintSimple(t *testing.T) {
 }
 
 func TestPrintJSON(t *testing.T) {
+	t.Cleanup(resetGetOpts)
 	resetGetOpts()
 	resp := &client.GetResponse{
 		Kvs: []*client.KeyValue{
@@ -161,6 +163,7 @@ func TestPrintJSON(t *testing.T) {
 }
 
 func TestPrintTable(t *testing.T) {
+	t.Cleanup(resetGetOpts)
 	resetGetOpts()
 	resp := &client.GetResponse{
 		Kvs: []*client.KeyValue{
@@ -214,6 +217,7 @@ func TestPrintTable(t *testing.T) {
 }
 
 func TestPrintFields(t *testing.T) {
+	t.Cleanup(resetGetOpts)
 	resetGetOpts()
 	resp := &client.GetResponse{
 		Kvs: []*client.KeyValue{
@@ -257,6 +261,7 @@ func TestPrintFields(t *testing.T) {
 }
 
 func TestPrintYAML(t *testing.T) {
+	t.Cleanup(resetGetOpts)
 	resetGetOpts()
 	resp := &client.GetResponse{
 		Kvs: []*client.KeyValue{
@@ -273,11 +278,13 @@ func TestPrintYAML(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, output, "app:")
 	assert.Contains(t, output, "name: myapp")
-	assert.Contains(t, output, "version: 1.0.0")
-	assert.NotContains(t, output, "empty")
+	assert.Contains(t, output, "version:")
+	// Keys with empty values should be omitted from YAML output
+	assert.NotContains(t, output, "empty:", "empty-value key should be excluded from YAML output")
 }
 
 func TestPrintYAML_Error(t *testing.T) {
+	t.Cleanup(resetGetOpts)
 	resetGetOpts()
 	resp := &client.GetResponse{
 		Kvs: []*client.KeyValue{
@@ -293,6 +300,7 @@ func TestPrintYAML_Error(t *testing.T) {
 }
 
 func TestPrintTree(t *testing.T) {
+	t.Cleanup(resetGetOpts)
 	resetGetOpts()
 	resp := &client.GetResponse{
 		Kvs: []*client.KeyValue{

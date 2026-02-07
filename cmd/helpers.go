@@ -177,13 +177,16 @@ func applyGlobalOverrides(cfg *client.Config) error {
 	return nil
 }
 
-func readPasswordFromStdin() (string, error) {
+func isStdinPiped() bool {
 	stat, err := os.Stdin.Stat()
 	if err != nil {
-		return "", err
+		return false
 	}
+	return (stat.Mode() & os.ModeCharDevice) == 0
+}
 
-	if (stat.Mode() & os.ModeCharDevice) != 0 {
+func readPasswordFromStdin() (string, error) {
+	if !isStdinPiped() {
 		return "", fmt.Errorf("stdin is a terminal; use a pipe or redirect")
 	}
 
