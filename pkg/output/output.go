@@ -552,10 +552,15 @@ func PrintError(err error) {
 }
 
 func printConfigPairsYAML(pairs []*models.ConfigPair) error {
+	var nilCount int
 	var emptyValueKeys []string
 	validPairs := make([]*models.ConfigPair, 0, len(pairs))
 
 	for _, pair := range pairs {
+		if pair == nil {
+			nilCount++
+			continue
+		}
 		if strVal, ok := pair.Value.(string); ok && strVal == "" {
 			emptyValueKeys = append(emptyValueKeys, pair.Key)
 			continue
@@ -563,6 +568,9 @@ func printConfigPairsYAML(pairs []*models.ConfigPair) error {
 		validPairs = append(validPairs, pair)
 	}
 
+	if nilCount > 0 {
+		fmt.Fprintf(os.Stderr, "Warning: %d nil entry(ies) omitted from YAML output\n", nilCount)
+	}
 	if len(emptyValueKeys) > 0 {
 		fmt.Fprintf(os.Stderr, "Warning: %d key(s) with empty values omitted from YAML output: %v\n",
 			len(emptyValueKeys), emptyValueKeys)
@@ -599,16 +607,19 @@ func printValidationYAML(result *validator.ValidationResult, strict bool) error 
 }
 
 func printApplyYAML(pairs []*models.ConfigPair, dryRun bool) error {
-	items := make([]any, len(pairs))
-	for i, pair := range pairs {
-		items[i] = map[string]string{
+	items := make([]any, 0, len(pairs))
+	for _, pair := range pairs {
+		if pair == nil {
+			continue
+		}
+		items = append(items, map[string]string{
 			"key":   pair.Key,
 			"value": formatValue(pair.Value),
-		}
+		})
 	}
 
 	data := map[string]any{
-		"applied": len(pairs),
+		"applied": len(items),
 		"dry_run": dryRun,
 		"items":   items,
 	}
@@ -623,29 +634,35 @@ func printApplyYAML(pairs []*models.ConfigPair, dryRun bool) error {
 }
 
 func printContextsYAML(contexts map[string]*ContextView, currentContext string) error {
-	type contextOutput struct {
-		Name      string   `yaml:"name"`
-		Username  string   `yaml:"username,omitempty"`
-		Endpoints []string `yaml:"endpoints"`
-		Current   bool     `yaml:"current"`
+	type sortableContext struct {
+		name string
+		data map[string]any
 	}
 
-	output := make([]contextOutput, 0, len(contexts))
+	sorted := make([]sortableContext, 0, len(contexts))
 	for name, ctx := range contexts {
-		output = append(output, contextOutput{
-			Name:      name,
-			Current:   name == currentContext,
-			Endpoints: ctx.Endpoints,
-			Username:  ctx.Username,
-		})
+		ctxMap := map[string]any{
+			"name":      name,
+			"endpoints": ctx.Endpoints,
+			"current":   name == currentContext,
+		}
+		if ctx.Username != "" {
+			ctxMap["username"] = ctx.Username
+		}
+		sorted = append(sorted, sortableContext{name: name, data: ctxMap})
 	}
 
-	sort.Slice(output, func(i, j int) bool {
-		return output[i].Name < output[j].Name
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].name < sorted[j].name
 	})
 
+	items := make([]any, len(sorted))
+	for i, s := range sorted {
+		items[i] = s.data
+	}
+
 	data := map[string]any{
-		"contexts": output,
+		"contexts": items,
 	}
 
 	yamlBytes, err := SerializeYAML(data)

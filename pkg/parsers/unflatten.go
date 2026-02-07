@@ -72,13 +72,11 @@ func preparePair(pair *models.ConfigPair) ([]string, bool) {
 func insertPath(root map[string]any, parts []string, pair *models.ConfigPair) error {
 	current := root
 	for i, part := range parts {
-		isLeaf := i == len(parts)-1
-
-		if isLeaf {
+		if i == len(parts)-1 {
 			return setLeafValue(current, part, pair)
 		}
 
-		nextMap, err := navigateToNextMap(current, parts, i)
+		nextMap, err := navigateToNextMap(current, part, pair.Key, parts[i+1])
 		if err != nil {
 			return err
 		}
@@ -87,38 +85,29 @@ func insertPath(root map[string]any, parts []string, pair *models.ConfigPair) er
 	return nil
 }
 
-// setLeafValue handles the leaf node insertion and collision detection.
 func setLeafValue(current map[string]any, part string, pair *models.ConfigPair) error {
 	if existing, exists := current[part]; exists {
-		// Collision check: Cannot overwrite a map (directory) with a value
 		if _, isMap := existing.(map[string]any); isMap {
 			return fmt.Errorf("key collision: '%s' is implicitly a directory (has children), cannot set as value", pair.Key)
 		}
-		// Overwriting existing value is allowed (last write wins)
 	}
 	current[part] = pair.Value
 	return nil
 }
 
-// navigateToNextMap handles intermediate node navigation/creation and collision detection.
-func navigateToNextMap(current map[string]any, parts []string, i int) (map[string]any, error) {
-	part := parts[i]
+func navigateToNextMap(current map[string]any, part, originalKey, nextPart string) (map[string]any, error) {
 	existing, exists := current[part]
 
 	if !exists {
-		// Create new level
 		newMap := make(map[string]any)
 		current[part] = newMap
 		return newMap, nil
 	}
 
-	// Verify existing node is a map
 	if asMap, ok := existing.(map[string]any); ok {
 		return asMap, nil
 	}
 
-	// Collision check: Cannot treat a value as a directory
-	// Construct the conflicting path for the error message
-	conflictingPath := "/" + strings.Join(parts[:i+1], "/")
-	return nil, fmt.Errorf("key collision: '%s' is already a value, cannot append '%s'", conflictingPath, parts[i+1])
+	return nil, fmt.Errorf("key collision: '%s' is already a value, cannot append '%s'",
+		originalKey, nextPart)
 }

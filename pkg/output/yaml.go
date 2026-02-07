@@ -130,6 +130,5 @@ func fallbackToNode(val any) (*yaml.Node, error) {
 		return doc.Content[0], nil
 	}
 
-	// Should be unreachable for valid YAML
-	return &yaml.Node{Kind: yaml.ScalarNode, Value: ""}, nil
+	return nil, fmt.Errorf("yaml.Unmarshal produced a document with no content nodes")
 }
