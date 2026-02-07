@@ -599,7 +599,7 @@ func printValidationYAML(result *validator.ValidationResult, strict bool) error 
 }
 
 func printApplyYAML(pairs []*models.ConfigPair, dryRun bool) error {
-	items := make([]map[string]string, len(pairs))
+	items := make([]any, len(pairs))
 	for i, pair := range pairs {
 		items[i] = map[string]string{
 			"key":   pair.Key,
@@ -658,17 +658,15 @@ func printContextsYAML(contexts map[string]*ContextView, currentContext string) 
 }
 
 func printConfigViewYAML(cfg *ConfigView) error {
-	type sanitizedContext struct {
-		Username  string   `yaml:"username,omitempty"`
-		Endpoints []string `yaml:"endpoints"`
-	}
-
-	contexts := make(map[string]sanitizedContext)
+	contexts := make(map[string]any)
 	for name, ctx := range cfg.Contexts {
-		contexts[name] = sanitizedContext{
-			Endpoints: ctx.Endpoints,
-			Username:  ctx.Username,
+		ctxMap := map[string]any{
+			"endpoints": ctx.Endpoints,
 		}
+		if ctx.Username != "" {
+			ctxMap["username"] = ctx.Username
+		}
+		contexts[name] = ctxMap
 	}
 
 	data := map[string]any{

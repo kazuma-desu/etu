@@ -564,13 +564,13 @@ func TestGetParserWithDeprecationCheck_Warning(t *testing.T) {
 			oldStderr := os.Stderr
 			r, w, err := os.Pipe()
 			require.NoError(t, err)
+			defer func() { os.Stderr = oldStderr }()
 			os.Stderr = w
 
 			registry := NewRegistry()
 			parser, err := registry.GetParserWithDeprecationCheck(tt.format)
 
 			w.Close()
-			os.Stderr = oldStderr
 
 			var buf bytes.Buffer
 			_, _ = io.Copy(&buf, r)

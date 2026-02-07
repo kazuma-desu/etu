@@ -20,70 +20,105 @@ func UnflattenMap(pairs []*models.ConfigPair) (map[string]any, error) {
 	result := make(map[string]any)
 
 	for _, pair := range pairs {
-		if pair == nil {
+		parts, shouldProcess := preparePair(pair)
+		if !shouldProcess {
 			continue
 		}
 
-		// Skip empty string values
-		if strVal, ok := pair.Value.(string); ok && strVal == "" {
-			continue
-		}
-
-		// Remove leading slash to handle absolute paths
-		key := strings.TrimPrefix(pair.Key, "/")
-		if key == "" {
-			continue
-		}
-
-		parts := strings.Split(key, "/")
-
-		// Filter empty parts (handles consecutive slashes like /a//b)
-		filtered := parts[:0]
-		for _, p := range parts {
-			if p != "" {
-				filtered = append(filtered, p)
-			}
-		}
-		parts = filtered
-
-		current := result
-
-		for i, part := range parts {
-			isLeaf := i == len(parts)-1
-
-			if isLeaf {
-				// Leaf node: Attempt to set the value
-				if existing, exists := current[part]; exists {
-					// Collision check: Cannot overwrite a map (directory) with a value
-					if _, isMap := existing.(map[string]any); isMap {
-						return nil, fmt.Errorf("key collision: '%s' is implicitly a directory (has children), cannot set as value", pair.Key)
-					}
-					// Overwriting existing value is allowed (last write wins)
-				}
-				current[part] = pair.Value
-			} else {
-				// Intermediate node: Navigate or create map
-				existing, exists := current[part]
-
-				if !exists {
-					// Create new level
-					newMap := make(map[string]any)
-					current[part] = newMap
-					current = newMap
-				} else {
-					// Verify existing node is a map
-					if asMap, ok := existing.(map[string]any); ok {
-						current = asMap
-					} else {
-						// Collision check: Cannot treat a value as a directory
-						// Construct the conflicting path for the error message
-						conflictingPath := "/" + strings.Join(parts[:i+1], "/")
-						return nil, fmt.Errorf("key collision: '%s' is already a value, cannot append '%s'", conflictingPath, parts[i+1])
-					}
-				}
-			}
+		if err := insertPath(result, parts, pair); err != nil {
+			return nil, err
 		}
 	}
 
 	return result, nil
+}
+
+// preparePair handles filtering and path splitting logic.
+// It returns the parts of the key and a boolean indicating whether to proceed.
+func preparePair(pair *models.ConfigPair) ([]string, bool) {
+	if pair == nil {
+		return nil, false
+	}
+
+	// Skip empty string values
+	if strVal, ok := pair.Value.(string); ok && strVal == "" {
+		return nil, false
+	}
+
+	// Remove leading slash to handle absolute paths
+	key := strings.TrimPrefix(pair.Key, "/")
+	if key == "" {
+		return nil, false
+	}
+
+	parts := strings.Split(key, "/")
+
+	// Filter empty parts (handles consecutive slashes like /a//b)
+	filtered := parts[:0]
+	for _, p := range parts {
+		if p != "" {
+			filtered = append(filtered, p)
+		}
+	}
+
+	if len(filtered) == 0 {
+		return nil, false
+	}
+
+	return filtered, true
+}
+
+// insertPath navigates the map structure and inserts the value at the leaf.
+func insertPath(root map[string]any, parts []string, pair *models.ConfigPair) error {
+	current := root
+	for i, part := range parts {
+		isLeaf := i == len(parts)-1
+
+		if isLeaf {
+			return setLeafValue(current, part, pair)
+		}
+
+		nextMap, err := navigateToNextMap(current, parts, i)
+		if err != nil {
+			return err
+		}
+		current = nextMap
+	}
+	return nil
+}
+
+// setLeafValue handles the leaf node insertion and collision detection.
+func setLeafValue(current map[string]any, part string, pair *models.ConfigPair) error {
+	if existing, exists := current[part]; exists {
+		// Collision check: Cannot overwrite a map (directory) with a value
+		if _, isMap := existing.(map[string]any); isMap {
+			return fmt.Errorf("key collision: '%s' is implicitly a directory (has children), cannot set as value", pair.Key)
+		}
+		// Overwriting existing value is allowed (last write wins)
+	}
+	current[part] = pair.Value
+	return nil
+}
+
+// navigateToNextMap handles intermediate node navigation/creation and collision detection.
+func navigateToNextMap(current map[string]any, parts []string, i int) (map[string]any, error) {
+	part := parts[i]
+	existing, exists := current[part]
+
+	if !exists {
+		// Create new level
+		newMap := make(map[string]any)
+		current[part] = newMap
+		return newMap, nil
+	}
+
+	// Verify existing node is a map
+	if asMap, ok := existing.(map[string]any); ok {
+		return asMap, nil
+	}
+
+	// Collision check: Cannot treat a value as a directory
+	// Construct the conflicting path for the error message
+	conflictingPath := "/" + strings.Join(parts[:i+1], "/")
+	return nil, fmt.Errorf("key collision: '%s' is already a value, cannot append '%s'", conflictingPath, parts[i+1])
 }

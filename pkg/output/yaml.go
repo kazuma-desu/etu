@@ -23,6 +23,8 @@ func toNode(v any) (*yaml.Node, error) {
 	switch val := v.(type) {
 	case map[string]any:
 		return mapToNode(val)
+	case map[string]string:
+		return mapStringToNode(val)
 	case []any:
 		return sliceToNode(val)
 	case string:
@@ -44,6 +46,23 @@ func scalarNode(tag, value string) *yaml.Node {
 	return &yaml.Node{Kind: yaml.ScalarNode, Tag: tag, Value: value}
 }
 
+func mapStringToNode(val map[string]string) (*yaml.Node, error) {
+	node := &yaml.Node{Kind: yaml.MappingNode}
+
+	keys := make([]string, 0, len(val))
+	for k := range val {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		keyNode := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: k}
+		valNode := stringToNode(val[k])
+		node.Content = append(node.Content, keyNode, valNode)
+	}
+	return node, nil
+}
+
 func mapToNode(val map[string]any) (*yaml.Node, error) {
 	node := &yaml.Node{Kind: yaml.MappingNode}
 
@@ -55,7 +74,7 @@ func mapToNode(val map[string]any) (*yaml.Node, error) {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		keyNode := &yaml.Node{Kind: yaml.ScalarNode, Value: k}
+		keyNode := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: k}
 		valNode, err := toNode(val[k])
 		if err != nil {
 			return nil, err
