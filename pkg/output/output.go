@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss/tree"
 
 	"github.com/kazuma-desu/etu/pkg/models"
+	"github.com/kazuma-desu/etu/pkg/parsers"
 	"github.com/kazuma-desu/etu/pkg/validator"
 )
 
@@ -40,6 +41,8 @@ func PrintConfigPairsWithFormat(pairs []*models.ConfigPair, format string) error
 		return PrintConfigPairs(pairs, false)
 	case FormatJSON.String():
 		return printJSON(pairs)
+	case FormatYAML.String():
+		return printConfigPairsYAML(pairs)
 	case FormatTable.String():
 		return printConfigPairsTable(pairs)
 	case FormatTree.String():
@@ -166,6 +169,8 @@ func PrintValidationWithFormat(result *validator.ValidationResult, strict bool, 
 		return nil
 	case FormatJSON.String():
 		return printValidationJSON(result, strict)
+	case FormatYAML.String():
+		return printValidationYAML(result, strict)
 	case FormatTable.String():
 		return printValidationTable(result, strict)
 	default:
@@ -283,6 +288,8 @@ func PrintApplyResultsWithFormat(pairs []*models.ConfigPair, format string, dryR
 		return nil
 	case FormatJSON.String():
 		return printApplyJSON(pairs, dryRun)
+	case FormatYAML.String():
+		return printApplyYAML(pairs, dryRun)
 	case FormatTable.String():
 		return printApplyTable(pairs, dryRun)
 	default:
@@ -354,6 +361,8 @@ func PrintContextsWithFormat(contexts map[string]*ContextView, currentContext st
 		return printContextsSimple(contexts, currentContext)
 	case FormatJSON.String():
 		return printContextsJSON(contexts, currentContext)
+	case FormatYAML.String():
+		return printContextsYAML(contexts, currentContext)
 	case FormatTable.String():
 		return printContextsTable(contexts, currentContext)
 	default:
@@ -460,6 +469,8 @@ func PrintConfigViewWithFormat(cfg *ConfigView, format string) error {
 		return printConfigViewSimple(cfg)
 	case FormatJSON.String():
 		return printConfigViewJSON(cfg)
+	case FormatYAML.String():
+		return printConfigViewYAML(cfg)
 	case FormatTable.String():
 		return printConfigViewTable(cfg)
 	default:
@@ -538,6 +549,159 @@ func printConfigViewTable(cfg *ConfigView) error {
 func PrintError(err error) {
 	msg := StyleIfTerminal(errorStyle, fmt.Sprintf("✗ Error: %v", err))
 	fmt.Println(StyleIfTerminal(errorPanelStyle, msg))
+}
+
+func printConfigPairsYAML(pairs []*models.ConfigPair) error {
+	var nilCount int
+	var emptyValueKeys []string
+	validPairs := make([]*models.ConfigPair, 0, len(pairs))
+
+	for _, pair := range pairs {
+		if pair == nil {
+			nilCount++
+			continue
+		}
+		if strVal, ok := pair.Value.(string); ok && strVal == "" {
+			emptyValueKeys = append(emptyValueKeys, pair.Key)
+			continue
+		}
+		validPairs = append(validPairs, pair)
+	}
+
+	if nilCount > 0 {
+		fmt.Fprintf(os.Stderr, "Warning: %d nil entry(ies) omitted from YAML output\n", nilCount)
+	}
+	if len(emptyValueKeys) > 0 {
+		fmt.Fprintf(os.Stderr, "Warning: %d key(s) with empty values omitted from YAML output: %v\n",
+			len(emptyValueKeys), emptyValueKeys)
+	}
+
+	nested, err := parsers.UnflattenMap(validPairs)
+	if err != nil {
+		return fmt.Errorf("failed to unflatten keys: %w", err)
+	}
+
+	yamlBytes, err := SerializeYAML(nested)
+	if err != nil {
+		return fmt.Errorf("failed to serialize YAML: %w", err)
+	}
+
+	fmt.Print(string(yamlBytes))
+	return nil
+}
+
+func printValidationYAML(result *validator.ValidationResult, strict bool) error {
+	data := map[string]any{
+		"valid":  result.Valid,
+		"strict": strict,
+		"issues": result.Issues,
+	}
+
+	yamlBytes, err := SerializeYAML(data)
+	if err != nil {
+		return fmt.Errorf("failed to serialize YAML: %w", err)
+	}
+
+	fmt.Print(string(yamlBytes))
+	return nil
+}
+
+func printApplyYAML(pairs []*models.ConfigPair, dryRun bool) error {
+	items := make([]any, 0, len(pairs))
+	for _, pair := range pairs {
+		if pair == nil {
+			continue
+		}
+		items = append(items, map[string]string{
+			"key":   pair.Key,
+			"value": formatValue(pair.Value),
+		})
+	}
+
+	data := map[string]any{
+		"applied": len(items),
+		"dry_run": dryRun,
+		"items":   items,
+	}
+
+	yamlBytes, err := SerializeYAML(data)
+	if err != nil {
+		return fmt.Errorf("failed to serialize YAML: %w", err)
+	}
+
+	fmt.Print(string(yamlBytes))
+	return nil
+}
+
+func printContextsYAML(contexts map[string]*ContextView, currentContext string) error {
+	type sortableContext struct {
+		name string
+		data map[string]any
+	}
+
+	sorted := make([]sortableContext, 0, len(contexts))
+	for name, ctx := range contexts {
+		ctxMap := map[string]any{
+			"name":      name,
+			"endpoints": ctx.Endpoints,
+			"current":   name == currentContext,
+		}
+		if ctx.Username != "" {
+			ctxMap["username"] = ctx.Username
+		}
+		sorted = append(sorted, sortableContext{name: name, data: ctxMap})
+	}
+
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].name < sorted[j].name
+	})
+
+	items := make([]any, len(sorted))
+	for i, s := range sorted {
+		items[i] = s.data
+	}
+
+	data := map[string]any{
+		"contexts": items,
+	}
+
+	yamlBytes, err := SerializeYAML(data)
+	if err != nil {
+		return fmt.Errorf("failed to serialize YAML: %w", err)
+	}
+
+	fmt.Print(string(yamlBytes))
+	return nil
+}
+
+func printConfigViewYAML(cfg *ConfigView) error {
+	contexts := make(map[string]any)
+	for name, ctx := range cfg.Contexts {
+		ctxMap := map[string]any{
+			"endpoints": ctx.Endpoints,
+		}
+		if ctx.Username != "" {
+			ctxMap["username"] = ctx.Username
+		}
+		contexts[name] = ctxMap
+	}
+
+	data := map[string]any{
+		"current_context": cfg.CurrentContext,
+		"log_level":       cfg.LogLevel,
+		"default_format":  cfg.DefaultFormat,
+		"strict":          cfg.Strict,
+		"no_validate":     cfg.NoValidate,
+		"contexts":        contexts,
+	}
+
+	yamlBytes, err := SerializeYAML(data)
+	if err != nil {
+		return fmt.Errorf("failed to serialize YAML: %w", err)
+	}
+
+	fmt.Print(string(yamlBytes))
+	return nil
 }
 
 // formatValue is a package-local alias to models.FormatValue for backward compatibility.

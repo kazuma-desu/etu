@@ -45,7 +45,8 @@ func (r *Registry) Register(format models.FormatType, parser Parser) {
 	r.parsers[format] = parser
 }
 
-// GetParser returns the parser for the specified format
+// GetParser returns the parser for the specified format.
+// Use this for internal lookups where deprecation warnings are not needed.
 func (r *Registry) GetParser(format models.FormatType) (Parser, error) {
 	parser, ok := r.parsers[format]
 	if !ok {
@@ -54,8 +55,18 @@ func (r *Registry) GetParser(format models.FormatType) (Parser, error) {
 	return parser, nil
 }
 
+// GetParserWithDeprecationCheck returns the parser for the specified format,
+// emitting a deprecation warning to stderr for deprecated formats.
+// Use this for user-facing CLI entry points where the format was explicitly provided.
+func (r *Registry) GetParserWithDeprecationCheck(format models.FormatType) (Parser, error) {
+	if format == models.FormatEtcdctl || format == models.FormatJSON {
+		fmt.Fprintf(os.Stderr, "Warning: '%s' format is deprecated. Consider migrating to YAML using 'etu convert'.\n", format)
+	}
+	return r.GetParser(format)
+}
+
 // DetectFormat detects file format from extension, falling back to content analysis.
-// Priority: extension > content signature > default (etcdctl)
+// Priority: extension > content signature > default (yaml)
 func (r *Registry) DetectFormat(path string) (models.FormatType, error) {
 	// 1. Extension-based detection (fastest)
 	format := r.detectByExtension(path)
@@ -74,7 +85,7 @@ func (r *Registry) DetectFormat(path string) (models.FormatType, error) {
 	}
 
 	// 3. Default fallback
-	return models.FormatEtcdctl, nil
+	return models.FormatYAML, nil
 }
 
 // detectByExtension returns format based on file extension
@@ -86,7 +97,7 @@ func (r *Registry) detectByExtension(path string) models.FormatType {
 	case ".json":
 		return models.FormatJSON
 	case ".txt":
-		return models.FormatEtcdctl
+		return models.FormatAuto
 	default:
 		return models.FormatAuto
 	}
@@ -121,7 +132,7 @@ func (r *Registry) detectByContent(path string) models.FormatType {
 	}
 
 	if firstNonEmptyLine == "" {
-		return models.FormatEtcdctl
+		return models.FormatAuto
 	}
 
 	// JSON detection: starts with { or [

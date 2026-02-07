@@ -1,7 +1,9 @@
 package parsers
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -226,7 +228,7 @@ func TestDetectFormat_ByContent(t *testing.T) {
 	}
 }
 
-func TestDetectFormat_FallbackToEtcdctl(t *testing.T) {
+func TestDetectFormat_FallbackToYAML(t *testing.T) {
 	tests := []struct {
 		name    string
 		content string
@@ -252,7 +254,40 @@ func TestDetectFormat_FallbackToEtcdctl(t *testing.T) {
 
 			format, err := r.DetectFormat(tmpFile)
 			assert.NoError(t, err)
-			assert.Equal(t, models.FormatEtcdctl, format, "Should fallback to etcdctl when no matching parser")
+			assert.Equal(t, models.FormatYAML, format, "Should fallback to YAML when no matching parser")
+		})
+	}
+}
+
+func TestDetectFormat_DefaultsToYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		filename string
+		content  string
+	}{
+		{
+			name:     "no extension, unknown content",
+			filename: "config",
+			content:  "some random text",
+		},
+		{
+			name:     "unknown extension",
+			filename: "config.unknown",
+			content:  "some plain text without any format markers",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			tmpFile := filepath.Join(tmpDir, tt.filename)
+			err := os.WriteFile(tmpFile, []byte(tt.content), 0644)
+			require.NoError(t, err)
+
+			r := NewRegistry()
+			format, err := r.DetectFormat(tmpFile)
+			assert.NoError(t, err)
+			assert.Equal(t, models.FormatYAML, format, "Should default to YAML for unknown extensions or content")
 		})
 	}
 }
@@ -260,10 +295,10 @@ func TestDetectFormat_FallbackToEtcdctl(t *testing.T) {
 func TestDetectFormat_FileNotFound(t *testing.T) {
 	r := NewRegistry()
 
-	// Non-existent file should fallback to etcdctl (default)
+	// Non-existent file should fallback to YAML (default)
 	format, err := r.DetectFormat("/nonexistent/path/config.txt")
 	assert.NoError(t, err)
-	assert.Equal(t, models.FormatEtcdctl, format)
+	assert.Equal(t, models.FormatYAML, format)
 }
 
 func TestDetectFormat_ScannerError(t *testing.T) {
@@ -281,7 +316,7 @@ func TestDetectFormat_ScannerError(t *testing.T) {
 	r := NewRegistry()
 	format, err := r.DetectFormat(tmpFile)
 	assert.NoError(t, err)
-	assert.Equal(t, models.FormatEtcdctl, format, "Scanner error should fallback to etcdctl via FormatAuto")
+	assert.Equal(t, models.FormatYAML, format, "Scanner error should fallback to YAML via FormatAuto")
 }
 
 func TestDetectFormat_EmptyFile(t *testing.T) {
@@ -293,7 +328,7 @@ func TestDetectFormat_EmptyFile(t *testing.T) {
 	r := NewRegistry()
 	format, err := r.DetectFormat(tmpFile)
 	assert.NoError(t, err)
-	assert.Equal(t, models.FormatEtcdctl, format, "Empty file should default to etcdctl")
+	assert.Equal(t, models.FormatYAML, format, "Empty file should default to YAML")
 }
 
 func TestDetectFormat_CommentsOnly(t *testing.T) {
@@ -325,7 +360,7 @@ func TestDetectFormat_CommentsOnly(t *testing.T) {
 			r := NewRegistry()
 			format, err := r.DetectFormat(tmpFile)
 			assert.NoError(t, err)
-			assert.Equal(t, models.FormatEtcdctl, format, "File with only comments should default to etcdctl")
+			assert.Equal(t, models.FormatYAML, format, "File with only comments should default to YAML")
 		})
 	}
 }
@@ -404,8 +439,8 @@ func TestDetectFormat_CaseInsensitiveExtension(t *testing.T) {
 		{
 			name:           "uppercase TXT",
 			filename:       "config.TXT",
-			registerFormat: models.FormatEtcdctl,
-			expected:       models.FormatEtcdctl,
+			registerFormat: models.FormatYAML,
+			expected:       models.FormatYAML,
 		},
 	}
 
@@ -510,5 +545,45 @@ func BenchmarkDetectFormat_ByContent(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = r.DetectFormat(tmpFile)
+	}
+}
+
+func TestGetParserWithDeprecationCheck_Warning(t *testing.T) {
+	tests := []struct {
+		name     string
+		format   models.FormatType
+		wantWarn bool
+	}{
+		{"etcdctl deprecated", models.FormatEtcdctl, true},
+		{"json deprecated", models.FormatJSON, true},
+		{"yaml not deprecated", models.FormatYAML, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldStderr := os.Stderr
+			r, w, err := os.Pipe()
+			require.NoError(t, err)
+			defer func() { os.Stderr = oldStderr }()
+			os.Stderr = w
+
+			registry := NewRegistry()
+			parser, err := registry.GetParserWithDeprecationCheck(tt.format)
+
+			w.Close()
+
+			var buf bytes.Buffer
+			_, _ = io.Copy(&buf, r)
+			output := buf.String()
+
+			require.NoError(t, err)
+			require.NotNil(t, parser)
+
+			if tt.wantWarn {
+				assert.Contains(t, output, "deprecated")
+			} else {
+				assert.Empty(t, output)
+			}
+		})
 	}
 }
