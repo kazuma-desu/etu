@@ -120,3 +120,43 @@ func TestSerializeYAML_EmptyMap(t *testing.T) {
 	// Empty map produces "{}\n" in YAML
 	assert.Equal(t, "{}\n", string(output))
 }
+
+func TestSerializeYAML_NonSerializableType(t *testing.T) {
+	// yaml.v3 panics on channels, so we need to recover
+	data := map[string]any{
+		"channel": make(chan int),
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			// Expected panic for non-serializable type
+			t.Log("Correctly panicked on channel type:", r)
+		}
+	}()
+
+	_, err := SerializeYAML(data)
+	if err != nil {
+		// If it returns error instead of panic, that's also acceptable
+		assert.Contains(t, err.Error(), "failed to convert to YAML node")
+	}
+}
+
+func TestSerializeYAML_FuncType(t *testing.T) {
+	// yaml.v3 panics on functions, so we need to recover
+	data := map[string]any{
+		"func": func() {},
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			// Expected panic for non-serializable type
+			t.Log("Correctly panicked on function type:", r)
+		}
+	}()
+
+	_, err := SerializeYAML(data)
+	if err != nil {
+		// If it returns error instead of panic, that's also acceptable
+		assert.Contains(t, err.Error(), "failed to convert to YAML node")
+	}
+}

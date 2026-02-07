@@ -1,7 +1,9 @@
 package parsers
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -543,5 +545,45 @@ func BenchmarkDetectFormat_ByContent(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = r.DetectFormat(tmpFile)
+	}
+}
+
+func TestGetParserWithDeprecationCheck_Warning(t *testing.T) {
+	tests := []struct {
+		name     string
+		format   models.FormatType
+		wantWarn bool
+	}{
+		{"etcdctl deprecated", models.FormatEtcdctl, true},
+		{"json deprecated", models.FormatJSON, true},
+		{"yaml not deprecated", models.FormatYAML, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Capture stderr
+			oldStderr := os.Stderr
+			r, w, _ := os.Pipe()
+			os.Stderr = w
+
+			registry := NewRegistry()
+			parser, err := registry.GetParserWithDeprecationCheck(tt.format)
+
+			w.Close()
+			os.Stderr = oldStderr
+
+			var buf bytes.Buffer
+			_, _ = io.Copy(&buf, r)
+			output := buf.String()
+
+			require.NoError(t, err)
+			require.NotNil(t, parser)
+
+			if tt.wantWarn {
+				assert.Contains(t, output, "deprecated")
+			} else {
+				assert.Empty(t, output)
+			}
+		})
 	}
 }

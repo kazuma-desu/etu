@@ -191,3 +191,27 @@ func TestUnflattenMap_NilValue(t *testing.T) {
 	assert.Contains(t, result, "key")
 	assert.Nil(t, result["key"])
 }
+
+func TestUnflattenMap_RootOnlyKey(t *testing.T) {
+	// Key "/" should be skipped (becomes empty after TrimPrefix)
+	pairs := []*models.ConfigPair{
+		{Key: "/", Value: "value"},
+		{Key: "/valid", Value: "ok"},
+	}
+	result, err := UnflattenMap(pairs)
+	require.NoError(t, err)
+
+	// "/" should be skipped, only "valid" should exist
+	assert.Len(t, result, 1)
+	assert.Equal(t, "ok", result["valid"])
+}
+
+func TestUnflattenMap_OnlySlashes(t *testing.T) {
+	// Key "///" should be skipped (all parts are empty)
+	pairs := []*models.ConfigPair{
+		{Key: "///", Value: "value"},
+	}
+	result, err := UnflattenMap(pairs)
+	require.NoError(t, err)
+	assert.Empty(t, result)
+}
