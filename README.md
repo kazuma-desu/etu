@@ -310,6 +310,27 @@ etu completion powershell >> $PROFILE
 - Watch operations
 - Backup/restore commands
 
+## Changelog
+
+### Recent Changes
+
+#### Security
+- **Go 1.24.13**: Upgraded from Go 1.24.2 to 1.24.13 to fix [GO-2026-4337](https://pkg.go.dev/vuln/GO-2026-4337) (CVE-2025-68121) - crypto/tls session resumption vulnerability
+
+#### YAML Output Improvements
+- **Deterministic Output**: YAML serialization now produces consistent key ordering across runs
+- **String Type Safety**: Map keys and string values are explicitly tagged with `!!str` to prevent misinterpretation of values like `"true"`, `"null"`, `"123"`
+- **Type Handling**: Direct handling of `int`, `float64`, `bool`, `nil`, and `map[string]string` types without marshal/unmarshal round-trip
+
+#### Robustness
+- **Nil Guards**: Added nil pair protection in `printConfigPairsYAML` and `printApplyYAML` to prevent panics
+- **Error Consistency**: Unified collision error messages in path navigation to use original key format
+- **Error Handling**: `fallbackToNode` now returns explicit error instead of silent empty scalar for edge cases
+
+#### Test Coverage
+- Added comprehensive unit tests for `cmd/get.go`, `cmd/convert.go`, and edge cases in parsers
+- Improved test isolation with `t.Cleanup` for global state reset
+
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and release process.
