@@ -116,9 +116,9 @@ func TestDeleteCommand_Integration(t *testing.T) {
 		assert.Contains(t, output, "/delete/dryrun/b")
 		assert.Contains(t, output, "Would delete")
 
-		value, err := etcdClient.Get(ctx, "/delete/dryrun/a")
+		typedValue, err := etcdClient.GetTyped(ctx, "/delete/dryrun/a")
 		require.NoError(t, err)
-		assert.Equal(t, int64(1), value)
+		assert.Equal(t, int64(1), typedValue)
 	})
 
 	t.Run("Delete error without leading slash", func(t *testing.T) {

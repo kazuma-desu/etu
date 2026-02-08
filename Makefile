@@ -65,25 +65,40 @@ check-container-runtime:
 	fi
 
 # Run etcd container without auth (for local development)
+# NOTE: Only one of etcd-dev or etcd-dev-auth can run at a time (both use port 2379)
 etcd-dev: check-container-runtime
-	@$(CONTAINER_RUNTIME) rm -f etcd-dev 2>/dev/null || true
+	@$(CONTAINER_RUNTIME) rm -f etcd-dev etcd-dev-auth 2>/dev/null || true
 	@$(CONTAINER_RUNTIME) run -d --name etcd-dev -p 2379:2379 \
 		quay.io/coreos/etcd:v3.5.12 \
 		/usr/local/bin/etcd \
 		--listen-client-urls http://0.0.0.0:2379 \
 		--advertise-client-urls http://0.0.0.0:2379
-	@echo "etcd-dev started on http://localhost:2379 (no auth)"
+	@echo "Waiting for etcd to become ready..."
+	@for i in 1 2 3 4 5; do \
+		if $(CONTAINER_RUNTIME) exec etcd-dev /usr/local/bin/etcdctl --endpoints=http://localhost:2379 endpoint health >/dev/null 2>&1; then \
+			echo "etcd-dev started on http://localhost:2379 (no auth)"; \
+			exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "Warning: etcd may not be ready yet" >&2
 
 # Run etcd container with auth enabled
+# NOTE: Only one of etcd-dev or etcd-dev-auth can run at a time (both use port 2379)
 etcd-dev-auth: check-container-runtime
-	@$(CONTAINER_RUNTIME) rm -f etcd-dev-auth 2>/dev/null || true
+	@$(CONTAINER_RUNTIME) rm -f etcd-dev-auth etcd-dev 2>/dev/null || true
 	@$(CONTAINER_RUNTIME) run -d --name etcd-dev-auth -p 2379:2379 \
 		quay.io/coreos/etcd:v3.5.12 \
 		/usr/local/bin/etcd \
 		--listen-client-urls http://0.0.0.0:2379 \
 		--advertise-client-urls http://0.0.0.0:2379
-	@echo "Waiting for etcd to start..."
-	@sleep 2
+	@echo "Waiting for etcd to become ready..."
+	@for i in 1 2 3 4 5 6 7 8 9 10; do \
+		if $(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 endpoint health >/dev/null 2>&1; then \
+			break; \
+		fi; \
+		sleep 1; \
+	done
 	@echo "Creating root user and enabling auth..."
 	@$(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 user add root:admin
 	@$(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 auth enable
