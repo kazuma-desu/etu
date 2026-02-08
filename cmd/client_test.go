@@ -44,7 +44,7 @@ func TestMockClient_Integration(t *testing.T) {
 
 	t.Run("simulates timeout", func(t *testing.T) {
 		mock := client.NewMockClient()
-		mock.GetFunc = func(_ context.Context, _ string) (any, error) {
+		mock.GetFunc = func(_ context.Context, _ string) (string, error) {
 			return "", context.DeadlineExceeded
 		}
 
