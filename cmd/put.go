@@ -87,7 +87,7 @@ func runPut(_ *cobra.Command, args []string) error {
 	}
 
 	if putOpts.dryRun {
-		output.Info(fmt.Sprintf("Would put: %s = %s", key, truncateForDisplay(value, 50)))
+		output.Info(fmt.Sprintf("Would put: %s = %s", key, output.Truncate(value, 50)))
 	} else {
 		output.Success(fmt.Sprintf("Put: %s", key))
 	}
@@ -147,19 +147,4 @@ func validateKeyValue(key, value string) error {
 	}
 
 	return nil
-}
-
-func truncateForDisplay(s string, maxLen int) string {
-	if maxLen <= 0 {
-		return ""
-	}
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	runes := []rune(s)
-	if len(runes) <= maxLen {
-		return s
-	}
-	if maxLen <= 3 {
-		return string(runes[:maxLen])
-	}
-	return string(runes[:maxLen-3]) + "..."
 }

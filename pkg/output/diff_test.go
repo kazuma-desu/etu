@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestDiffKeyValues_AllAdded(t *testing.T) {
@@ -233,6 +234,7 @@ func TestPrintDiffResult_UnsupportedFormat(t *testing.T) {
 	err := PrintDiffResult(result, "invalid_format", false)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported format")
+	assert.Contains(t, err.Error(), "yaml")
 }
 
 func TestPrintDiffResult_DispatchesToSimple(t *testing.T) {
@@ -395,6 +397,98 @@ func TestPrintDiffJSON_ValidJSON(t *testing.T) {
 	var raw interface{}
 	err = json.Unmarshal([]byte(output), &raw)
 	require.NoError(t, err, "Output should be valid JSON")
+}
+
+func TestPrintDiffResult_DispatchesToYAML(t *testing.T) {
+	result := &DiffResult{
+		Entries: []*DiffEntry{
+			{Key: "/test/key", Status: DiffStatusAdded, NewValue: "value"},
+		},
+		Added: 1,
+	}
+
+	output, err := captureStdout(t, func() error {
+		return PrintDiffResult(result, "yaml", false)
+	})
+	require.NoError(t, err)
+	assert.Contains(t, output, "added:")
+	assert.Contains(t, output, "/test/key")
+}
+
+func TestPrintDiffYAML_EmptyResult(t *testing.T) {
+	result := &DiffResult{Entries: []*DiffEntry{}}
+
+	output, err := captureStdout(t, func() error {
+		return printDiffYAML(result, false)
+	})
+	require.NoError(t, err)
+	assert.Contains(t, output, "added: 0")
+	assert.Contains(t, output, "modified: 0")
+	assert.Contains(t, output, "deleted: 0")
+	assert.Contains(t, output, "entries: []")
+}
+
+func TestPrintDiffYAML_AllStatuses(t *testing.T) {
+	result := &DiffResult{
+		Entries: []*DiffEntry{
+			{Key: "/added", Status: DiffStatusAdded, NewValue: "new"},
+			{Key: "/modified", Status: DiffStatusModified, OldValue: "old", NewValue: "new"},
+			{Key: "/deleted", Status: DiffStatusDeleted, OldValue: "old"},
+			{Key: "/unchanged", Status: DiffStatusUnchanged, OldValue: "same", NewValue: "same"},
+		},
+		Added:     1,
+		Modified:  1,
+		Deleted:   1,
+		Unchanged: 1,
+	}
+
+	output, err := captureStdout(t, func() error {
+		return printDiffYAML(result, false)
+	})
+	require.NoError(t, err)
+
+	assert.Contains(t, output, "added: 1")
+	assert.Contains(t, output, "modified: 1")
+	assert.Contains(t, output, "deleted: 1")
+	assert.Contains(t, output, "/added")
+	assert.Contains(t, output, "/modified")
+	assert.Contains(t, output, "/deleted")
+	assert.NotContains(t, output, "/unchanged")
+}
+
+func TestPrintDiffYAML_ShowUnchanged(t *testing.T) {
+	result := &DiffResult{
+		Entries: []*DiffEntry{
+			{Key: "/unchanged", Status: DiffStatusUnchanged, OldValue: "same", NewValue: "same"},
+		},
+		Unchanged: 1,
+	}
+
+	output, err := captureStdout(t, func() error {
+		return printDiffYAML(result, true)
+	})
+	require.NoError(t, err)
+
+	assert.Contains(t, output, "unchanged: 1")
+	assert.Contains(t, output, "/unchanged")
+}
+
+func TestPrintDiffYAML_ValidYAML(t *testing.T) {
+	result := &DiffResult{
+		Entries: []*DiffEntry{
+			{Key: "/key", Status: DiffStatusAdded, NewValue: "value with \"quotes\""},
+		},
+		Added: 1,
+	}
+
+	output, err := captureStdout(t, func() error {
+		return printDiffYAML(result, false)
+	})
+	require.NoError(t, err)
+
+	var parsed map[string]interface{}
+	err = yaml.Unmarshal([]byte(output), &parsed)
+	require.NoError(t, err, "Output should be valid YAML")
 }
 
 func TestPrintDiffSimple_NoChanges(t *testing.T) {

@@ -42,7 +42,10 @@ Use --full with --prefix to compare all keys under a prefix (server-scoped diff)
   etu diff -f config.txt --show-unchanged
 
   # JSON output for scripting
-  etu diff -f config.txt -o json`,
+  etu diff -f config.txt -o json
+
+  # YAML output
+  etu diff -f config.txt -o yaml`,
 		RunE: runDiff,
 	}
 )
@@ -53,9 +56,9 @@ func init() {
 	diffCmd.Flags().StringVarP(&diffOpts.FilePath, "file", "f", "",
 		"path to configuration file (required)")
 	diffCmd.Flags().StringVarP(&diffOpts.Format, "output", "o", output.FormatSimple.String(),
-		"output format: simple, json, table")
+		"output format: simple, json, yaml, table")
 	diffCmd.Flags().StringVar(&diffOpts.DeprecatedFormat, "format", "",
-		"output format: simple, json, table (deprecated: use -o instead)")
+		"output format: simple, json, yaml, table (deprecated: use -o instead)")
 	_ = diffCmd.Flags().MarkHidden("format")
 	diffCmd.Flags().BoolVar(&diffOpts.ShowUnchanged, "show-unchanged", false,
 		"show keys that are unchanged")

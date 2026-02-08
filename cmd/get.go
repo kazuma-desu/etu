@@ -284,7 +284,7 @@ func printTable(resp *client.GetResponse) error {
 		headers = []string{"KEY", "VALUE", "CREATE_REV", "MOD_REV", "VERSION", "LEASE"}
 		rows = make([][]string, len(resp.Kvs))
 		for i, kv := range resp.Kvs {
-			value := truncateValue(models.FormatValue(kv.Value), 30)
+			value := output.Truncate(models.FormatValue(kv.Value), 30)
 			rows[i] = []string{
 				kv.Key,
 				value,
@@ -298,7 +298,7 @@ func printTable(resp *client.GetResponse) error {
 		headers = []string{"KEY", "VALUE"}
 		rows = make([][]string, len(resp.Kvs))
 		for i, kv := range resp.Kvs {
-			value := truncateValue(models.FormatValue(kv.Value), 50)
+			value := output.Truncate(models.FormatValue(kv.Value), 50)
 			rows[i] = []string{kv.Key, value}
 		}
 	}
@@ -348,15 +348,4 @@ func printTree(resp *client.GetResponse) error {
 	}
 
 	return output.PrintTree(pairs)
-}
-
-func truncateValue(value string, maxLen int) string {
-	// Replace newlines with space for table display
-	value = strings.ReplaceAll(value, "\n", " ")
-	value = strings.ReplaceAll(value, "\t", " ")
-
-	if len(value) <= maxLen {
-		return value
-	}
-	return value[:maxLen-3] + "..."
 }

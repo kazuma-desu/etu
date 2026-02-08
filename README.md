@@ -304,6 +304,35 @@ etu completion powershell | Out-String | Invoke-Expression
 etu completion powershell >> $PROFILE
 ```
 
+## Exit Codes
+
+etu uses standard exit codes for automation and scripting:
+
+| Code | Meaning | Description |
+|------|---------|-------------|
+| 0 | Success | Command executed successfully |
+| 1 | General error | An unexpected error occurred |
+| 2 | Validation error | Invalid input, missing arguments, or validation failed |
+| 3 | Connection error | Failed to connect to etcd cluster |
+| 4 | Key not found | The requested key does not exist in etcd |
+
+These codes can be used in shell scripts for error handling:
+
+```bash
+etu get /config/app/host
+exit_code=$?
+
+if [ $exit_code -eq 4 ]; then
+    echo "Key not found, using default"
+    host="localhost"
+elif [ $exit_code -eq 0 ]; then
+    echo "Key retrieved successfully"
+else
+    echo "Error occurred (exit code: $exit_code)"
+    exit $exit_code
+fi
+```
+
 ## Roadmap
 
 - Additional parsers (Helm, TOML)

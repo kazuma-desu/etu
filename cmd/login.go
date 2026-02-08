@@ -387,16 +387,16 @@ func validateEndpointFormat(endpoint string) error {
 	}
 
 	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
-		return fmt.Errorf("'%s' — must start with http:// or https://", truncate(endpoint, 20))
+		return fmt.Errorf("'%s' — must start with http:// or https://", output.Truncate(endpoint, 20))
 	}
 
 	parsed, err := url.Parse(endpoint)
 	if err != nil {
-		return fmt.Errorf("'%s' — invalid URL", truncate(endpoint, 20))
+		return fmt.Errorf("'%s' — invalid URL", output.Truncate(endpoint, 20))
 	}
 
 	if parsed.Host == "" {
-		return fmt.Errorf("'%s' — missing hostname", truncate(endpoint, 20))
+		return fmt.Errorf("'%s' — missing hostname", output.Truncate(endpoint, 20))
 	}
 
 	return nil
@@ -427,13 +427,6 @@ func validateEndpoints(s string) error {
 	}
 
 	return nil
-}
-
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
 }
 
 func parseEndpoints(s string) []string {

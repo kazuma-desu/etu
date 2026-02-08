@@ -32,28 +32,6 @@ func resetGetOpts() {
 	getOpts.showMetadata = false
 }
 
-func TestTruncateValue(t *testing.T) {
-	tests := []struct {
-		name     string
-		value    string
-		maxLen   int
-		expected string
-	}{
-		{"short string", "hello", 10, "hello"},
-		{"exact length", "hello", 5, "hello"},
-		{"truncate", "hello world", 8, "hello..."},
-		{"newlines", "hello\nworld", 20, "hello world"},
-		{"tabs", "hello\tworld", 20, "hello world"},
-		{"very short maxLen", "hello world", 3, "..."},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, truncateValue(tt.value, tt.maxLen))
-		})
-	}
-}
-
 func TestPrintSimple(t *testing.T) {
 	t.Cleanup(resetGetOpts)
 	resetGetOpts()

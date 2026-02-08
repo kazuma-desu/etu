@@ -358,53 +358,6 @@ func TestValidateEndpointFormat(t *testing.T) {
 	}
 }
 
-func TestTruncate(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		max      int
-		expected string
-	}{
-		{
-			name:     "shorter than max",
-			input:    "hello",
-			max:      10,
-			expected: "hello",
-		},
-		{
-			name:     "equal to max",
-			input:    "hello",
-			max:      5,
-			expected: "hello",
-		},
-		{
-			name:     "longer than max",
-			input:    "hello world",
-			max:      5,
-			expected: "hello...",
-		},
-		{
-			name:     "empty string",
-			input:    "",
-			max:      5,
-			expected: "",
-		},
-		{
-			name:     "max zero",
-			input:    "hello",
-			max:      0,
-			expected: "...",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := truncate(tt.input, tt.max)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestParseEndpoints(t *testing.T) {
 	tests := []struct {
 		name     string
