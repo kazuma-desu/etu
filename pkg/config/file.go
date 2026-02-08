@@ -55,10 +55,20 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// If config doesn't exist, return empty config
-	if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
+	info, statErr := os.Stat(configPath)
+	if os.IsNotExist(statErr) {
 		return &Config{
 			Contexts: make(map[string]*ContextConfig),
 		}, nil
+	}
+
+	// Check file permissions - warn if too open
+	if statErr == nil {
+		mode := info.Mode().Perm()
+		if mode&0077 != 0 {
+			fmt.Fprintf(os.Stderr, "Warning: Config file %s has permissions %o. Consider changing to 0600 for better security.\n",
+				configPath, mode)
+		}
 	}
 
 	data, err := os.ReadFile(configPath)

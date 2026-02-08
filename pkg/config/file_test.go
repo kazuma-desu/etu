@@ -528,3 +528,81 @@ func TestGetEtcdConfigWithContext_EmptyEndpoints(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no etcd endpoints configured")
 }
+
+func TestLoadConfig_PermissionWarning(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	configPath := filepath.Join(tmpDir, ".config", "etu", "config.yaml")
+	err := os.MkdirAll(filepath.Dir(configPath), 0700)
+	require.NoError(t, err)
+
+	configContent := `current-context: dev
+contexts:
+  dev:
+    endpoints:
+      - http://localhost:2379
+`
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, "dev", cfg.CurrentContext)
+}
+
+func TestLoadConfig_CorrectPermissions_NoWarning(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	configPath := filepath.Join(tmpDir, ".config", "etu", "config.yaml")
+	err := os.MkdirAll(filepath.Dir(configPath), 0700)
+	require.NoError(t, err)
+
+	configContent := `current-context: prod
+contexts:
+  prod:
+    endpoints:
+      - http://prod:2379
+`
+	err = os.WriteFile(configPath, []byte(configContent), 0600)
+	require.NoError(t, err)
+
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, "prod", cfg.CurrentContext)
+}
+
+func TestLoadConfig_VeryOpenPermissions(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	configPath := filepath.Join(tmpDir, ".config", "etu", "config.yaml")
+	err := os.MkdirAll(filepath.Dir(configPath), 0700)
+	require.NoError(t, err)
+
+	configContent := `current-context: test
+contexts:
+  test:
+    endpoints:
+      - http://test:2379
+`
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	info, err := os.Stat(configPath)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0644), info.Mode().Perm())
+
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.NotNil(t, cfg)
+}

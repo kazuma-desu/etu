@@ -96,6 +96,10 @@ func runGet(_ *cobra.Command, args []string) error {
 	defer cancel()
 	key := args[0]
 
+	if !strings.HasPrefix(key, "/") {
+		return fmt.Errorf("key must start with '/': %s", key)
+	}
+
 	// Handle range_end if provided
 	if len(args) > 1 {
 		getOpts.rangeEnd = args[1]

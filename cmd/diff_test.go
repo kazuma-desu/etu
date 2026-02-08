@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,8 +61,24 @@ func TestDiffFullFlagRequiresPrefix(t *testing.T) {
 	diffOpts.Full = true
 	diffOpts.Prefix = ""
 
-	err := runDiff(nil, nil)
+	err := runDiff(diffCmd, nil)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "--full requires --prefix")
+}
+
+func TestDiffDeprecatedFormatFlag(t *testing.T) {
+	originalOpts := diffOpts
+	defer func() { diffOpts = originalOpts }()
+
+	diffOpts.FilePath = "test.txt"
+	diffOpts.Format = "simple"
+	diffOpts.DeprecatedFormat = "json"
+
+	var stderr strings.Builder
+	diffCmd.SetErr(&stderr)
+
+	_ = runDiff(diffCmd, nil)
+
+	assert.Contains(t, stderr.String(), "deprecated")
 }

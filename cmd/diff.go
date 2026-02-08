@@ -14,11 +14,12 @@ import (
 
 var (
 	diffOpts struct {
-		Format        string
-		Prefix        string
-		FilePath      string
-		ShowUnchanged bool
-		Full          bool
+		Format           string
+		DeprecatedFormat string
+		Prefix           string
+		FilePath         string
+		ShowUnchanged    bool
+		Full             bool
 	}
 
 	diffCmd = &cobra.Command{
@@ -41,7 +42,7 @@ Use --full with --prefix to compare all keys under a prefix (server-scoped diff)
   etu diff -f config.txt --show-unchanged
 
   # JSON output for scripting
-  etu diff -f config.txt --format json`,
+  etu diff -f config.txt -o json`,
 		RunE: runDiff,
 	}
 )
@@ -51,8 +52,11 @@ func init() {
 
 	diffCmd.Flags().StringVarP(&diffOpts.FilePath, "file", "f", "",
 		"path to configuration file (required)")
-	diffCmd.Flags().StringVar(&diffOpts.Format, "format", output.FormatSimple.String(),
+	diffCmd.Flags().StringVarP(&diffOpts.Format, "output", "o", output.FormatSimple.String(),
 		"output format: simple, json, table")
+	diffCmd.Flags().StringVar(&diffOpts.DeprecatedFormat, "format", "",
+		"output format: simple, json, table (deprecated: use -o instead)")
+	_ = diffCmd.Flags().MarkHidden("format")
 	diffCmd.Flags().BoolVar(&diffOpts.ShowUnchanged, "show-unchanged", false,
 		"show keys that are unchanged")
 	diffCmd.Flags().StringVar(&diffOpts.Prefix, "prefix", "",
@@ -67,10 +71,21 @@ func init() {
 	registerFileCompletion(diffCmd, "file")
 }
 
-func runDiff(_ *cobra.Command, _ []string) error {
+func runDiff(cmd *cobra.Command, _ []string) error {
 	// Validate flags: --full requires --prefix
 	if diffOpts.Full && diffOpts.Prefix == "" {
 		return fmt.Errorf("--full requires --prefix to scope the comparison\nHint: etu diff -f %s --full --prefix /your/prefix", diffOpts.FilePath)
+	}
+
+	if diffOpts.DeprecatedFormat != "" {
+		if cmd != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Warning: Flag --format is deprecated, use -o instead\n")
+			if diffOpts.Format == output.FormatSimple.String() && !cmd.Flags().Changed("output") {
+				diffOpts.Format = diffOpts.DeprecatedFormat
+			}
+		} else if diffOpts.Format == output.FormatSimple.String() {
+			diffOpts.Format = diffOpts.DeprecatedFormat
+		}
 	}
 
 	ctx, cancel := getOperationContext()
