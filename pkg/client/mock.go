@@ -25,7 +25,8 @@ type MockClient struct {
 	PutAllFunc             func(ctx context.Context, pairs []*models.ConfigPair) error
 	PutAllWithProgressFunc func(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error)
 	PutAllWithOptionsFunc  func(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, opts *BatchOptions) (*PutAllResult, error)
-	GetFunc                func(ctx context.Context, key string) (any, error)
+	GetFunc                func(ctx context.Context, key string) (string, error)
+	GetTypedFunc           func(ctx context.Context, key string) (any, error)
 	GetWithOptionsFunc     func(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error)
 	DeleteFunc             func(ctx context.Context, key string) (int64, error)
 	DeletePrefixFunc       func(ctx context.Context, prefix string) (int64, error)
@@ -109,12 +110,23 @@ func (m *MockClient) PutAllWithOptions(ctx context.Context, pairs []*models.Conf
 	return result, nil
 }
 
-func (m *MockClient) Get(ctx context.Context, key string) (any, error) {
+func (m *MockClient) Get(ctx context.Context, key string) (string, error) {
 	m.GetCalls = append(m.GetCalls, key)
 	if m.GetFunc != nil {
 		return m.GetFunc(ctx, key)
 	}
 	return "", nil
+}
+
+func (m *MockClient) GetTyped(ctx context.Context, key string) (any, error) {
+	if m.GetTypedFunc != nil {
+		return m.GetTypedFunc(ctx, key)
+	}
+	value, err := m.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return models.InferType(value), nil
 }
 
 func (m *MockClient) GetWithOptions(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error) {

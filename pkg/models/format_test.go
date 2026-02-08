@@ -37,9 +37,9 @@ func TestFormatValue(t *testing.T) {
 		{"uint64", uint64(64), "64"},
 
 		// Floats
-		{"float32", float32(3.14), "3.140000"},
-		{"float64", float64(3.14), "3.140000"},
-		{"float64 zero", float64(0.0), "0.000000"},
+		{"float32", float32(3.14), "3.14"},
+		{"float64", float64(3.14), "3.14"},
+		{"float64 zero", float64(0.0), "0"},
 
 		// Bool
 		{"bool true", true, "true"},
@@ -127,6 +127,14 @@ func TestInferType(t *testing.T) {
 		{"empty string", "", ""},
 		{"multiple decimal points", "123.456.789", "123.456.789"},
 		{"string with spaces", "hello world", "hello world"},
+		{"int64 overflow", "99999999999999999999", "99999999999999999999"},
+		{"case sensitivity True", "True", "True"},
+		{"case sensitivity TRUE", "TRUE", "TRUE"},
+		{"case sensitivity FALSE", "FALSE", "FALSE"},
+		{"leading zeros", "007", int64(7)},
+		{"whitespace prefix", " 123", " 123"},
+		{"whitespace suffix", "123 ", "123 "},
+		{"whitespace both", " 123 ", " 123 "},
 	}
 
 	for _, tt := range tests {

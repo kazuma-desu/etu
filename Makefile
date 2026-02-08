@@ -56,8 +56,17 @@ run-example:
 # Detect container runtime (podman or docker)
 CONTAINER_RUNTIME := $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)
 
+# Check container runtime is available
+.PHONY: check-container-runtime
+check-container-runtime:
+	@if [ -z "$(CONTAINER_RUNTIME)" ]; then \
+		echo "Error: No container runtime found. Please install podman or docker." >&2; \
+		exit 1; \
+	fi
+
 # Run etcd container without auth (for local development)
-etcd-dev:
+etcd-dev: check-container-runtime
+	@$(CONTAINER_RUNTIME) rm -f etcd-dev 2>/dev/null || true
 	@$(CONTAINER_RUNTIME) run -d --name etcd-dev -p 2379:2379 \
 		quay.io/coreos/etcd:v3.5.12 \
 		/usr/local/bin/etcd \
@@ -66,14 +75,18 @@ etcd-dev:
 	@echo "etcd-dev started on http://localhost:2379 (no auth)"
 
 # Run etcd container with auth enabled
-etcd-dev-auth:
+etcd-dev-auth: check-container-runtime
+	@$(CONTAINER_RUNTIME) rm -f etcd-dev-auth 2>/dev/null || true
 	@$(CONTAINER_RUNTIME) run -d --name etcd-dev-auth -p 2379:2379 \
-		-e ETCD_ROOT_PASSWORD=admin \
 		quay.io/coreos/etcd:v3.5.12 \
 		/usr/local/bin/etcd \
 		--listen-client-urls http://0.0.0.0:2379 \
-		--advertise-client-urls http://0.0.0.0:2379 \
-		--auth-token simple
+		--advertise-client-urls http://0.0.0.0:2379
+	@echo "Waiting for etcd to start..."
+	@sleep 2
+	@echo "Creating root user and enabling auth..."
+	@$(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 user add root:admin
+	@$(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 auth enable
 	@echo "etcd-dev-auth started on http://localhost:2379"
 	@echo "Username: root, Password: admin"
 

@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+var (
+	intRe   = regexp.MustCompile(`^-?\d+$`)
+	floatRe = regexp.MustCompile(`^-?\d+\.\d+([eE][+-]?\d+)?$|^-?\d+[eE][+-]?\d+$`)
+)
+
 // FormatValue converts a value to a display string.
 // Supports: string, int, int64, float64, map[string]any, fmt.Stringer, and nil.
 // Returns empty string for nil values.
@@ -40,9 +45,9 @@ func FormatValue(val any) string {
 	case uint64:
 		return fmt.Sprintf("%d", v)
 	case float32:
-		return fmt.Sprintf("%f", v)
+		return strconv.FormatFloat(float64(v), 'g', -1, 32)
 	case float64:
-		return fmt.Sprintf("%f", v)
+		return strconv.FormatFloat(v, 'g', -1, 64)
 	case bool:
 		return fmt.Sprintf("%t", v)
 	case map[string]any:
@@ -78,14 +83,14 @@ func InferType(s string) any {
 	}
 
 	// Try int (all digits, optional leading -)
-	if matched, _ := regexp.MatchString(`^-?\d+$`, s); matched {
+	if intRe.MatchString(s) {
 		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
 			return i
 		}
 	}
 
 	// Try float (contains . or e/E)
-	if matched, _ := regexp.MatchString(`^-?\d+\.\d+([eE][+-]?\d+)?$|^-?\d+[eE][+-]?\d+$`, s); matched {
+	if floatRe.MatchString(s) {
 		if f, err := strconv.ParseFloat(s, 64); err == nil {
 			return f
 		}

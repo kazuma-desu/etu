@@ -265,7 +265,7 @@ func TestFormatValueUnit(t *testing.T) {
 		{"string", "test", "test"},
 		{"int", 42, "42"},
 		{"int64", int64(42), "42"},
-		{"float64", 3.14, "3.140000"},
+		{"float64", 3.14, "3.14"},
 		{"bool", true, "true"},
 		{"nil", nil, ""},
 	}

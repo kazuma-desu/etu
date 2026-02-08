@@ -304,7 +304,7 @@ type GetOptions struct {
 
 type KeyValue struct {
 	Key            string
-	Value          any
+	Value          string
 	CreateRevision int64
 	ModRevision    int64
 	Version        int64
@@ -317,7 +317,7 @@ type GetResponse struct {
 	More  bool
 }
 
-func (c *Client) Get(ctx context.Context, key string) (any, error) {
+func (c *Client) Get(ctx context.Context, key string) (string, error) {
 	opts := &GetOptions{}
 	resp, err := c.GetWithOptions(ctx, key, opts)
 	if err != nil {
@@ -329,6 +329,14 @@ func (c *Client) Get(ctx context.Context, key string) (any, error) {
 	}
 
 	return resp.Kvs[0].Value, nil
+}
+
+func (c *Client) GetTyped(ctx context.Context, key string) (any, error) {
+	value, err := c.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return models.InferType(value), nil
 }
 
 func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error) {
@@ -351,7 +359,7 @@ func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOption
 	for i, kv := range resp.Kvs {
 		result.Kvs[i] = &KeyValue{
 			Key:            string(kv.Key),
-			Value:          models.InferType(string(kv.Value)),
+			Value:          string(kv.Value),
 			CreateRevision: kv.CreateRevision,
 			ModRevision:    kv.ModRevision,
 			Version:        kv.Version,

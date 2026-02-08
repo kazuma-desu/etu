@@ -72,11 +72,19 @@ func (d *DryRunClient) PutAllWithOptions(_ context.Context, pairs []*models.Conf
 	return result, nil
 }
 
-func (d *DryRunClient) Get(ctx context.Context, key string) (any, error) {
+func (d *DryRunClient) Get(ctx context.Context, key string) (string, error) {
 	if d.reader != nil {
 		return d.reader.Get(ctx, key)
 	}
 	return "", fmt.Errorf("dry-run mode: cannot read key %q without connection", key)
+}
+
+func (d *DryRunClient) GetTyped(ctx context.Context, key string) (any, error) {
+	value, err := d.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return models.InferType(value), nil
 }
 
 func (d *DryRunClient) GetWithOptions(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error) {

@@ -87,7 +87,7 @@ func TestDryRunClient_Get_WithoutReader(t *testing.T) {
 
 func TestDryRunClient_Get_WithReader(t *testing.T) {
 	mock := NewMockClient()
-	mock.GetFunc = func(_ context.Context, _ string) (any, error) {
+	mock.GetFunc = func(_ context.Context, _ string) (string, error) {
 		return "test-value", nil
 	}
 
