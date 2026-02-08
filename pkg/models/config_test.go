@@ -18,19 +18,14 @@ func TestConfigPair_String(t *testing.T) {
 			expected: "/app/name: myapp",
 		},
 		{
-			name:     "integer value",
-			pair:     &ConfigPair{Key: "/app/port", Value: 8080},
+			name:     "integer value as string",
+			pair:     &ConfigPair{Key: "/app/port", Value: "8080"},
 			expected: "/app/port: 8080",
 		},
 		{
-			name:     "map value",
-			pair:     &ConfigPair{Key: "/app/config", Value: map[string]string{"key": "value"}},
-			expected: "/app/config: map[key:value]",
-		},
-		{
-			name:     "nil value",
-			pair:     &ConfigPair{Key: "/app/nil", Value: nil},
-			expected: "/app/nil: <nil>",
+			name:     "empty value",
+			pair:     &ConfigPair{Key: "/app/empty", Value: ""},
+			expected: "/app/empty: ",
 		},
 	}
 
