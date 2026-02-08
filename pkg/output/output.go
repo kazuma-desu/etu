@@ -561,7 +561,7 @@ func printConfigPairsYAML(pairs []*models.ConfigPair) error {
 			nilCount++
 			continue
 		}
-		if strVal, ok := pair.Value.(string); ok && strVal == "" {
+		if pair.Value == "" {
 			emptyValueKeys = append(emptyValueKeys, pair.Key)
 			continue
 		}

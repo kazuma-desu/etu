@@ -2,6 +2,7 @@ package output
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -96,21 +97,50 @@ func sliceToNode(val []any) (*yaml.Node, error) {
 	return node, nil
 }
 
+var (
+	intRe   = regexp.MustCompile(`^-?\d+$`)
+	floatRe = regexp.MustCompile(`^-?\d+\.\d+([eE][+-]?\d+)?$|^-?\d+[eE][+-]?\d+$`)
+)
+
 func stringToNode(val string) *yaml.Node {
-	// Use default style (0) for single-line scalars
-	// Use LiteralStyle for multi-line strings to render as block scalars (|)
-	// Always set Tag: "!!str" so values like "true", "yes", "null" are emitted
-	// as quoted strings rather than being re-parsed as booleans/nulls
-	var style yaml.Style
+	// Multi-line strings always use literal style with !!str tag
 	if strings.Contains(val, "\n") {
-		style = yaml.LiteralStyle
+		return &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: val,
+			Style: yaml.LiteralStyle,
+		}
 	}
-	return &yaml.Node{
-		Kind:  yaml.ScalarNode,
-		Tag:   "!!str",
-		Value: val,
-		Style: style,
+
+	// YAML special values that need explicit quoting to prevent misinterpretation
+	switch val {
+	case "null", "~", "yes", "no", "on", "off":
+		return &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: val,
+			Style: yaml.DoubleQuotedStyle,
+		}
 	}
+
+	// Bool-looking strings: render as !!bool (unquoted)
+	if val == "true" || val == "false" {
+		return scalarNode("!!bool", val)
+	}
+
+	// Integer-looking strings: render as !!int (unquoted)
+	if intRe.MatchString(val) {
+		return scalarNode("!!int", val)
+	}
+
+	// Float-looking strings: render as !!float (unquoted)
+	if floatRe.MatchString(val) {
+		return scalarNode("!!float", val)
+	}
+
+	// Regular strings: use !!str tag (default quoted behavior)
+	return scalarNode("!!str", val)
 }
 
 func fallbackToNode(val any) (*yaml.Node, error) {

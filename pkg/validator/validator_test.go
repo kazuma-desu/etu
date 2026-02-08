@@ -247,15 +247,9 @@ func TestValidator_ValidateValue(t *testing.T) {
 		},
 		{
 			name:        "valid integer value",
-			pair:        &models.ConfigPair{Key: "/app/port", Value: 8080},
+			pair:        &models.ConfigPair{Key: "/app/port", Value: "8080"},
 			expectError: false,
 			expectWarn:  false,
-		},
-		{
-			name:         "nil value",
-			pair:         &models.ConfigPair{Key: "/app/nil", Value: nil},
-			expectError:  true,
-			messageMatch: "cannot be nil",
 		},
 		{
 			name:         "empty string warning",
@@ -432,23 +426,18 @@ func TestValidator_StructuredDataValidation(t *testing.T) {
 			expectWarn: false,
 		},
 		{
-			name:       "nil value",
-			pair:       &models.ConfigPair{Key: "/app/nil", Value: nil},
+			name:       "empty value - no structured data",
+			pair:       &models.ConfigPair{Key: "/app/nil", Value: ""},
 			expectWarn: false,
 		},
 		{
-			name:       "map value - not a string, no warning",
-			pair:       &models.ConfigPair{Key: "/app/config", Value: map[string]string{"key": "value"}},
+			name:       "plain string value - not structured data",
+			pair:       &models.ConfigPair{Key: "/app/config", Value: "simple-value"},
 			expectWarn: false,
 		},
 		{
-			name:       "slice value - not a string, no warning",
-			pair:       &models.ConfigPair{Key: "/app/config", Value: []string{"item1", "item2"}},
-			expectWarn: false,
-		},
-		{
-			name:       "integer value - not a string, no warning",
-			pair:       &models.ConfigPair{Key: "/app/port", Value: 8080},
+			name:       "integer string value - not structured data",
+			pair:       &models.ConfigPair{Key: "/app/port", Value: "8080"},
 			expectWarn: false,
 		},
 	}

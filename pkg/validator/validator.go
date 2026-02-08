@@ -61,12 +61,7 @@ func ValueValidator(pair *models.ConfigPair, result *ValidationResult) {
 		return
 	}
 
-	if pair.Value == nil {
-		result.addError(pair.Key, "value cannot be nil")
-		return
-	}
-
-	valueStr := fmt.Sprintf("%v", pair.Value)
+	valueStr := pair.Value
 
 	if valueStr == "" {
 		result.addWarning(pair.Key, "value is empty string")
@@ -87,20 +82,15 @@ func StructuredDataValidator(pair *models.ConfigPair, result *ValidationResult) 
 		return
 	}
 
-	if pair.Value == nil {
+	if pair.Value == "" {
 		return
 	}
 
-	valueStr, ok := pair.Value.(string)
-	if !ok {
+	if !looksLikeStructuredData(pair.Value) {
 		return
 	}
 
-	if !looksLikeStructuredData(valueStr) {
-		return
-	}
-
-	if !isValidStructuredData(valueStr) {
+	if !isValidStructuredData(pair.Value) {
 		result.addWarning(pair.Key, "value looks like structured data but is not valid JSON or YAML")
 	}
 }
@@ -112,7 +102,7 @@ func URLValidator(pair *models.ConfigPair, result *ValidationResult) {
 		return
 	}
 
-	if pair.Value == nil {
+	if pair.Value == "" {
 		return
 	}
 
@@ -120,11 +110,7 @@ func URLValidator(pair *models.ConfigPair, result *ValidationResult) {
 		return
 	}
 
-	str, ok := pair.Value.(string)
-	if !ok {
-		result.addWarning(pair.Key, fmt.Sprintf("value for key containing 'url' is not a string (actual type: %T)", pair.Value))
-		return
-	}
+	str := pair.Value
 
 	if str == "" {
 		return
