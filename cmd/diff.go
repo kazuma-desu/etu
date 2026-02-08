@@ -140,12 +140,12 @@ func runDiff(cmd *cobra.Command, _ []string) error {
 	// Compute diff
 	fileMap := make(map[string]string)
 	for _, p := range pairs {
-		fileMap[p.Key] = formatValue(p.Value)
+		fileMap[p.Key] = models.FormatValue(p.Value)
 	}
 
 	etcdMap := make(map[string]string)
 	for _, p := range etcdPairs {
-		etcdMap[p.Key] = formatValue(p.Value)
+		etcdMap[p.Key] = models.FormatValue(p.Value)
 	}
 
 	result := output.DiffKeyValues(fileMap, etcdMap)
@@ -183,16 +183,4 @@ func fetchEtcdStateByPrefix(ctx context.Context, etcdClient client.EtcdClient, p
 		result = append(result, &models.ConfigPair{Key: kv.Key, Value: kv.Value})
 	}
 	return result, nil
-}
-
-func formatValue(val any) string {
-	if val == nil {
-		return ""
-	}
-	switch v := val.(type) {
-	case string:
-		return v
-	default:
-		return fmt.Sprintf("%v", v)
-	}
 }

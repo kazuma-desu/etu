@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -96,8 +95,8 @@ func runGet(_ *cobra.Command, args []string) error {
 	defer cancel()
 	key := args[0]
 
-	if !strings.HasPrefix(key, "/") {
-		return fmt.Errorf("✗ key must start with '/': %s", key)
+	if err := validateKeyPrefix(key); err != nil {
+		return err
 	}
 
 	// Handle range_end if provided

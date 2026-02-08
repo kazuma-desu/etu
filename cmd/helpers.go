@@ -272,3 +272,24 @@ func resolveNoValidateOption(flagValue, flagChanged bool, appCfg *config.Config)
 	}
 	return false
 }
+
+func validateKeyPrefix(key string) error {
+	if !strings.HasPrefix(key, "/") {
+		return fmt.Errorf("✗ key must start with '/': %s", key)
+	}
+	return nil
+}
+
+func stdinToTempFile() (string, error) {
+	tmpFile, err := os.CreateTemp("", "etu-stdin-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer tmpFile.Close()
+
+	if _, err := io.Copy(tmpFile, os.Stdin); err != nil {
+		return "", fmt.Errorf("failed to write stdin to temp file: %w", err)
+	}
+
+	return tmpFile.Name(), nil
+}

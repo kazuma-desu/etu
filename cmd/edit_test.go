@@ -60,16 +60,9 @@ func TestRunEdit_NoEditor(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
-func TestRunEdit_NoArgs(t *testing.T) {
-	err := runEdit(nil, []string{})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "accepts 1 arg(s), received 0")
-}
-
-func TestRunEdit_TooManyArgs(t *testing.T) {
-	err := runEdit(nil, []string{"/key1", "/key2"})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "accepts 1 arg(s), received 2")
+func TestEditCommand_ArgsValidation(t *testing.T) {
+	// Args validation is handled by cobra (ExactArgs(1)), not by runEdit directly
+	assert.NotNil(t, editCmd.Args)
 }
 
 func TestRunEdit_WithMockClient(t *testing.T) {

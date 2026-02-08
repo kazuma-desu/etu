@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kazuma-desu/etu/pkg/models"
 )
 
 func TestFormatValue(t *testing.T) {
@@ -47,7 +49,7 @@ func TestFormatValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := formatValue(tt.input)
+			got := models.FormatValue(tt.input)
 			assert.Equal(t, tt.expected, got)
 		})
 	}

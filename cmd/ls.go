@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -56,8 +55,8 @@ func runLs(_ *cobra.Command, args []string) error {
 
 	prefix := args[0]
 
-	if !strings.HasPrefix(prefix, "/") {
-		return fmt.Errorf("✗ key must start with '/': %s", prefix)
+	if err := validateKeyPrefix(prefix); err != nil {
+		return err
 	}
 
 	etcdClient, cleanup, err := newEtcdClient()

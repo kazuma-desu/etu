@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -70,20 +69,12 @@ func runApply(cmd *cobra.Command, _ []string) error {
 
 	filePath := applyOpts.FilePath
 	if filePath == "-" {
-		tmpFile, err := os.CreateTemp("", "etu-apply-*")
+		tmpPath, err := stdinToTempFile()
 		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
+			return err
 		}
-		defer os.Remove(tmpFile.Name())
-
-		if _, err := io.Copy(tmpFile, os.Stdin); err != nil {
-			tmpFile.Close()
-			return fmt.Errorf("failed to write stdin to temp file: %w", err)
-		}
-		if err := tmpFile.Close(); err != nil {
-			return fmt.Errorf("failed to close temp file: %w", err)
-		}
-		filePath = tmpFile.Name()
+		defer os.Remove(tmpPath)
+		filePath = tmpPath
 	}
 
 	pairs, err := parseConfigFile(ctx, filePath, applyOpts.Format, appCfg)
