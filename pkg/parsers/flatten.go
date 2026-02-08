@@ -2,7 +2,8 @@ package parsers
 
 import (
 	"encoding/json"
-	"math"
+	"fmt"
+	"strconv"
 
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
@@ -60,32 +61,25 @@ func flattenValue(key string, value any, pairs *[]*models.ConfigPair) {
 	case int:
 		*pairs = append(*pairs, &models.ConfigPair{
 			Key:   key,
-			Value: int64(v),
+			Value: fmt.Sprintf("%d", v),
 		})
 
 	case int64:
 		*pairs = append(*pairs, &models.ConfigPair{
 			Key:   key,
-			Value: v,
+			Value: fmt.Sprintf("%d", v),
 		})
 
 	case float64:
-		if isWholeNumber(v) {
-			*pairs = append(*pairs, &models.ConfigPair{
-				Key:   key,
-				Value: int64(v),
-			})
-		} else {
-			*pairs = append(*pairs, &models.ConfigPair{
-				Key:   key,
-				Value: v,
-			})
-		}
+		*pairs = append(*pairs, &models.ConfigPair{
+			Key:   key,
+			Value: strconv.FormatFloat(v, 'g', -1, 64),
+		})
 
 	case bool:
 		*pairs = append(*pairs, &models.ConfigPair{
 			Key:   key,
-			Value: v,
+			Value: fmt.Sprintf("%t", v),
 		})
 
 	default:
@@ -99,8 +93,4 @@ func flattenValue(key string, value any, pairs *[]*models.ConfigPair) {
 			Value: string(serialized),
 		})
 	}
-}
-
-func isWholeNumber(f float64) bool {
-	return math.Trunc(f) == f && f >= math.MinInt64 && f <= math.MaxInt64
 }

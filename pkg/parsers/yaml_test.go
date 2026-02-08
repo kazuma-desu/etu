@@ -39,7 +39,7 @@ app:
 
 	assert.Len(t, pairs, 2)
 	assertYAMLPair(t, pairs, "/app/database/host", "localhost")
-	assertYAMLPair(t, pairs, "/app/database/port", int64(5432))
+	assertYAMLPair(t, pairs, "/app/database/port", "5432")
 }
 
 func TestYAMLParser_DeepNesting(t *testing.T) {
@@ -63,7 +63,7 @@ func TestYAMLParser_IntegerValue(t *testing.T) {
 	pairs := parseYAML(t, content)
 
 	assert.Len(t, pairs, 1)
-	assertYAMLPair(t, pairs, "/port", int64(8080))
+	assertYAMLPair(t, pairs, "/port", "8080")
 }
 
 func TestYAMLParser_FloatValue(t *testing.T) {
@@ -72,7 +72,7 @@ func TestYAMLParser_FloatValue(t *testing.T) {
 	pairs := parseYAML(t, content)
 
 	assert.Len(t, pairs, 1)
-	assertYAMLPair(t, pairs, "/rate", 0.95)
+	assertYAMLPair(t, pairs, "/rate", "0.95")
 }
 
 func TestYAMLParser_BooleanValues(t *testing.T) {
@@ -84,8 +84,8 @@ debug: false
 	pairs := parseYAML(t, content)
 
 	assert.Len(t, pairs, 2)
-	assertYAMLPair(t, pairs, "/enabled", true)
-	assertYAMLPair(t, pairs, "/debug", false)
+	assertYAMLPair(t, pairs, "/enabled", "true")
+	assertYAMLPair(t, pairs, "/debug", "false")
 }
 
 func TestYAMLParser_NullValueSkipped(t *testing.T) {
@@ -155,9 +155,9 @@ app:
 
 	assert.Len(t, pairs, 5)
 	assertYAMLPair(t, pairs, "/app/name", "myapp")
-	assertYAMLPair(t, pairs, "/app/port", int64(8080))
-	assertYAMLPair(t, pairs, "/app/rate", 0.5)
-	assertYAMLPair(t, pairs, "/app/enabled", true)
+	assertYAMLPair(t, pairs, "/app/port", "8080")
+	assertYAMLPair(t, pairs, "/app/rate", "0.5")
+	assertYAMLPair(t, pairs, "/app/enabled", "true")
 	assertYAMLPair(t, pairs, "/app/tags", `["web","api"]`)
 }
 
@@ -310,9 +310,9 @@ production:
 	pairs := parseYAML(t, content)
 
 	assertYAMLPair(t, pairs, "/defaults/host", "localhost")
-	assertYAMLPair(t, pairs, "/defaults/port", int64(5432))
+	assertYAMLPair(t, pairs, "/defaults/port", "5432")
 	assertYAMLPair(t, pairs, "/production/host", "prod-db")
-	assertYAMLPair(t, pairs, "/production/port", int64(5432))
+	assertYAMLPair(t, pairs, "/production/port", "5432")
 }
 
 func TestYAMLParser_SpecialCharactersInKeys(t *testing.T) {
@@ -375,8 +375,8 @@ large: 1.5e10
 	pairs := parseYAML(t, content)
 
 	assert.Len(t, pairs, 2)
-	assertYAMLPair(t, pairs, "/small", 1.5e-10)
-	assertYAMLPair(t, pairs, "/large", int64(15000000000))
+	assertYAMLPair(t, pairs, "/small", "1.5e-10")
+	assertYAMLPair(t, pairs, "/large", "1.5e+10")
 }
 
 func TestYAMLParser_OctalNumbers(t *testing.T) {
@@ -387,7 +387,7 @@ octal: 0o755
 	pairs := parseYAML(t, content)
 
 	assert.Len(t, pairs, 1)
-	assertYAMLPair(t, pairs, "/octal", int64(493))
+	assertYAMLPair(t, pairs, "/octal", "493")
 }
 
 func TestYAMLParser_HexNumbers(t *testing.T) {
@@ -398,7 +398,7 @@ hex: 0xFF
 	pairs := parseYAML(t, content)
 
 	assert.Len(t, pairs, 1)
-	assertYAMLPair(t, pairs, "/hex", int64(255))
+	assertYAMLPair(t, pairs, "/hex", "255")
 }
 
 func TestYAMLParser_NegativeNumbers(t *testing.T) {
@@ -410,8 +410,8 @@ negative_float: -3.14
 	pairs := parseYAML(t, content)
 
 	assert.Len(t, pairs, 2)
-	assertYAMLPair(t, pairs, "/negative_int", int64(-42))
-	assertYAMLPair(t, pairs, "/negative_float", -3.14)
+	assertYAMLPair(t, pairs, "/negative_int", "-42")
+	assertYAMLPair(t, pairs, "/negative_float", "-3.14")
 }
 
 func TestYAMLParser_EmptyNestedMap(t *testing.T) {

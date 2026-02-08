@@ -24,7 +24,7 @@ func TestUnflattenMap_SimpleKeyValue(t *testing.T) {
 func TestUnflattenMap_NestedMaps(t *testing.T) {
 	pairs := []*models.ConfigPair{
 		{Key: "/app/database/host", Value: "localhost"},
-		{Key: "/app/database/port", Value: 5432},
+		{Key: "/app/database/port", Value: "5432"},
 	}
 
 	result, err := UnflattenMap(pairs)
@@ -37,7 +37,7 @@ func TestUnflattenMap_NestedMaps(t *testing.T) {
 	require.True(t, ok)
 
 	assert.Equal(t, "localhost", db["host"])
-	assert.Equal(t, 5432, db["port"])
+	assert.Equal(t, "5432", db["port"])
 }
 
 func TestUnflattenMap_Collision_LeafAsParent(t *testing.T) {
@@ -126,15 +126,27 @@ func TestUnflattenMap_RoundTrip(t *testing.T) {
 	output, err := UnflattenMap(pairs)
 	require.NoError(t, err)
 
-	inputJSON, _ := json.Marshal(input)
+	// After flattening and unflattening, all values become strings
+	expected := map[string]any{
+		"app": map[string]any{
+			"name": "myapp",
+			"db": map[string]any{
+				"host": "localhost",
+				"port": "5432",
+			},
+			"tags": `["a","b"]`,
+		},
+	}
+
+	expectedJSON, _ := json.Marshal(expected)
 	outputJSON, _ := json.Marshal(output)
 
-	assert.JSONEq(t, string(inputJSON), string(outputJSON))
+	assert.JSONEq(t, string(expectedJSON), string(outputJSON))
 }
 
 func TestUnflattenMap_MixedTypes_Collision(t *testing.T) {
 	pairs := []*models.ConfigPair{
-		{Key: "/port", Value: 8080},
+		{Key: "/port", Value: "8080"},
 		{Key: "/port/protocol", Value: "tcp"},
 	}
 
@@ -183,13 +195,11 @@ func TestUnflattenMap_ConsecutiveSlashes(t *testing.T) {
 
 func TestUnflattenMap_NilValue(t *testing.T) {
 	pairs := []*models.ConfigPair{
-		{Key: "/key", Value: nil},
+		{Key: "/key", Value: ""},
 	}
 	result, err := UnflattenMap(pairs)
 	require.NoError(t, err)
-	// nil values should be included (not skipped like empty strings)
-	assert.Contains(t, result, "key")
-	assert.Nil(t, result["key"])
+	assert.NotContains(t, result, "key")
 }
 
 func TestUnflattenMap_RootOnlyKey(t *testing.T) {

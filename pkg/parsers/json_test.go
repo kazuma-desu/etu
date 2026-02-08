@@ -40,7 +40,7 @@ func TestJSONParser_NestedMaps(t *testing.T) {
 
 	assert.Len(t, pairs, 2)
 	assertJSONPair(t, pairs, "/app/database/host", "localhost")
-	assertJSONPair(t, pairs, "/app/database/port", int64(5432))
+	assertJSONPair(t, pairs, "/app/database/port", "5432")
 }
 
 func TestJSONParser_DeepNesting(t *testing.T) {
@@ -68,7 +68,7 @@ func TestJSONParser_IntegerValue(t *testing.T) {
 	pairs := parseJSON(t, content)
 
 	assert.Len(t, pairs, 1)
-	assertJSONPair(t, pairs, "/port", int64(8080))
+	assertJSONPair(t, pairs, "/port", "8080")
 }
 
 func TestJSONParser_FloatValue(t *testing.T) {
@@ -77,7 +77,7 @@ func TestJSONParser_FloatValue(t *testing.T) {
 	pairs := parseJSON(t, content)
 
 	assert.Len(t, pairs, 1)
-	assertJSONPair(t, pairs, "/rate", 0.95)
+	assertJSONPair(t, pairs, "/rate", "0.95")
 }
 
 func TestJSONParser_WholeNumberFloat(t *testing.T) {
@@ -86,7 +86,7 @@ func TestJSONParser_WholeNumberFloat(t *testing.T) {
 	pairs := parseJSON(t, content)
 
 	assert.Len(t, pairs, 1)
-	assertJSONPair(t, pairs, "/count", int64(42))
+	assertJSONPair(t, pairs, "/count", "42")
 }
 
 func TestJSONParser_BooleanValues(t *testing.T) {
@@ -98,8 +98,8 @@ func TestJSONParser_BooleanValues(t *testing.T) {
 	pairs := parseJSON(t, content)
 
 	assert.Len(t, pairs, 2)
-	assertJSONPair(t, pairs, "/enabled", true)
-	assertJSONPair(t, pairs, "/debug", false)
+	assertJSONPair(t, pairs, "/enabled", "true")
+	assertJSONPair(t, pairs, "/debug", "false")
 }
 
 func TestJSONParser_NullValueSkipped(t *testing.T) {
@@ -174,9 +174,9 @@ func TestJSONParser_MixedTypes(t *testing.T) {
 
 	assert.Len(t, pairs, 5)
 	assertJSONPair(t, pairs, "/app/name", "myapp")
-	assertJSONPair(t, pairs, "/app/port", int64(8080))
-	assertJSONPair(t, pairs, "/app/rate", 0.5)
-	assertJSONPair(t, pairs, "/app/enabled", true)
+	assertJSONPair(t, pairs, "/app/port", "8080")
+	assertJSONPair(t, pairs, "/app/rate", "0.5")
+	assertJSONPair(t, pairs, "/app/enabled", "true")
 	assertJSONPair(t, pairs, "/app/tags", `["web","api"]`)
 }
 
@@ -305,8 +305,8 @@ func TestJSONParser_ScientificNotation(t *testing.T) {
 	pairs := parseJSON(t, content)
 
 	assert.Len(t, pairs, 2)
-	assertJSONPair(t, pairs, "/small", 1.5e-10)
-	assertJSONPair(t, pairs, "/large", int64(15000000000))
+	assertJSONPair(t, pairs, "/small", "1.5e-10")
+	assertJSONPair(t, pairs, "/large", "1.5e+10")
 }
 
 func TestJSONParser_NegativeNumbers(t *testing.T) {
@@ -318,8 +318,8 @@ func TestJSONParser_NegativeNumbers(t *testing.T) {
 	pairs := parseJSON(t, content)
 
 	assert.Len(t, pairs, 2)
-	assertJSONPair(t, pairs, "/negative_int", int64(-42))
-	assertJSONPair(t, pairs, "/negative_float", -3.14)
+	assertJSONPair(t, pairs, "/negative_int", "-42")
+	assertJSONPair(t, pairs, "/negative_float", "-3.14")
 }
 
 func TestJSONParser_EmptyNestedMap(t *testing.T) {

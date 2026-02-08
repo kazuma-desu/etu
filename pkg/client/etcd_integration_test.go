@@ -116,10 +116,6 @@ func TestClient_Integration(t *testing.T) {
 		value, err := client.Get(ctx, "/test/key")
 		require.NoError(t, err, "Get operation should succeed")
 		assert.Equal(t, "test-value", value, "retrieved value should match")
-
-		typedValue, err := client.GetTyped(ctx, "/test/key")
-		require.NoError(t, err, "GetTyped operation should succeed")
-		assert.Equal(t, "test-value", typedValue, "typed value should match")
 	})
 
 	t.Run("Put integer value", func(t *testing.T) {
@@ -132,13 +128,9 @@ func TestClient_Integration(t *testing.T) {
 		err := client.Put(ctx, "/test/port", "8080")
 		require.NoError(t, err, "Put operation should succeed")
 
-		rawValue, err := client.Get(ctx, "/test/port")
+		value, err := client.Get(ctx, "/test/port")
 		require.NoError(t, err, "Get operation should succeed")
-		assert.Equal(t, "8080", rawValue, "raw string value should match")
-
-		typedValue, err := client.GetTyped(ctx, "/test/port")
-		require.NoError(t, err, "GetTyped operation should succeed")
-		assert.Equal(t, int64(8080), typedValue, "integer value should be inferred as int64")
+		assert.Equal(t, "8080", value, "string value should match")
 	})
 
 	t.Run("PutAll multiple pairs", func(t *testing.T) {
@@ -165,13 +157,9 @@ func TestClient_Integration(t *testing.T) {
 		require.NoError(t, err, "Get version should succeed")
 		assert.Equal(t, "1.0.0", version, "app version should match")
 
-		portRaw, err := client.Get(ctx, "/app/port")
+		port, err := client.Get(ctx, "/app/port")
 		require.NoError(t, err, "Get port should succeed")
-		assert.Equal(t, "8080", portRaw, "app port raw value should match")
-
-		portTyped, err := client.GetTyped(ctx, "/app/port")
-		require.NoError(t, err, "GetTyped port should succeed")
-		assert.Equal(t, int64(8080), portTyped, "app port should be inferred as int64")
+		assert.Equal(t, "8080", port, "app port value should match")
 	})
 
 	t.Run("Get non-existent key", func(t *testing.T) {
@@ -255,18 +243,6 @@ func TestClient_Integration(t *testing.T) {
 		val, err = client.Get(ctx, "/types/bool")
 		require.NoError(t, err, "Get bool value should succeed")
 		assert.Equal(t, "true", val, "bool value should be stored as string")
-
-		typedVal, err := client.GetTyped(ctx, "/types/int")
-		require.NoError(t, err, "GetTyped int value should succeed")
-		assert.Equal(t, int64(42), typedVal, "int value should be inferred as int64")
-
-		typedVal, err = client.GetTyped(ctx, "/types/float")
-		require.NoError(t, err, "GetTyped float value should succeed")
-		assert.InDelta(t, float64(3.14159), typedVal, 0.0001, "float value should be inferred as float64")
-
-		typedVal, err = client.GetTyped(ctx, "/types/bool")
-		require.NoError(t, err, "GetTyped bool value should succeed")
-		assert.Equal(t, true, typedVal, "bool value should be inferred as bool")
 	})
 
 	t.Run("Close client", func(t *testing.T) {

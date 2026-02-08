@@ -33,7 +33,7 @@ func TestFlattenMap_NestedMaps(t *testing.T) {
 
 	assert.Len(t, pairs, 2)
 	assertPair(t, pairs, "/app/database/host", "localhost")
-	assertPair(t, pairs, "/app/database/port", int64(5432))
+	assertPair(t, pairs, "/app/database/port", "5432")
 }
 
 func TestFlattenMap_DeepNesting(t *testing.T) {
@@ -63,7 +63,7 @@ func TestFlattenMap_IntegerValue(t *testing.T) {
 	pairs := FlattenMap(input)
 
 	assert.Len(t, pairs, 1)
-	assertPair(t, pairs, "/port", int64(8080))
+	assertPair(t, pairs, "/port", "8080")
 }
 
 func TestFlattenMap_FloatValue(t *testing.T) {
@@ -74,7 +74,7 @@ func TestFlattenMap_FloatValue(t *testing.T) {
 	pairs := FlattenMap(input)
 
 	assert.Len(t, pairs, 1)
-	assertPair(t, pairs, "/rate", 0.95)
+	assertPair(t, pairs, "/rate", "0.95")
 }
 
 func TestFlattenMap_WholeNumberFloat(t *testing.T) {
@@ -85,7 +85,7 @@ func TestFlattenMap_WholeNumberFloat(t *testing.T) {
 	pairs := FlattenMap(input)
 
 	assert.Len(t, pairs, 1)
-	assertPair(t, pairs, "/count", int64(42))
+	assertPair(t, pairs, "/count", "42")
 }
 
 func TestFlattenMap_BooleanValue(t *testing.T) {
@@ -97,8 +97,8 @@ func TestFlattenMap_BooleanValue(t *testing.T) {
 	pairs := FlattenMap(input)
 
 	assert.Len(t, pairs, 2)
-	assertPair(t, pairs, "/enabled", true)
-	assertPair(t, pairs, "/debug", false)
+	assertPair(t, pairs, "/enabled", "true")
+	assertPair(t, pairs, "/debug", "false")
 }
 
 func TestFlattenMap_NullValueSkipped(t *testing.T) {
@@ -175,9 +175,9 @@ func TestFlattenMap_MixedTypes(t *testing.T) {
 
 	assert.Len(t, pairs, 5)
 	assertPair(t, pairs, "/app/name", "myapp")
-	assertPair(t, pairs, "/app/port", int64(8080))
-	assertPair(t, pairs, "/app/rate", 0.5)
-	assertPair(t, pairs, "/app/enabled", true)
+	assertPair(t, pairs, "/app/port", "8080")
+	assertPair(t, pairs, "/app/rate", "0.5")
+	assertPair(t, pairs, "/app/enabled", "true")
 	assertPair(t, pairs, "/app/tags", `["a","b"]`)
 }
 
@@ -228,7 +228,7 @@ func TestFlattenMap_Int64Value(t *testing.T) {
 	pairs := FlattenMap(input)
 
 	assert.Len(t, pairs, 1)
-	assertPair(t, pairs, "/bignum", int64(9223372036854775807))
+	assertPair(t, pairs, "/bignum", "9223372036854775807")
 }
 
 func TestFlattenMap_SpecialCharactersInKeys(t *testing.T) {
