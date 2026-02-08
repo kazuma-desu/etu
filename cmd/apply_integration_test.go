@@ -113,7 +113,7 @@ integration-test
 
 		value, err = etcdClient.Get(ctx, "/test/app/port")
 		require.NoError(t, err)
-		assert.Equal(t, "8080", value)
+		assert.Equal(t, int64(8080), value)
 	})
 
 	t.Run("Apply with dry-run", func(t *testing.T) {

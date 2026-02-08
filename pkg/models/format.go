@@ -2,7 +2,9 @@ package models
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -62,4 +64,33 @@ func FormatValue(val any) string {
 	default:
 		return fmt.Sprintf("%v", v)
 	}
+}
+
+// InferType infers the type of a string value when fetching from etcd.
+// Returns bool, int64, float64, or string based on the content of s.
+func InferType(s string) any {
+	// Try bool first (most specific)
+	if s == "true" {
+		return true
+	}
+	if s == "false" {
+		return false
+	}
+
+	// Try int (all digits, optional leading -)
+	if matched, _ := regexp.MatchString(`^-?\d+$`, s); matched {
+		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
+			return i
+		}
+	}
+
+	// Try float (contains . or e/E)
+	if matched, _ := regexp.MatchString(`^-?\d+\.\d+([eE][+-]?\d+)?$|^-?\d+[eE][+-]?\d+$`, s); matched {
+		if f, err := strconv.ParseFloat(s, 64); err == nil {
+			return f
+		}
+	}
+
+	// Default to string
+	return s
 }

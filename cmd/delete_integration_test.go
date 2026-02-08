@@ -118,7 +118,7 @@ func TestDeleteCommand_Integration(t *testing.T) {
 
 		value, err := etcdClient.Get(ctx, "/delete/dryrun/a")
 		require.NoError(t, err)
-		assert.Equal(t, "1", value)
+		assert.Equal(t, int64(1), value)
 	})
 
 	t.Run("Delete error without leading slash", func(t *testing.T) {

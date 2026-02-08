@@ -111,7 +111,7 @@ func TestMockClient_PutAllWithProgress(t *testing.T) {
 func TestMockClient_Get(t *testing.T) {
 	t.Run("custom function returns value", func(t *testing.T) {
 		mock := NewMockClient()
-		mock.GetFunc = func(_ context.Context, _ string) (string, error) {
+		mock.GetFunc = func(_ context.Context, _ string) (any, error) {
 			return "test-value", nil
 		}
 

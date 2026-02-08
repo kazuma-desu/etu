@@ -173,7 +173,7 @@ func printSimple(resp *client.GetResponse) {
 	for _, kv := range resp.Kvs {
 		switch {
 		case getOpts.printValue:
-			fmt.Println(kv.Value)
+			fmt.Println(models.FormatValue(kv.Value))
 		case getOpts.keysOnly:
 			fmt.Println(kv.Key)
 		case getOpts.showMetadata:
@@ -185,10 +185,10 @@ func printSimple(resp *client.GetResponse) {
 			if kv.Lease > 0 {
 				meta = append(meta, [2]string{"Lease", fmt.Sprintf("%d", kv.Lease)})
 			}
-			output.KeyValueWithMetadata(kv.Key, kv.Value, meta)
+			output.KeyValueWithMetadata(kv.Key, models.FormatValue(kv.Value), meta)
 		default:
 			fmt.Println(kv.Key)
-			fmt.Println(kv.Value)
+			fmt.Println(models.FormatValue(kv.Value))
 		}
 	}
 }
@@ -202,7 +202,7 @@ func printJSON(resp *client.GetResponse) error {
 			"create_revision": kv.CreateRevision,
 			"mod_revision":    kv.ModRevision,
 			"version":         kv.Version,
-			"value":           base64.StdEncoding.EncodeToString([]byte(kv.Value)),
+			"value":           base64.StdEncoding.EncodeToString([]byte(models.FormatValue(kv.Value))),
 		}
 		// Only include lease if it's set (etcdctl does this)
 		if kv.Lease > 0 {
@@ -236,7 +236,7 @@ func printYAML(resp *client.GetResponse) error {
 	var emptyValueKeys []string
 
 	for _, kv := range resp.Kvs {
-		if kv.Value == "" {
+		if models.FormatValue(kv.Value) == "" {
 			emptyValueKeys = append(emptyValueKeys, kv.Key)
 			continue
 		}
@@ -280,7 +280,7 @@ func printTable(resp *client.GetResponse) error {
 		headers = []string{"KEY", "VALUE", "CREATE_REV", "MOD_REV", "VERSION", "LEASE"}
 		rows = make([][]string, len(resp.Kvs))
 		for i, kv := range resp.Kvs {
-			value := truncateValue(kv.Value, 30)
+			value := truncateValue(models.FormatValue(kv.Value), 30)
 			rows[i] = []string{
 				kv.Key,
 				value,
@@ -294,7 +294,7 @@ func printTable(resp *client.GetResponse) error {
 		headers = []string{"KEY", "VALUE"}
 		rows = make([][]string, len(resp.Kvs))
 		for i, kv := range resp.Kvs {
-			value := truncateValue(kv.Value, 50)
+			value := truncateValue(models.FormatValue(kv.Value), 50)
 			rows[i] = []string{kv.Key, value}
 		}
 	}
@@ -319,7 +319,7 @@ func printFields(resp *client.GetResponse) {
 			meta = append(meta, [2]string{"Lease", fmt.Sprintf("%d", kv.Lease)})
 		}
 
-		value := kv.Value
+		value := models.FormatValue(kv.Value)
 		if getOpts.keysOnly {
 			value = ""
 		}

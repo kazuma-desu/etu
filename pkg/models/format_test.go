@@ -105,3 +105,64 @@ func BenchmarkFormatValue(b *testing.B) {
 		}
 	}
 }
+
+func TestInferType(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected any
+	}{
+		{"true string", "true", true},
+		{"false string", "false", false},
+		{"positive integer", "123", int64(123)},
+		{"negative integer", "-456", int64(-456)},
+		{"zero", "0", int64(0)},
+		{"simple float", "1.5", float64(1.5)},
+		{"scientific notation uppercase", "1e10", float64(1e10)},
+		{"scientific notation lowercase", "1E10", float64(1e10)},
+		{"negative scientific notation", "-1.5e-3", float64(-1.5e-3)},
+		{"float with positive exponent", "2.5e+3", float64(2.5e3)},
+		{"simple string", "hello", "hello"},
+		{"alphanumeric string", "123abc", "123abc"},
+		{"empty string", "", ""},
+		{"multiple decimal points", "123.456.789", "123.456.789"},
+		{"string with spaces", "hello world", "hello world"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := InferType(tt.input)
+
+			if resultType(result) != resultType(tt.expected) {
+				t.Errorf("InferType(%q) = %T, want %T", tt.input, result, tt.expected)
+				return
+			}
+
+			switch v := result.(type) {
+			case bool:
+				assert.Equal(t, tt.expected.(bool), v)
+			case int64:
+				assert.Equal(t, tt.expected.(int64), v)
+			case float64:
+				assert.Equal(t, tt.expected.(float64), v)
+			case string:
+				assert.Equal(t, tt.expected.(string), v)
+			}
+		})
+	}
+}
+
+func resultType(v any) string {
+	switch v.(type) {
+	case bool:
+		return "bool"
+	case int64:
+		return "int64"
+	case float64:
+		return "float64"
+	case string:
+		return "string"
+	default:
+		return "unknown"
+	}
+}

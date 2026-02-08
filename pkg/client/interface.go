@@ -160,7 +160,7 @@ type WatchOptions struct {
 type EtcdReader interface {
 	// Get retrieves a single value from etcd.
 	// Returns error if key not found.
-	Get(ctx context.Context, key string) (string, error)
+	Get(ctx context.Context, key string) (any, error)
 
 	// GetWithOptions retrieves keys with advanced options (prefix, sort, etc.)
 	GetWithOptions(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error)

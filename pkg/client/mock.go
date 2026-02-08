@@ -25,7 +25,7 @@ type MockClient struct {
 	PutAllFunc             func(ctx context.Context, pairs []*models.ConfigPair) error
 	PutAllWithProgressFunc func(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc) (*PutAllResult, error)
 	PutAllWithOptionsFunc  func(ctx context.Context, pairs []*models.ConfigPair, onProgress ProgressFunc, opts *BatchOptions) (*PutAllResult, error)
-	GetFunc                func(ctx context.Context, key string) (string, error)
+	GetFunc                func(ctx context.Context, key string) (any, error)
 	GetWithOptionsFunc     func(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error)
 	DeleteFunc             func(ctx context.Context, key string) (int64, error)
 	DeletePrefixFunc       func(ctx context.Context, prefix string) (int64, error)
@@ -109,7 +109,7 @@ func (m *MockClient) PutAllWithOptions(ctx context.Context, pairs []*models.Conf
 	return result, nil
 }
 
-func (m *MockClient) Get(ctx context.Context, key string) (string, error) {
+func (m *MockClient) Get(ctx context.Context, key string) (any, error) {
 	m.GetCalls = append(m.GetCalls, key)
 	if m.GetFunc != nil {
 		return m.GetFunc(ctx, key)

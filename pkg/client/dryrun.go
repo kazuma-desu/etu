@@ -72,7 +72,7 @@ func (d *DryRunClient) PutAllWithOptions(_ context.Context, pairs []*models.Conf
 	return result, nil
 }
 
-func (d *DryRunClient) Get(ctx context.Context, key string) (string, error) {
+func (d *DryRunClient) Get(ctx context.Context, key string) (any, error) {
 	if d.reader != nil {
 		return d.reader.Get(ctx, key)
 	}

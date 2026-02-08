@@ -1,4 +1,4 @@
-.PHONY: build clean test test-integration test-all test-coverage test-verbose install run-example help
+.PHONY: build clean test test-integration test-all test-coverage test-verbose install run-example etcd-dev etcd-dev-auth help
 
 # Version info (injected at build time via ldflags)
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -53,6 +53,30 @@ clean:
 run-example:
 	./etu parse -f examples/sample.txt
 
+# Detect container runtime (podman or docker)
+CONTAINER_RUNTIME := $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)
+
+# Run etcd container without auth (for local development)
+etcd-dev:
+	@$(CONTAINER_RUNTIME) run -d --name etcd-dev -p 2379:2379 \
+		quay.io/coreos/etcd:v3.5.12 \
+		/usr/local/bin/etcd \
+		--listen-client-urls http://0.0.0.0:2379 \
+		--advertise-client-urls http://0.0.0.0:2379
+	@echo "etcd-dev started on http://localhost:2379 (no auth)"
+
+# Run etcd container with auth enabled
+etcd-dev-auth:
+	@$(CONTAINER_RUNTIME) run -d --name etcd-dev-auth -p 2379:2379 \
+		-e ETCD_ROOT_PASSWORD=admin \
+		quay.io/coreos/etcd:v3.5.12 \
+		/usr/local/bin/etcd \
+		--listen-client-urls http://0.0.0.0:2379 \
+		--advertise-client-urls http://0.0.0.0:2379 \
+		--auth-token simple
+	@echo "etcd-dev-auth started on http://localhost:2379"
+	@echo "Username: root, Password: admin"
+
 # Build for multiple platforms
 build-all:
 	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o dist/etu-linux-amd64 .
@@ -73,4 +97,6 @@ help:
 	@echo "  clean            - Remove build artifacts"
 	@echo "  run-example      - Run example parse command"
 	@echo "  build-all        - Build for multiple platforms"
+	@echo "  etcd-dev         - Run etcd container without auth (localhost:2379)"
+	@echo "  etcd-dev-auth    - Run etcd container with auth (localhost:2379, root/admin)"
 	@echo "  help             - Show this help message"
