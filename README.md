@@ -102,7 +102,9 @@ etu config delete-context <context>
 ### Key Operations
 
 ```bash
-etu get <key> [--prefix] [--keys-only]    # Get keys
+etu ls <prefix>                           # List keys under prefix
+etu ls /app -o json                       # List keys in JSON format
+etu get <key> [--prefix] [--keys-only]    # Get keys with values
 etu put <key> <value> [--dry-run]         # Put key-value
 etu put <key> - < file.txt                # Put from stdin
 etu delete <key> [--prefix] [--force]     # Delete keys
@@ -115,6 +117,22 @@ etu edit <key>                            # Edit in $EDITOR
 etu apply -f <file> [--dry-run] [--strict]   # Apply to etcd
 etu diff -f <file> [--prefix <p>] [--full]   # Compare with etcd
 ```
+
+### Cluster Management
+
+```bash
+etu status                                # Show cluster health and status
+etu status -o json                        # Show status in JSON format
+etu status -o yaml                        # Show status in YAML format
+```
+
+The `status` command displays:
+- Endpoint connectivity and health
+- Server version
+- Database size
+- Leader information
+- Raft index and term
+- Any cluster errors
 
 ### Settings
 
