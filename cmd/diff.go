@@ -74,7 +74,7 @@ func init() {
 func runDiff(cmd *cobra.Command, _ []string) error {
 	// Validate flags: --full requires --prefix
 	if diffOpts.Full && diffOpts.Prefix == "" {
-		return fmt.Errorf("--full requires --prefix to scope the comparison\nHint: etu diff -f %s --full --prefix /your/prefix", diffOpts.FilePath)
+		return fmt.Errorf("✗ --full requires --prefix to scope the comparison\nHint: etu diff -f %s --full --prefix /your/prefix", diffOpts.FilePath)
 	}
 
 	if diffOpts.DeprecatedFormat != "" {

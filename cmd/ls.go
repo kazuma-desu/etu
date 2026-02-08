@@ -57,7 +57,7 @@ func runLs(_ *cobra.Command, args []string) error {
 	prefix := args[0]
 
 	if !strings.HasPrefix(prefix, "/") {
-		return fmt.Errorf("key must start with '/': %s", prefix)
+		return fmt.Errorf("✗ key must start with '/': %s", prefix)
 	}
 
 	etcdClient, cleanup, err := newEtcdClient()
@@ -93,7 +93,7 @@ func runLs(_ *cobra.Command, args []string) error {
 	case "table":
 		return printLsTable(resp)
 	default:
-		return fmt.Errorf("invalid output format: %s (use simple, json, yaml, or table)", outputFormat)
+		return fmt.Errorf("✗ invalid output format: %s (use simple, json, yaml, or table)", outputFormat)
 	}
 }
 

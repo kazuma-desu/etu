@@ -97,7 +97,7 @@ func runGet(_ *cobra.Command, args []string) error {
 	key := args[0]
 
 	if !strings.HasPrefix(key, "/") {
-		return fmt.Errorf("key must start with '/': %s", key)
+		return fmt.Errorf("✗ key must start with '/': %s", key)
 	}
 
 	// Handle range_end if provided
@@ -149,7 +149,7 @@ func runGet(_ *cobra.Command, args []string) error {
 			logger.Log.Debug("No keys found")
 			return nil
 		}
-		return fmt.Errorf("key not found: %s", key)
+		return fmt.Errorf("✗ key not found: %s\n\nHint: Check the key path or use 'etu ls' to list available keys", key)
 	}
 
 	// Output results based on format
@@ -169,7 +169,7 @@ func runGet(_ *cobra.Command, args []string) error {
 		printFields(resp)
 		return nil
 	default:
-		return fmt.Errorf("invalid output format: %s (use simple, json, yaml, table, tree, or fields)", outputFormat)
+		return fmt.Errorf("✗ invalid output format: %s (use simple, json, yaml, table, tree, or fields)", outputFormat)
 	}
 }
 

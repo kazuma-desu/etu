@@ -325,7 +325,7 @@ func (c *Client) Get(ctx context.Context, key string) (string, error) {
 	}
 
 	if len(resp.Kvs) == 0 {
-		return "", fmt.Errorf("key not found: %s", key)
+		return "", fmt.Errorf("key not found: %s\n\nHint: Check the key path or use 'etu ls' to list available keys", key)
 	}
 
 	return resp.Kvs[0].Value, nil

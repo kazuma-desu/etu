@@ -162,14 +162,14 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 		// Validate log level
 		validLevels := []string{"debug", "info", "warn", "error"}
 		if !slices.Contains(validLevels, value) {
-			return fmt.Errorf("invalid log level %s, valid: debug, info, warn, error", value)
+			return fmt.Errorf("✗ invalid log level %s, valid: debug, info, warn, error", value)
 		}
 		cfg.LogLevel = value
 	case "default-format":
 		// Validate format
 		validFormats := []string{"auto", "etcdctl"}
 		if !slices.Contains(validFormats, value) {
-			return fmt.Errorf("invalid format %s, valid: auto, etcdctl", value)
+			return fmt.Errorf("✗ invalid format %s, valid: auto, etcdctl", value)
 		}
 		cfg.DefaultFormat = value
 	case "strict":
@@ -180,7 +180,7 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 		case "false":
 			cfg.Strict = false
 		default:
-			return fmt.Errorf("invalid boolean value %s, valid: true, false", value)
+			return fmt.Errorf("✗ invalid boolean value %s, valid: true, false", value)
 		}
 	case "no-validate":
 		// Parse boolean
@@ -190,10 +190,10 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 		case "false":
 			cfg.NoValidate = false
 		default:
-			return fmt.Errorf("invalid boolean value %s, valid: true, false", value)
+			return fmt.Errorf("✗ invalid boolean value %s, valid: true, false", value)
 		}
 	default:
-		return fmt.Errorf("unknown configuration key: %s", key)
+		return fmt.Errorf("✗ unknown configuration key: %s", key)
 	}
 
 	if err := config.SaveConfig(cfg); err != nil {

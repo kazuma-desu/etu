@@ -62,7 +62,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 		}
 	}
 	if editor == "" {
-		return fmt.Errorf("no editor found: set $EDITOR or $VISUAL environment variable")
+		return fmt.Errorf("✗ no editor found: set $EDITOR or $VISUAL environment variable")
 	}
 
 	// Create temporary file

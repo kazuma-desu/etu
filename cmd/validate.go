@@ -78,7 +78,7 @@ func runValidate(cmd *cobra.Command, _ []string) error {
 	}
 
 	if !result.Valid {
-		return fmt.Errorf("validation failed")
+		return fmt.Errorf("✗ validation failed")
 	}
 
 	return nil

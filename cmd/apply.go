@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -21,6 +23,10 @@ var (
 		Example: `  # Apply configuration
   etu apply -f config.txt
 
+  # Apply from stdin
+  cat config.yaml | etu apply -f -
+  etu apply -f - < config.yaml
+
   # Preview changes without applying
   etu apply -f config.txt --dry-run
 
@@ -37,7 +43,7 @@ func init() {
 	rootCmd.AddCommand(applyCmd)
 
 	applyCmd.Flags().StringVarP(&applyOpts.FilePath, "file", "f", "",
-		"path to configuration file (required)")
+		"path to configuration file or '-' for stdin (required)")
 	applyCmd.Flags().StringVar((*string)(&applyOpts.Format), "format", "",
 		"file format: auto, etcdctl (overrides config)")
 	applyCmd.Flags().BoolVar(&applyOpts.DryRun, "dry-run", false,
@@ -62,7 +68,25 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	noValidate := resolveNoValidateOption(applyOpts.NoValidate, cmd.Flags().Changed("no-validate"), appCfg)
 	strict := resolveStrictOption(applyOpts.Strict, cmd.Flags().Changed("strict"), appCfg)
 
-	pairs, err := parseConfigFile(ctx, applyOpts.FilePath, applyOpts.Format, appCfg)
+	filePath := applyOpts.FilePath
+	if filePath == "-" {
+		tmpFile, err := os.CreateTemp("", "etu-apply-*")
+		if err != nil {
+			return fmt.Errorf("failed to create temp file: %w", err)
+		}
+		defer os.Remove(tmpFile.Name())
+
+		if _, err := io.Copy(tmpFile, os.Stdin); err != nil {
+			tmpFile.Close()
+			return fmt.Errorf("failed to write stdin to temp file: %w", err)
+		}
+		if err := tmpFile.Close(); err != nil {
+			return fmt.Errorf("failed to close temp file: %w", err)
+		}
+		filePath = tmpFile.Name()
+	}
+
+	pairs, err := parseConfigFile(ctx, filePath, applyOpts.Format, appCfg)
 	if err != nil {
 		return err
 	}
@@ -82,7 +106,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 			if !isQuietOutput() {
 				output.Error("Validation failed - not applying to etcd")
 			}
-			return fmt.Errorf("validation failed")
+			return fmt.Errorf("✗ validation failed")
 		}
 
 		if !isQuietOutput() {

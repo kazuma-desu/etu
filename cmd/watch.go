@@ -62,7 +62,7 @@ func runWatch(_ *cobra.Command, args []string) error {
 
 	// Validate revision is non-negative
 	if watchOpts.rev < 0 {
-		return fmt.Errorf("invalid --rev: must be non-negative")
+		return fmt.Errorf("✗ invalid --rev: must be non-negative")
 	}
 
 	etcdClient, cleanup, err := newEtcdClient()
@@ -113,7 +113,7 @@ func runWatch(_ *cobra.Command, args []string) error {
 		}
 
 		if resp.CompactRevision > 0 {
-			return fmt.Errorf("watch canceled: revision %d has been compacted", resp.CompactRevision)
+			return fmt.Errorf("✗ watch canceled: revision %d has been compacted", resp.CompactRevision)
 		}
 
 		for _, event := range resp.Events {
