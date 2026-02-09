@@ -142,7 +142,7 @@ func TestClient_Integration(t *testing.T) {
 		pairs := []*models.ConfigPair{
 			{Key: "/app/name", Value: "myapp"},
 			{Key: "/app/version", Value: "1.0.0"},
-			{Key: "/app/port", Value: int64(8080)},
+			{Key: "/app/port", Value: "8080"},
 		}
 
 		err := client.PutAll(ctx, pairs)
@@ -198,7 +198,7 @@ func TestClient_Integration(t *testing.T) {
 		}
 
 		pairs := []*models.ConfigPair{
-			{Key: "/app/greetings", Value: mapValue},
+			{Key: "/app/greetings", Value: models.FormatValue(mapValue)},
 		}
 
 		err := client.PutAll(ctx, pairs)
@@ -220,9 +220,9 @@ func TestClient_Integration(t *testing.T) {
 
 		pairs := []*models.ConfigPair{
 			{Key: "/types/string", Value: "text"},
-			{Key: "/types/int", Value: int64(42)},
-			{Key: "/types/float", Value: 3.14159},
-			{Key: "/types/bool", Value: true},
+			{Key: "/types/int", Value: "42"},
+			{Key: "/types/float", Value: "3.14159"},
+			{Key: "/types/bool", Value: "true"},
 		}
 
 		err := client.PutAll(ctx, pairs)
