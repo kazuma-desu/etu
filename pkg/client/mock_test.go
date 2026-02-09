@@ -249,7 +249,7 @@ func TestMockClient_Operations(t *testing.T) {
 		mock.Put(context.Background(), "/single", "value")
 		mock.PutAllWithProgress(context.Background(), []*models.ConfigPair{
 			{Key: "/batch/key1", Value: "batch1"},
-			{Key: "/batch/key2", Value: int64(42)},
+			{Key: "/batch/key2", Value: "42"},
 		}, nil)
 
 		ops := mock.Operations()

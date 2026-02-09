@@ -14,7 +14,7 @@ import (
 func TestPrintConfigPairsWithFormat_YAML(t *testing.T) {
 	pairs := []*models.ConfigPair{
 		{Key: "/app/db/host", Value: "localhost"},
-		{Key: "/app/db/port", Value: 5432},
+		{Key: "/app/db/port", Value: "5432"},
 		{Key: "/app/name", Value: "test-app"},
 	}
 

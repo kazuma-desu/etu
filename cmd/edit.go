@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
 )
 
@@ -74,7 +73,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 	defer os.Remove(tmpPath)
 
 	// Write current value to temp file
-	if _, writeErr := tmpFile.WriteString(models.FormatValue(value)); writeErr != nil {
+	if _, writeErr := tmpFile.WriteString(value); writeErr != nil {
 		tmpFile.Close()
 		return fmt.Errorf("failed to write to temporary file: %w", writeErr)
 	}

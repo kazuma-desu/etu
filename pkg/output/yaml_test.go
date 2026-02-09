@@ -160,3 +160,205 @@ func TestSerializeYAML_FuncType(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed to convert to YAML node")
 	}
 }
+
+func TestSerializeYAML_NumericBoolHeuristic(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    map[string]any
+		expected string
+	}{
+		{
+			name: "integer-looking string renders unquoted",
+			input: map[string]any{
+				"port": "8080",
+			},
+			expected: "port: 8080\n",
+		},
+		{
+			name: "negative integer-looking string renders unquoted",
+			input: map[string]any{
+				"offset": "-42",
+			},
+			expected: "offset: -42\n",
+		},
+		{
+			name: "float-looking string renders unquoted",
+			input: map[string]any{
+				"rate": "3.14",
+			},
+			expected: "rate: 3.14\n",
+		},
+		{
+			name: "scientific notation float renders unquoted",
+			input: map[string]any{
+				"value": "1.5e10",
+			},
+			expected: "value: 1.5e10\n",
+		},
+		{
+			name: "bool-looking string true renders unquoted",
+			input: map[string]any{
+				"enabled": "true",
+			},
+			expected: "enabled: true\n",
+		},
+		{
+			name: "bool-looking string false renders unquoted",
+			input: map[string]any{
+				"disabled": "false",
+			},
+			expected: "disabled: false\n",
+		},
+		{
+			name: "regular string renders normally",
+			input: map[string]any{
+				"name": "hello",
+			},
+			expected: "name: hello\n",
+		},
+		{
+			name: "YAML special value null is quoted",
+			input: map[string]any{
+				"value": "null",
+			},
+			expected: "value: \"null\"\n",
+		},
+		{
+			name: "YAML special value tilde is quoted",
+			input: map[string]any{
+				"value": "~",
+			},
+			expected: "value: \"~\"\n",
+		},
+		{
+			name: "YAML special value yes is quoted",
+			input: map[string]any{
+				"value": "yes",
+			},
+			expected: "value: \"yes\"\n",
+		},
+		{
+			name: "YAML special value no is quoted",
+			input: map[string]any{
+				"value": "no",
+			},
+			expected: "value: \"no\"\n",
+		},
+		{
+			name: "YAML special value on is quoted",
+			input: map[string]any{
+				"value": "on",
+			},
+			expected: "value: \"on\"\n",
+		},
+		{
+			name: "YAML special value off is quoted",
+			input: map[string]any{
+				"flag": "off",
+			},
+			expected: "flag: \"off\"\n",
+		},
+		{
+			name: "YAML special value Yes (case-variant) is quoted",
+			input: map[string]any{
+				"answer": "Yes",
+			},
+			expected: "answer: \"Yes\"\n",
+		},
+		{
+			name: "YAML special value YES (uppercase) is quoted",
+			input: map[string]any{
+				"answer": "YES",
+			},
+			expected: "answer: \"YES\"\n",
+		},
+		{
+			name: "YAML special value No (case-variant) is quoted",
+			input: map[string]any{
+				"answer": "No",
+			},
+			expected: "answer: \"No\"\n",
+		},
+		{
+			name: "YAML special value FALSE (uppercase) is quoted",
+			input: map[string]any{
+				"answer": "FALSE",
+			},
+			expected: "answer: \"FALSE\"\n",
+		},
+		{
+			name: "YAML special value On (case-variant) is quoted",
+			input: map[string]any{
+				"switch": "On",
+			},
+			expected: "switch: \"On\"\n",
+		},
+		{
+			name: "YAML special value OFF (uppercase) is quoted",
+			input: map[string]any{
+				"switch": "OFF",
+			},
+			expected: "switch: \"OFF\"\n",
+		},
+		{
+			name: "YAML special value TRUE (uppercase) is quoted",
+			input: map[string]any{
+				"flag": "TRUE",
+			},
+			expected: "flag: \"TRUE\"\n",
+		},
+		{
+			name: "YAML special value False (mixed case) is quoted",
+			input: map[string]any{
+				"flag": "False",
+			},
+			expected: "flag: \"False\"\n",
+		},
+		{
+			name: "leading-zero number is quoted (octal ambiguity)",
+			input: map[string]any{
+				"value": "0123",
+			},
+			expected: "value: \"0123\"\n",
+		},
+		{
+			name: "negative leading-zero number is quoted",
+			input: map[string]any{
+				"value": "-0123",
+			},
+			expected: "value: \"-0123\"\n",
+		},
+		{
+			name: "zero itself renders as int",
+			input: map[string]any{
+				"value": "0",
+			},
+			expected: "value: 0\n",
+		},
+		{
+			name: "negative zero renders as int",
+			input: map[string]any{
+				"value": "-0",
+			},
+			expected: "value: -0\n",
+		},
+		{
+			name: "mixed numeric and regular strings",
+			input: map[string]any{
+				"port":    "8080",
+				"host":    "localhost",
+				"enabled": "true",
+				"rate":    "3.14",
+			},
+			expected: "enabled: true\nhost: localhost\nport: 8080\nrate: 3.14\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output, err := SerializeYAML(tt.input)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, string(output))
+		})
+	}
+}

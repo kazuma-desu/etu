@@ -331,14 +331,6 @@ func (c *Client) Get(ctx context.Context, key string) (string, error) {
 	return resp.Kvs[0].Value, nil
 }
 
-func (c *Client) GetTyped(ctx context.Context, key string) (any, error) {
-	value, err := c.Get(ctx, key)
-	if err != nil {
-		return nil, err
-	}
-	return models.InferType(value), nil
-}
-
 func (c *Client) GetWithOptions(ctx context.Context, key string, opts *GetOptions) (*GetResponse, error) {
 	clientOpts, err := buildClientOptions(opts)
 	if err != nil {

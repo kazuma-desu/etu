@@ -2,6 +2,7 @@ package output
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -96,21 +97,50 @@ func sliceToNode(val []any) (*yaml.Node, error) {
 	return node, nil
 }
 
+var (
+	intRe   = regexp.MustCompile(`^-?\d+$`)
+	floatRe = regexp.MustCompile(`^-?\d+\.\d+([eE][+-]?\d+)?$|^-?\d+[eE][+-]?\d+$`)
+)
+
 func stringToNode(val string) *yaml.Node {
-	// Use default style (0) for single-line scalars
-	// Use LiteralStyle for multi-line strings to render as block scalars (|)
-	// Always set Tag: "!!str" so values like "true", "yes", "null" are emitted
-	// as quoted strings rather than being re-parsed as booleans/nulls
-	var style yaml.Style
-	if strings.Contains(val, "\n") {
-		style = yaml.LiteralStyle
+	// Heuristic: detect if the string looks like a number or bool
+	// and emit it with the appropriate tag so YAML renders it unquoted
+
+	// Special case: lowercase "true"/"false" render as !!bool (cosmetic preference)
+	if val == "true" || val == "false" {
+		return scalarNode("!!bool", val)
 	}
-	return &yaml.Node{
-		Kind:  yaml.ScalarNode,
-		Tag:   "!!str",
-		Value: val,
-		Style: style,
+
+	// YAML 1.1 treats these case-insensitively, so normalize before comparison.
+	// Lowercase "true"/"false" are already handled above; this catches non-lowercase
+	// variants (e.g. "True", "FALSE") and other special values.
+	lower := strings.ToLower(val)
+	switch lower {
+	case "null", "~", "yes", "no", "on", "off", "true", "false":
+		return &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: val,
+			Style: yaml.DoubleQuotedStyle,
+		}
 	}
+
+	// Integer-looking strings: render as !!int (unquoted)
+	// Avoid emitting leading-zero numbers as !!int (YAML 1.1 octal ambiguity)
+	if intRe.MatchString(val) {
+		stripped := strings.TrimPrefix(val, "-")
+		if len(stripped) <= 1 || stripped[0] != '0' {
+			return scalarNode("!!int", val)
+		}
+	}
+
+	// Float-looking strings: render as !!float (unquoted)
+	if floatRe.MatchString(val) {
+		return scalarNode("!!float", val)
+	}
+
+	// Regular strings: use !!str tag (default quoted behavior)
+	return scalarNode("!!str", val)
 }
 
 func fallbackToNode(val any) (*yaml.Node, error) {

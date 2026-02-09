@@ -49,7 +49,7 @@ myapp
 			content: `/app/port
 8080`,
 			expected: []*models.ConfigPair{
-				{Key: "/app/port", Value: int64(8080)},
+				{Key: "/app/port", Value: "8080"},
 			},
 		},
 		{
@@ -57,7 +57,7 @@ myapp
 			content: `/app/offset
 -100`,
 			expected: []*models.ConfigPair{
-				{Key: "/app/offset", Value: int64(-100)},
+				{Key: "/app/offset", Value: "-100"},
 			},
 		},
 		{
@@ -65,7 +65,7 @@ myapp
 			content: `/app/threshold
 0.95`,
 			expected: []*models.ConfigPair{
-				{Key: "/app/threshold", Value: 0.95},
+				{Key: "/app/threshold", Value: "0.95"},
 			},
 		},
 		{
@@ -73,7 +73,7 @@ myapp
 			content: `/app/temperature
 -3.14`,
 			expected: []*models.ConfigPair{
-				{Key: "/app/temperature", Value: -3.14},
+				{Key: "/app/temperature", Value: "-3.14"},
 			},
 		},
 		{
@@ -100,12 +100,8 @@ es: Spanish Title
 fr: French Title`,
 			expected: []*models.ConfigPair{
 				{
-					Key: "/app/title",
-					Value: map[string]any{
-						"en": "English Title",
-						"es": "Spanish Title",
-						"fr": "French Title",
-					},
+					Key:   "/app/title",
+					Value: "en: English Title\nes: Spanish Title\nfr: French Title",
 				},
 			},
 		},
@@ -116,11 +112,8 @@ en: "Hello"
 es: "Hola"`,
 			expected: []*models.ConfigPair{
 				{
-					Key: "/app/greeting",
-					Value: map[string]any{
-						"en": "Hello",
-						"es": "Hola",
-					},
+					Key:   "/app/greeting",
+					Value: "en: \"Hello\"\nes: \"Hola\"",
 				},
 			},
 		},
@@ -197,16 +190,7 @@ This is a long description with multiple words`,
 
 			for i := range got {
 				assert.Equal(t, tt.expected[i].Key, got[i].Key, "Key mismatch at index %d", i)
-
-				// Compare values based on type
-				switch expectedVal := tt.expected[i].Value.(type) {
-				case map[string]any:
-					gotMap, ok := got[i].Value.(map[string]any)
-					require.True(t, ok, "Expected map[string]any at index %d, got %T", i, got[i].Value)
-					assert.Equal(t, expectedVal, gotMap, "Map value mismatch at index %d", i)
-				default:
-					assert.Equal(t, tt.expected[i].Value, got[i].Value, "Value mismatch at index %d", i)
-				}
+				assert.Equal(t, tt.expected[i].Value, got[i].Value, "Value mismatch at index %d", i)
 			}
 		})
 	}
@@ -257,18 +241,18 @@ func TestStripWrappingQuotes(t *testing.T) {
 func TestEtcdctlParser_ParseScalar(t *testing.T) {
 	parser := &EtcdctlParser{}
 	tests := []struct {
-		expected any
+		expected string
 		name     string
 		input    string
 	}{
-		{name: "positive integer", input: "42", expected: int64(42)},
-		{name: "negative integer", input: "-42", expected: int64(-42)},
-		{name: "zero", input: "0", expected: int64(0)},
-		{name: "large integer", input: "999999999", expected: int64(999999999)},
-		{name: "float", input: "3.14", expected: 3.14},
-		{name: "negative float", input: "-3.14", expected: -3.14},
-		{name: "decimal less than one", input: "0.5", expected: 0.5},
-		{name: "decimal without leading zero", input: ".5", expected: 0.5},
+		{name: "positive integer", input: "42", expected: "42"},
+		{name: "negative integer", input: "-42", expected: "-42"},
+		{name: "zero", input: "0", expected: "0"},
+		{name: "large integer", input: "999999999", expected: "999999999"},
+		{name: "float", input: "3.14", expected: "3.14"},
+		{name: "negative float", input: "-3.14", expected: "-3.14"},
+		{name: "decimal less than one", input: "0.5", expected: "0.5"},
+		{name: "decimal without leading zero", input: ".5", expected: ".5"},
 		{name: "simple string", input: "hello", expected: "hello"},
 		{name: "double quoted", input: `"quoted"`, expected: "quoted"},
 		{name: "single quoted", input: `'quoted'`, expected: "quoted"},
@@ -292,7 +276,7 @@ func TestEtcdctlParser_ParseValueLines(t *testing.T) {
 	parser := &EtcdctlParser{}
 	tests := []struct {
 		name     string
-		expected any
+		expected string
 		lines    []string
 	}{
 		{
@@ -308,12 +292,12 @@ func TestEtcdctlParser_ParseValueLines(t *testing.T) {
 		{
 			name:     "single integer",
 			lines:    []string{"42"},
-			expected: int64(42),
+			expected: "42",
 		},
 		{
 			name:     "language map",
 			lines:    []string{"en: Hello", "es: Hola"},
-			expected: map[string]any{"en": "Hello", "es": "Hola"},
+			expected: "en: Hello\nes: Hola",
 		},
 		{
 			name:     "multiline text",

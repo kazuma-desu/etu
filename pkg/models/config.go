@@ -4,13 +4,13 @@ import "fmt"
 
 // ConfigPair represents a single etcd key-value configuration pair
 type ConfigPair struct {
-	Value any
+	Value string
 	Key   string
 }
 
 // String returns a string representation of the config pair
 func (c *ConfigPair) String() string {
-	return fmt.Sprintf("%s: %v", c.Key, c.Value)
+	return fmt.Sprintf("%s: %s", c.Key, c.Value)
 }
 
 // FormatType represents the type of configuration file format

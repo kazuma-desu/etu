@@ -61,7 +61,7 @@ func TestDryRunClient_Integration(t *testing.T) {
 
 		pairs := []*models.ConfigPair{
 			{Key: "/db/host", Value: "localhost"},
-			{Key: "/db/port", Value: int64(5432)},
+			{Key: "/db/port", Value: "5432"},
 		}
 
 		err := dryClient.PutAll(ctx, pairs)

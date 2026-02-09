@@ -2,19 +2,14 @@ package models
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 )
 
-var (
-	intRe   = regexp.MustCompile(`^-?\d+$`)
-	floatRe = regexp.MustCompile(`^-?\d+\.\d+([eE][+-]?\d+)?$|^-?\d+[eE][+-]?\d+$`)
-)
-
 // FormatValue converts a value to a display string.
-// Supports: string, int, int64, float64, map[string]any, fmt.Stringer, and nil.
+// Supports: string, all integer types (int, int8-64, uint, uint8-64),
+// float32/64, bool, map[string]any, fmt.Stringer, and nil.
 // Returns empty string for nil values.
 func FormatValue(val any) string {
 	if val == nil {
@@ -69,33 +64,4 @@ func FormatValue(val any) string {
 	default:
 		return fmt.Sprintf("%v", v)
 	}
-}
-
-// InferType infers the type of a string value when fetching from etcd.
-// Returns bool, int64, float64, or string based on the content of s.
-func InferType(s string) any {
-	// Try bool first (most specific)
-	if s == "true" {
-		return true
-	}
-	if s == "false" {
-		return false
-	}
-
-	// Try int (all digits, optional leading -)
-	if intRe.MatchString(s) {
-		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
-			return i
-		}
-	}
-
-	// Try float (contains . or e/E)
-	if floatRe.MatchString(s) {
-		if f, err := strconv.ParseFloat(s, 64); err == nil {
-			return f
-		}
-	}
-
-	// Default to string
-	return s
 }

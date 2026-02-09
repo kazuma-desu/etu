@@ -4,14 +4,10 @@ import (
 	"bufio"
 	"context"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/kazuma-desu/etu/pkg/models"
 )
-
-var langLineRE = regexp.MustCompile(`^(?P<tag>[A-Za-z0-9_\-]{2,}):\s*(?P<val>.+?)\s*$`)
 
 // EtcdctlParser parses etcdctl get output format
 // Format:
@@ -95,7 +91,7 @@ func (p *EtcdctlParser) Parse(ctx context.Context, path string) ([]*models.Confi
 }
 
 // parseValueLines parses one or more value lines
-func (p *EtcdctlParser) parseValueLines(lines []string) any {
+func (p *EtcdctlParser) parseValueLines(lines []string) string {
 	if len(lines) == 0 {
 		return ""
 	}
@@ -113,56 +109,13 @@ func (p *EtcdctlParser) parseValueLines(lines []string) any {
 		return p.parseScalar(lines[0])
 	}
 
-	// Check if all lines match the language tag pattern (key: value)
-	langMap := make(map[string]any)
-	allLangish := true
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			allLangish = false
-			break
-		}
-
-		matches := langLineRE.FindStringSubmatch(trimmed)
-		if matches == nil {
-			allLangish = false
-			break
-		}
-
-		tag := matches[1]
-		val := stripWrappingQuotes(strings.TrimSpace(matches[2]))
-		langMap[tag] = val
-	}
-
-	if allLangish {
-		return langMap
-	}
-
-	// Fallback: join lines as single string
+	// Join lines as raw multi-line string
 	return strings.Join(lines, "\n")
 }
 
-// parseScalar attempts to parse a scalar value with type inference
-func (p *EtcdctlParser) parseScalar(s string) any {
-	s = strings.TrimSpace(s)
-
-	// Try int
-	if matched, _ := regexp.MatchString(`^[+-]?\d+$`, s); matched {
-		if val, err := strconv.ParseInt(s, 10, 64); err == nil {
-			return val
-		}
-	}
-
-	// Try float
-	if matched, _ := regexp.MatchString(`^[+-]?(?:\d+\.\d*|\d*\.\d+|\d+)$`, s); matched {
-		if val, err := strconv.ParseFloat(s, 64); err == nil {
-			return val
-		}
-	}
-
-	// Return as string, stripping quotes if present
-	return stripWrappingQuotes(s)
+// parseScalar parses a scalar value as a string
+func (p *EtcdctlParser) parseScalar(s string) string {
+	return stripWrappingQuotes(strings.TrimSpace(s))
 }
 
 // stripWrappingQuotes removes surrounding quotes from a string

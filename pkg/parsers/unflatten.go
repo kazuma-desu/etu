@@ -41,7 +41,7 @@ func preparePair(pair *models.ConfigPair) ([]string, bool) {
 	}
 
 	// Skip empty string values
-	if strVal, ok := pair.Value.(string); ok && strVal == "" {
+	if pair.Value == "" {
 		return nil, false
 	}
 

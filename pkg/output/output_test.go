@@ -17,7 +17,7 @@ func TestPrintConfigPairs(t *testing.T) {
 	t.Run("Human readable output", func(t *testing.T) {
 		pairs := []*models.ConfigPair{
 			{Key: "/app/name", Value: "myapp"},
-			{Key: "/app/port", Value: int64(8080)},
+			{Key: "/app/port", Value: "8080"},
 		}
 
 		output, err := testutil.CaptureStdoutFunc(func() {
@@ -35,7 +35,7 @@ func TestPrintConfigPairs(t *testing.T) {
 	t.Run("JSON output", func(t *testing.T) {
 		pairs := []*models.ConfigPair{
 			{Key: "/app/name", Value: "myapp"},
-			{Key: "/app/port", Value: int64(8080)},
+			{Key: "/app/port", Value: "8080"},
 		}
 
 		output, err := testutil.CaptureStdoutFunc(func() {
@@ -53,11 +53,8 @@ func TestPrintConfigPairs(t *testing.T) {
 	t.Run("Map value formatting", func(t *testing.T) {
 		pairs := []*models.ConfigPair{
 			{
-				Key: "/config/settings",
-				Value: map[string]any{
-					"timeout": 30,
-					"retries": 3,
-				},
+				Key:   "/config/settings",
+				Value: `{"retries":3,"timeout":30}`,
 			},
 		}
 
@@ -244,11 +241,6 @@ func TestFormatValue(t *testing.T) {
 		result := formatValue(mapVal)
 		assert.Contains(t, result, "key1: value1")
 		assert.Contains(t, result, "key2: value2")
-	})
-
-	t.Run("Other types", func(t *testing.T) {
-		result := formatValue(42)
-		assert.Equal(t, "42", result)
 	})
 }
 
@@ -442,7 +434,7 @@ func TestPrintTree(t *testing.T) {
 	t.Run("Simple tree output", func(t *testing.T) {
 		pairs := []*models.ConfigPair{
 			{Key: "/app/name", Value: "myapp"},
-			{Key: "/app/port", Value: int64(8080)},
+			{Key: "/app/port", Value: "8080"},
 			{Key: "/db/host", Value: "localhost"},
 		}
 
@@ -492,7 +484,7 @@ func TestPrintTree(t *testing.T) {
 func TestPrintConfigPairsWithFormat(t *testing.T) {
 	pairs := []*models.ConfigPair{
 		{Key: "/app/name", Value: "myapp"},
-		{Key: "/app/port", Value: int64(8080)},
+		{Key: "/app/port", Value: "8080"},
 	}
 
 	t.Run("Simple format", func(t *testing.T) {
