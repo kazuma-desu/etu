@@ -283,7 +283,7 @@ func printTable(resp *client.GetResponse) error {
 		headers = []string{"KEY", "VALUE", "CREATE_REV", "MOD_REV", "VERSION", "LEASE"}
 		rows = make([][]string, len(resp.Kvs))
 		for i, kv := range resp.Kvs {
-			value := truncateValue(kv.Value, 30)
+			value := output.Truncate(kv.Value, 30)
 			rows[i] = []string{
 				kv.Key,
 				value,
@@ -297,7 +297,7 @@ func printTable(resp *client.GetResponse) error {
 		headers = []string{"KEY", "VALUE"}
 		rows = make([][]string, len(resp.Kvs))
 		for i, kv := range resp.Kvs {
-			value := truncateValue(kv.Value, 50)
+			value := output.Truncate(kv.Value, 50)
 			rows[i] = []string{kv.Key, value}
 		}
 	}
