@@ -19,7 +19,6 @@ var (
 		prefix bool
 		rev    int64
 		prevKV bool
-		json   bool
 	}
 
 	watchCmd = &cobra.Command{
@@ -29,6 +28,7 @@ var (
 
 Monitors etcd for PUT and DELETE events on the specified key.
 Use --prefix to watch all keys with a given prefix.
+Use -o flag to control output format (simple=raw value, json=full event).
 Press Ctrl+C to stop watching.`,
 		Example: `  # Watch a single key
   etu watch /config/app/host
@@ -40,7 +40,7 @@ Press Ctrl+C to stop watching.`,
   etu watch /config/app/ --prefix --rev 100
 
   # JSON output for scripting
-  etu watch /config/app/ --prefix -o`,
+  etu watch /config/app/ --prefix -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: runWatch,
 	}
@@ -55,8 +55,6 @@ func init() {
 		"revision to start watching from (0 = current)")
 	watchCmd.Flags().BoolVar(&watchOpts.prevKV, "prev-kv", false,
 		"include previous key-value pair in events")
-	watchCmd.Flags().BoolVarP(&watchOpts.json, "output", "o", false,
-		"output events as JSON")
 }
 
 func runWatch(_ *cobra.Command, args []string) error {
@@ -97,7 +95,7 @@ func runWatch(_ *cobra.Command, args []string) error {
 		PrevKV:   watchOpts.prevKV,
 	}
 
-	if !watchOpts.json {
+	if outputFormat != "json" {
 		if watchOpts.prefix {
 			output.Info(fmt.Sprintf("Watching keys with prefix: %s", key))
 		} else {
@@ -129,23 +127,15 @@ func runWatch(_ *cobra.Command, args []string) error {
 }
 
 func printWatchEvent(event client.WatchEvent) error {
-	if watchOpts.json {
+	if outputFormat == "json" {
 		data, err := json.Marshal(event)
 		if err != nil {
 			return fmt.Errorf("failed to marshal event: %w", err)
 		}
 		fmt.Println(string(data))
 	} else {
-		typeStr := string(event.Type)
-		fmt.Printf("[%s] rev=%d %s\n", typeStr, event.Revision, event.Key)
-
-		if event.PrevValue != nil {
-			fmt.Printf("  prev: %s\n", *event.PrevValue)
-		}
-		if event.Type == client.WatchEventPut {
-			fmt.Printf("  value: %s\n", event.Value)
-		}
-		fmt.Println()
+		// Simple format: print only the raw value (matches etcdctl)
+		fmt.Println(event.Value)
 	}
 	return nil
 }
