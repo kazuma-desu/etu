@@ -103,30 +103,26 @@ var (
 )
 
 func stringToNode(val string) *yaml.Node {
-	// Multi-line strings always use literal style with !!str tag
-	if strings.Contains(val, "\n") {
-		return &yaml.Node{
-			Kind:  yaml.ScalarNode,
-			Tag:   "!!str",
-			Value: val,
-			Style: yaml.LiteralStyle,
-		}
+	// Heuristic: detect if the string looks like a number or bool
+	// and emit it with the appropriate tag so YAML renders it unquoted
+
+	// Special case: lowercase "true"/"false" render as !!bool (cosmetic preference)
+	if val == "true" || val == "false" {
+		return scalarNode("!!bool", val)
 	}
 
-	// YAML special values that need explicit quoting to prevent misinterpretation
-	switch val {
-	case "null", "~", "yes", "no", "on", "off":
+	// Check for YAML special values that should be quoted to prevent misinterpretation
+	// YAML 1.1 treats these case-insensitively, so normalize before comparison
+	lower := strings.ToLower(val)
+	switch lower {
+	case "null", "~", "yes", "no", "on", "off", "true", "false":
+		// Force quoted with !!str tag to prevent YAML parser from interpreting as special values
 		return &yaml.Node{
 			Kind:  yaml.ScalarNode,
 			Tag:   "!!str",
 			Value: val,
 			Style: yaml.DoubleQuotedStyle,
 		}
-	}
-
-	// Bool-looking strings: render as !!bool (unquoted)
-	if val == "true" || val == "false" {
-		return scalarNode("!!bool", val)
 	}
 
 	// Integer-looking strings: render as !!int (unquoted)

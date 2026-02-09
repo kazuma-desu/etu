@@ -110,13 +110,7 @@ func URLValidator(pair *models.ConfigPair, result *ValidationResult) {
 		return
 	}
 
-	str := pair.Value
-
-	if str == "" {
-		return
-	}
-
-	parsed, err := url.Parse(str)
+	parsed, err := url.Parse(pair.Value)
 	if err != nil {
 		result.addWarning(pair.Key, fmt.Sprintf("value looks like URL but failed to parse: %v", err))
 		return

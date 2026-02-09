@@ -254,9 +254,65 @@ func TestSerializeYAML_NumericBoolHeuristic(t *testing.T) {
 		{
 			name: "YAML special value off is quoted",
 			input: map[string]any{
-				"value": "off",
+				"flag": "off",
 			},
-			expected: "value: \"off\"\n",
+			expected: "flag: \"off\"\n",
+		},
+		{
+			name: "YAML special value Yes (case-variant) is quoted",
+			input: map[string]any{
+				"answer": "Yes",
+			},
+			expected: "answer: \"Yes\"\n",
+		},
+		{
+			name: "YAML special value YES (uppercase) is quoted",
+			input: map[string]any{
+				"answer": "YES",
+			},
+			expected: "answer: \"YES\"\n",
+		},
+		{
+			name: "YAML special value No (case-variant) is quoted",
+			input: map[string]any{
+				"answer": "No",
+			},
+			expected: "answer: \"No\"\n",
+		},
+		{
+			name: "YAML special value FALSE (uppercase) is quoted",
+			input: map[string]any{
+				"answer": "FALSE",
+			},
+			expected: "answer: \"FALSE\"\n",
+		},
+		{
+			name: "YAML special value On (case-variant) is quoted",
+			input: map[string]any{
+				"switch": "On",
+			},
+			expected: "switch: \"On\"\n",
+		},
+		{
+			name: "YAML special value OFF (uppercase) is quoted",
+			input: map[string]any{
+				"switch": "OFF",
+			},
+			expected: "switch: \"OFF\"\n",
+		},
+		{
+			name: "YAML special value TRUE (uppercase) is quoted",
+			input: map[string]any{
+				"flag": "TRUE",
+			},
+			expected: "flag: \"TRUE\"\n",
+		},
+		{
+			name: "YAML special value False (mixed case) is quoted",
+			input: map[string]any{
+				"flag": "False",
+			},
+			expected: "flag: \"False\"\n",
 		},
 		{
 			name: "mixed numeric and regular strings",

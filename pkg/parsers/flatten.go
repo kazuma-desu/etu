@@ -2,8 +2,6 @@ package parsers
 
 import (
 	"encoding/json"
-	"fmt"
-	"strconv"
 
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
@@ -49,48 +47,14 @@ func flattenValue(key string, value any, pairs *[]*models.ConfigPair) {
 			Value: string(serialized),
 		})
 
-	case string:
-		if v == "" {
-			return
-		}
-		*pairs = append(*pairs, &models.ConfigPair{
-			Key:   key,
-			Value: v,
-		})
-
-	case int:
-		*pairs = append(*pairs, &models.ConfigPair{
-			Key:   key,
-			Value: fmt.Sprintf("%d", v),
-		})
-
-	case int64:
-		*pairs = append(*pairs, &models.ConfigPair{
-			Key:   key,
-			Value: fmt.Sprintf("%d", v),
-		})
-
-	case float64:
-		*pairs = append(*pairs, &models.ConfigPair{
-			Key:   key,
-			Value: strconv.FormatFloat(v, 'g', -1, 64),
-		})
-
-	case bool:
-		*pairs = append(*pairs, &models.ConfigPair{
-			Key:   key,
-			Value: fmt.Sprintf("%t", v),
-		})
-
 	default:
-		serialized, err := json.Marshal(v)
-		if err != nil {
-			logger.Log.Warn("failed to marshal value", "key", key, "error", err)
+		formatted := models.FormatValue(v)
+		if formatted == "" {
 			return
 		}
 		*pairs = append(*pairs, &models.ConfigPair{
 			Key:   key,
-			Value: string(serialized),
+			Value: formatted,
 		})
 	}
 }

@@ -8,7 +8,8 @@ import (
 )
 
 // FormatValue converts a value to a display string.
-// Supports: string, int, int64, float64, map[string]any, fmt.Stringer, and nil.
+// Supports: string, all integer types (int, int8-64, uint, uint8-64),
+// float32/64, bool, map[string]any, fmt.Stringer, and nil.
 // Returns empty string for nil values.
 func FormatValue(val any) string {
 	if val == nil {

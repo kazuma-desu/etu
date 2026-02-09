@@ -193,7 +193,7 @@ func TestUnflattenMap_ConsecutiveSlashes(t *testing.T) {
 	assert.False(t, hasEmpty, "should not have empty string key")
 }
 
-func TestUnflattenMap_NilValue(t *testing.T) {
+func TestUnflattenMap_EmptyValue(t *testing.T) {
 	pairs := []*models.ConfigPair{
 		{Key: "/key", Value: ""},
 	}

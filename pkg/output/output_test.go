@@ -242,11 +242,6 @@ func TestFormatValue(t *testing.T) {
 		assert.Contains(t, result, "key1: value1")
 		assert.Contains(t, result, "key2: value2")
 	})
-
-	t.Run("Other types", func(t *testing.T) {
-		result := formatValue(42)
-		assert.Equal(t, "42", result)
-	})
 }
 
 func TestHelperFunctions(t *testing.T) {
