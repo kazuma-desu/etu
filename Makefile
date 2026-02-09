@@ -93,15 +93,21 @@ etcd-dev-auth: check-container-runtime
 		--listen-client-urls http://0.0.0.0:2379 \
 		--advertise-client-urls http://0.0.0.0:2379
 	@echo "Waiting for etcd to become ready..."
-	@for i in 1 2 3 4 5 6 7 8 9 10; do \
+	@ready=0; \
+	for i in 1 2 3 4 5 6 7 8 9 10; do \
 		if $(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 endpoint health >/dev/null 2>&1; then \
+			ready=1; \
 			break; \
 		fi; \
 		sleep 1; \
-	done
-	@echo "Creating root user and enabling auth..."
-	@$(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 user add root:admin
-	@$(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 auth enable
+	done; \
+	if [ $$ready -eq 0 ]; then \
+		echo "ERROR: etcd not ready after 10 seconds"; \
+		exit 1; \
+	fi; \
+	echo "Creating root user and enabling auth..."; \
+	$(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 user add root:admin; \
+	$(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 auth enable
 	@echo "etcd-dev-auth started on http://localhost:2379"
 	@echo "Username: root, Password: admin"
 

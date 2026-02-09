@@ -236,7 +236,7 @@ func printYAML(resp *client.GetResponse) error {
 	var emptyValueKeys []string
 
 	for _, kv := range resp.Kvs {
-		if models.FormatValue(kv.Value) == "" {
+		if kv.Value == "" {
 			emptyValueKeys = append(emptyValueKeys, kv.Key)
 			continue
 		}

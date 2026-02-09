@@ -126,8 +126,12 @@ func stringToNode(val string) *yaml.Node {
 	}
 
 	// Integer-looking strings: render as !!int (unquoted)
+	// Avoid emitting leading-zero numbers as !!int (YAML 1.1 octal ambiguity)
 	if intRe.MatchString(val) {
-		return scalarNode("!!int", val)
+		stripped := strings.TrimPrefix(val, "-")
+		if !(len(stripped) > 1 && stripped[0] == '0') {
+			return scalarNode("!!int", val)
+		}
 	}
 
 	// Float-looking strings: render as !!float (unquoted)

@@ -315,6 +315,34 @@ func TestSerializeYAML_NumericBoolHeuristic(t *testing.T) {
 			expected: "flag: \"False\"\n",
 		},
 		{
+			name: "leading-zero number is quoted (octal ambiguity)",
+			input: map[string]any{
+				"value": "0123",
+			},
+			expected: "value: \"0123\"\n",
+		},
+		{
+			name: "negative leading-zero number is quoted",
+			input: map[string]any{
+				"value": "-0123",
+			},
+			expected: "value: \"-0123\"\n",
+		},
+		{
+			name: "zero itself renders as int",
+			input: map[string]any{
+				"value": "0",
+			},
+			expected: "value: 0\n",
+		},
+		{
+			name: "negative zero renders as int",
+			input: map[string]any{
+				"value": "-0",
+			},
+			expected: "value: -0\n",
+		},
+		{
 			name: "mixed numeric and regular strings",
 			input: map[string]any{
 				"port":    "8080",
