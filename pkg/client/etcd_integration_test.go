@@ -128,10 +128,9 @@ func TestClient_Integration(t *testing.T) {
 		err := client.Put(ctx, "/test/port", "8080")
 		require.NoError(t, err, "Put operation should succeed")
 
-		// Get the value back
 		value, err := client.Get(ctx, "/test/port")
 		require.NoError(t, err, "Get operation should succeed")
-		assert.Equal(t, "8080", value, "integer value should be stored as string")
+		assert.Equal(t, "8080", value, "string value should match")
 	})
 
 	t.Run("PutAll multiple pairs", func(t *testing.T) {
@@ -143,7 +142,7 @@ func TestClient_Integration(t *testing.T) {
 		pairs := []*models.ConfigPair{
 			{Key: "/app/name", Value: "myapp"},
 			{Key: "/app/version", Value: "1.0.0"},
-			{Key: "/app/port", Value: int64(8080)},
+			{Key: "/app/port", Value: "8080"},
 		}
 
 		err := client.PutAll(ctx, pairs)
@@ -160,7 +159,7 @@ func TestClient_Integration(t *testing.T) {
 
 		port, err := client.Get(ctx, "/app/port")
 		require.NoError(t, err, "Get port should succeed")
-		assert.Equal(t, "8080", port, "app port should match")
+		assert.Equal(t, "8080", port, "app port value should match")
 	})
 
 	t.Run("Get non-existent key", func(t *testing.T) {
@@ -199,7 +198,7 @@ func TestClient_Integration(t *testing.T) {
 		}
 
 		pairs := []*models.ConfigPair{
-			{Key: "/app/greetings", Value: mapValue},
+			{Key: "/app/greetings", Value: models.FormatValue(mapValue)},
 		}
 
 		err := client.PutAll(ctx, pairs)
@@ -221,30 +220,29 @@ func TestClient_Integration(t *testing.T) {
 
 		pairs := []*models.ConfigPair{
 			{Key: "/types/string", Value: "text"},
-			{Key: "/types/int", Value: int64(42)},
-			{Key: "/types/float", Value: 3.14159},
-			{Key: "/types/bool", Value: true},
+			{Key: "/types/int", Value: "42"},
+			{Key: "/types/float", Value: "3.14159"},
+			{Key: "/types/bool", Value: "true"},
 		}
 
 		err := client.PutAll(ctx, pairs)
 		require.NoError(t, err, "PutAll with various types should succeed")
 
-		// Verify all were set correctly
 		val, err := client.Get(ctx, "/types/string")
 		require.NoError(t, err, "Get string value should succeed")
 		assert.Equal(t, "text", val, "string value should match")
 
 		val, err = client.Get(ctx, "/types/int")
 		require.NoError(t, err, "Get int value should succeed")
-		assert.Equal(t, "42", val, "int value should be formatted as string")
+		assert.Equal(t, "42", val, "int value should be stored as string")
 
 		val, err = client.Get(ctx, "/types/float")
 		require.NoError(t, err, "Get float value should succeed")
-		assert.Contains(t, val, "3.14", "float value should be present")
+		assert.Equal(t, "3.14159", val, "float value should be stored as string")
 
 		val, err = client.Get(ctx, "/types/bool")
 		require.NoError(t, err, "Get bool value should succeed")
-		assert.Equal(t, "true", val, "bool value should be formatted as string")
+		assert.Equal(t, "true", val, "bool value should be stored as string")
 	})
 
 	t.Run("Close client", func(t *testing.T) {
@@ -760,7 +758,7 @@ func TestFormatValue(t *testing.T) {
 		{
 			name:     "float value",
 			value:    3.14,
-			expected: "3.140000",
+			expected: "3.14",
 		},
 		{
 			name:     "bool value",

@@ -3,11 +3,13 @@ package models
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 // FormatValue converts a value to a display string.
-// Supports: string, int, int64, float64, map[string]any, fmt.Stringer, and nil.
+// Supports: string, all integer types (int, int8-64, uint, uint8-64),
+// float32/64, bool, map[string]any, fmt.Stringer, and nil.
 // Returns empty string for nil values.
 func FormatValue(val any) string {
 	if val == nil {
@@ -38,9 +40,9 @@ func FormatValue(val any) string {
 	case uint64:
 		return fmt.Sprintf("%d", v)
 	case float32:
-		return fmt.Sprintf("%f", v)
+		return strconv.FormatFloat(float64(v), 'g', -1, 32)
 	case float64:
-		return fmt.Sprintf("%f", v)
+		return strconv.FormatFloat(v, 'g', -1, 64)
 	case bool:
 		return fmt.Sprintf("%t", v)
 	case map[string]any:

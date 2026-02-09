@@ -27,7 +27,7 @@ func TestDryRunClient_PutAll(t *testing.T) {
 	client := NewDryRunClient()
 	pairs := []*models.ConfigPair{
 		{Key: "/app/name", Value: "myapp"},
-		{Key: "/app/port", Value: int64(8080)},
+		{Key: "/app/port", Value: "8080"},
 	}
 
 	err := client.PutAll(context.Background(), pairs)
@@ -47,7 +47,7 @@ func TestDryRunClient_PutAllWithProgress(t *testing.T) {
 		client := NewDryRunClient()
 		pairs := []*models.ConfigPair{
 			{Key: "/app/name", Value: "myapp"},
-			{Key: "/app/port", Value: int64(8080)},
+			{Key: "/app/port", Value: "8080"},
 		}
 
 		var progressCalls []int

@@ -1,4 +1,4 @@
-.PHONY: build clean test test-integration test-all test-coverage test-verbose install run-example help
+.PHONY: build clean test test-integration test-all test-coverage test-verbose install run-example etcd-dev etcd-dev-auth help
 
 # Version info (injected at build time via ldflags)
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -53,6 +53,64 @@ clean:
 run-example:
 	./etu parse -f examples/sample.txt
 
+# Detect container runtime (podman or docker)
+CONTAINER_RUNTIME := $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)
+
+# Check container runtime is available
+.PHONY: check-container-runtime
+check-container-runtime:
+	@if [ -z "$(CONTAINER_RUNTIME)" ]; then \
+		echo "Error: No container runtime found. Please install podman or docker." >&2; \
+		exit 1; \
+	fi
+
+# Run etcd container without auth (for local development)
+# NOTE: Only one of etcd-dev or etcd-dev-auth can run at a time (both use port 2379)
+etcd-dev: check-container-runtime
+	@$(CONTAINER_RUNTIME) rm -f etcd-dev etcd-dev-auth 2>/dev/null || true
+	@$(CONTAINER_RUNTIME) run -d --name etcd-dev -p 2379:2379 \
+		quay.io/coreos/etcd:v3.5.12 \
+		/usr/local/bin/etcd \
+		--listen-client-urls http://0.0.0.0:2379 \
+		--advertise-client-urls http://0.0.0.0:2379
+	@echo "Waiting for etcd to become ready..."
+	@for i in 1 2 3 4 5; do \
+		if $(CONTAINER_RUNTIME) exec etcd-dev /usr/local/bin/etcdctl --endpoints=http://localhost:2379 endpoint health >/dev/null 2>&1; then \
+			echo "etcd-dev started on http://localhost:2379 (no auth)"; \
+			exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "Warning: etcd may not be ready yet" >&2
+
+# Run etcd container with auth enabled
+# NOTE: Only one of etcd-dev or etcd-dev-auth can run at a time (both use port 2379)
+etcd-dev-auth: check-container-runtime
+	@$(CONTAINER_RUNTIME) rm -f etcd-dev-auth etcd-dev 2>/dev/null || true
+	@$(CONTAINER_RUNTIME) run -d --name etcd-dev-auth -p 2379:2379 \
+		quay.io/coreos/etcd:v3.5.12 \
+		/usr/local/bin/etcd \
+		--listen-client-urls http://0.0.0.0:2379 \
+		--advertise-client-urls http://0.0.0.0:2379
+	@echo "Waiting for etcd to become ready..."
+	@ready=0; \
+	for i in 1 2 3 4 5 6 7 8 9 10; do \
+		if $(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 endpoint health >/dev/null 2>&1; then \
+			ready=1; \
+			break; \
+		fi; \
+		sleep 1; \
+	done; \
+	if [ $$ready -eq 0 ]; then \
+		echo "ERROR: etcd not ready after 10 seconds"; \
+		exit 1; \
+	fi; \
+	echo "Creating root user and enabling auth..."; \
+	$(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 user add root:admin; \
+	$(CONTAINER_RUNTIME) exec etcd-dev-auth /usr/local/bin/etcdctl --endpoints=http://localhost:2379 auth enable
+	@echo "etcd-dev-auth started on http://localhost:2379"
+	@echo "Username: root, Password: admin"
+
 # Build for multiple platforms
 build-all:
 	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o dist/etu-linux-amd64 .
@@ -73,4 +131,6 @@ help:
 	@echo "  clean            - Remove build artifacts"
 	@echo "  run-example      - Run example parse command"
 	@echo "  build-all        - Build for multiple platforms"
+	@echo "  etcd-dev         - Run etcd container without auth (localhost:2379)"
+	@echo "  etcd-dev-auth    - Run etcd container with auth (localhost:2379, root/admin)"
 	@echo "  help             - Show this help message"

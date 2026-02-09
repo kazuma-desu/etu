@@ -8,11 +8,16 @@ import (
 )
 
 func TestFormatValue(t *testing.T) {
+	// Primary use case is now string passthrough for ConfigPair.Value
+	// Backward compatibility maintained for other types
 	tests := []struct {
 		name     string
 		input    any
 		expected string
 	}{
+		// String passthrough (primary use case)
+		{"string passthrough", "8080", "8080"},
+
 		// Nil
 		{"nil", nil, ""},
 
@@ -37,9 +42,9 @@ func TestFormatValue(t *testing.T) {
 		{"uint64", uint64(64), "64"},
 
 		// Floats
-		{"float32", float32(3.14), "3.140000"},
-		{"float64", float64(3.14), "3.140000"},
-		{"float64 zero", float64(0.0), "0.000000"},
+		{"float32", float32(3.14), "3.14"},
+		{"float64", float64(3.14), "3.14"},
+		{"float64 zero", float64(0.0), "0"},
 
 		// Bool
 		{"bool true", true, "true"},

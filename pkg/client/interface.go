@@ -158,7 +158,7 @@ type WatchOptions struct {
 // EtcdReader defines read operations on etcd.
 // Implementations must be safe for concurrent use.
 type EtcdReader interface {
-	// Get retrieves a single value from etcd.
+	// Get retrieves a single value from etcd as a string.
 	// Returns error if key not found.
 	Get(ctx context.Context, key string) (string, error)
 
