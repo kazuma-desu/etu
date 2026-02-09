@@ -58,9 +58,16 @@ func init() {
 }
 
 func runWatch(_ *cobra.Command, args []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	key := args[0]
 
-	// Validate revision is non-negative
 	if watchOpts.rev < 0 {
 		return fmt.Errorf("invalid --rev: must be non-negative")
 	}

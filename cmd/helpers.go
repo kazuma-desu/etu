@@ -207,23 +207,9 @@ func newEtcdClientOrDryRun(dryRun bool) (client.EtcdClient, func(), error) {
 	return newEtcdClient()
 }
 
-func normalizeOutputFormat(supportedFormats []string) (string, error) {
-	return output.NormalizeFormat(outputFormat, supportedFormats)
+func validateOutputFormat(allowedFormats []string) error {
+	return output.ValidateFormat(outputFormat, allowedFormats)
 }
-
-var (
-	formatsWithoutTree = []string{
-		output.FormatSimple.String(),
-		output.FormatJSON.String(),
-		output.FormatTable.String(),
-	}
-	formatsWithTree = []string{
-		output.FormatSimple.String(),
-		output.FormatJSON.String(),
-		output.FormatTable.String(),
-		output.FormatTree.String(),
-	}
-)
 
 func isQuietOutput() bool {
 	// Check global output format (used by most commands)

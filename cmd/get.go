@@ -92,6 +92,17 @@ func init() {
 }
 
 func runGet(_ *cobra.Command, args []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatYAML.String(),
+		output.FormatTable.String(),
+		output.FormatTree.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	ctx, cancel := getOperationContext()
 	defer cancel()
 	key := args[0]

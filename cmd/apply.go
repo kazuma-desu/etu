@@ -55,6 +55,15 @@ func init() {
 }
 
 func runApply(cmd *cobra.Command, _ []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatTable.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	ctx, cancel := getOperationContext()
 	defer cancel()
 
@@ -90,11 +99,6 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	normalizedFormat, err := normalizeOutputFormat(formatsWithoutTree)
-	if err != nil {
-		return err
-	}
-
 	etcdClient, cleanup, err := newEtcdClientOrDryRun(applyOpts.DryRun)
 	if err != nil {
 		return err
@@ -104,7 +108,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	logVerboseInfo(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
 
 	var onProgress client.ProgressFunc
-	if normalizedFormat == output.FormatSimple.String() && !applyOpts.DryRun {
+	if outputFormat == output.FormatSimple.String() && !applyOpts.DryRun {
 		onProgress = func(current, total int, key string) {
 			output.PrintApplyProgress(current, total, key)
 		}
@@ -120,7 +124,6 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	}
 
 	if recorder, ok := etcdClient.(client.OperationRecorder); ok {
-		// Convert client operations to output view type
 		ops := recorder.Operations()
 		viewOps := make([]output.DryRunOperation, len(ops))
 		for i, op := range ops {
@@ -130,8 +133,8 @@ func runApply(cmd *cobra.Command, _ []string) error {
 				Value: op.Value,
 			}
 		}
-		return output.PrintDryRunOperations(viewOps, normalizedFormat)
+		return output.PrintDryRunOperations(viewOps, outputFormat)
 	}
 
-	return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, applyOpts.DryRun)
+	return output.PrintApplyResultsWithFormat(pairs, outputFormat, applyOpts.DryRun)
 }
