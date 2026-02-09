@@ -140,6 +140,11 @@ func TestConfigCommands(t *testing.T) {
 		cleanup := setupTestConfig(t)
 		defer cleanup()
 
+		// Set outputFormat to a valid format for config view
+		originalFormat := outputFormat
+		defer func() { outputFormat = originalFormat }()
+		outputFormat = "json"
+
 		ctxConfig := &config.ContextConfig{
 			Endpoints: []string{"localhost:2379"},
 			Username:  "testuser",
