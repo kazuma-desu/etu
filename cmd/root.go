@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
@@ -31,7 +32,9 @@ var (
 	rootCmd = &cobra.Command{
 		Use:   "etu",
 		Short: "Etcd Terminal Utility - kubectl-like CLI for etcd",
-		Long:  `A CLI tool for managing etcd configurations with kubectl-like UX.`,
+		Long: `A CLI tool for managing etcd configurations with kubectl-like UX.
+
+Use 'etu options' to see all available global flags.`,
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			configureLogging()
 		},
@@ -72,6 +75,9 @@ func init() {
 	_ = rootCmd.PersistentFlags().MarkHidden("username")
 	_ = rootCmd.PersistentFlags().MarkHidden("password")
 	_ = rootCmd.PersistentFlags().MarkHidden("password-stdin")
+
+	// Hide all global flags from main help - use 'etu options' to see them
+	hideAllGlobalFlags()
 }
 
 // Execute runs the root command
@@ -105,4 +111,10 @@ func formatNames() []string {
 		names[i] = f.String()
 	}
 	return names
+}
+
+func hideAllGlobalFlags() {
+	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+		_ = rootCmd.PersistentFlags().MarkHidden(f.Name)
+	})
 }
