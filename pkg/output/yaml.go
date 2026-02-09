@@ -111,12 +111,12 @@ func stringToNode(val string) *yaml.Node {
 		return scalarNode("!!bool", val)
 	}
 
-	// Check for YAML special values that should be quoted to prevent misinterpretation
-	// YAML 1.1 treats these case-insensitively, so normalize before comparison
+	// YAML 1.1 treats these case-insensitively, so normalize before comparison.
+	// Lowercase "true"/"false" are already handled above; this catches non-lowercase
+	// variants (e.g. "True", "FALSE") and other special values.
 	lower := strings.ToLower(val)
 	switch lower {
 	case "null", "~", "yes", "no", "on", "off", "true", "false":
-		// Force quoted with !!str tag to prevent YAML parser from interpreting as special values
 		return &yaml.Node{
 			Kind:  yaml.ScalarNode,
 			Tag:   "!!str",
@@ -129,7 +129,7 @@ func stringToNode(val string) *yaml.Node {
 	// Avoid emitting leading-zero numbers as !!int (YAML 1.1 octal ambiguity)
 	if intRe.MatchString(val) {
 		stripped := strings.TrimPrefix(val, "-")
-		if !(len(stripped) > 1 && stripped[0] == '0') {
+		if len(stripped) <= 1 || stripped[0] != '0' {
 			return scalarNode("!!int", val)
 		}
 	}

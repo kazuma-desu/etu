@@ -442,7 +442,7 @@ func parseYAML(t *testing.T, content string) []*models.ConfigPair {
 	return pairs
 }
 
-func assertYAMLPair(t *testing.T, pairs []*models.ConfigPair, key string, expectedValue any) {
+func assertYAMLPair(t *testing.T, pairs []*models.ConfigPair, key string, expectedValue string) {
 	t.Helper()
 	for _, p := range pairs {
 		if p.Key == key {

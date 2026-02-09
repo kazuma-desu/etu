@@ -259,7 +259,7 @@ func TestFlattenMap_UnicodeValues(t *testing.T) {
 	assertPair(t, pairs, "/emoji", "🚀")
 }
 
-func assertPair(t *testing.T, pairs []*models.ConfigPair, key string, expectedValue any) {
+func assertPair(t *testing.T, pairs []*models.ConfigPair, key string, expectedValue string) {
 	t.Helper()
 	for _, p := range pairs {
 		if p.Key == key {

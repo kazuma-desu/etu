@@ -828,25 +828,13 @@ func buildEtcdTree(pairs []*models.ConfigPair) *tree.Tree {
 	return root
 }
 
-// formatTreeValue formats a value for tree display
-func formatTreeValue(val any) string {
-	switch v := val.(type) {
-	case string:
-		if strings.Contains(v, "\n") {
-			lines := strings.Split(strings.TrimSpace(v), "\n")
-			return "[" + fmt.Sprintf("%d lines", len(lines)) + "]"
-		}
-		if len(v) > 50 {
-			return v[:47] + "..."
-		}
-		return v
-	case map[string]any:
-		return "[dict: " + fmt.Sprintf("%d keys", len(v)) + "]"
-	default:
-		str := fmt.Sprintf("%v", v)
-		if len(str) > 50 {
-			return str[:47] + "..."
-		}
-		return str
+func formatTreeValue(val string) string {
+	if strings.Contains(val, "\n") {
+		lines := strings.Split(strings.TrimSpace(val), "\n")
+		return "[" + fmt.Sprintf("%d lines", len(lines)) + "]"
 	}
+	if len(val) > 50 {
+		return val[:47] + "..."
+	}
+	return val
 }

@@ -374,7 +374,7 @@ func parseJSON(t *testing.T, content string) []*models.ConfigPair {
 	return pairs
 }
 
-func assertJSONPair(t *testing.T, pairs []*models.ConfigPair, key string, expectedValue any) {
+func assertJSONPair(t *testing.T, pairs []*models.ConfigPair, key string, expectedValue string) {
 	t.Helper()
 	for _, p := range pairs {
 		if p.Key == key {
