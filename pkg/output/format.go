@@ -16,7 +16,6 @@ const (
 	FormatYAML   Format = "yaml"
 	FormatTable  Format = "table"
 	FormatTree   Format = "tree"
-	FormatFields Format = "fields"
 )
 
 var allFormats = []Format{
@@ -25,7 +24,6 @@ var allFormats = []Format{
 	FormatYAML,
 	FormatTable,
 	FormatTree,
-	FormatFields,
 }
 
 // formatSet is derived from allFormats for O(1) validation lookup.

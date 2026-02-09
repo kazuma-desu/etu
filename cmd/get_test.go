@@ -216,50 +216,6 @@ func TestPrintTable(t *testing.T) {
 	})
 }
 
-func TestPrintFields(t *testing.T) {
-	t.Cleanup(resetGetOpts)
-	resetGetOpts()
-	resp := &client.GetResponse{
-		Kvs: []*client.KeyValue{
-			{
-				Key:            "key1",
-				Value:          "val1",
-				CreateRevision: 10,
-				ModRevision:    20,
-				Version:        2,
-				Lease:          123,
-			},
-		},
-		Count: 1,
-	}
-
-	t.Run("default fields", func(t *testing.T) {
-		getOpts.keysOnly = false
-		output, err := testutil.CaptureStdout(func() error {
-			printFields(resp)
-			return nil
-		})
-		require.NoError(t, err)
-		assert.Contains(t, output, "key1")
-		assert.Contains(t, output, "val1")
-		assert.Contains(t, output, "CreateRevision: 10")
-		assert.Contains(t, output, "ModRevision: 20")
-		assert.Contains(t, output, "Version: 2")
-		assert.Contains(t, output, "Lease: 123")
-	})
-
-	t.Run("keys only", func(t *testing.T) {
-		getOpts.keysOnly = true
-		output, err := testutil.CaptureStdout(func() error {
-			printFields(resp)
-			return nil
-		})
-		require.NoError(t, err)
-		assert.Contains(t, output, "key1")
-		assert.NotContains(t, output, "val1")
-	})
-}
-
 func TestPrintYAML(t *testing.T) {
 	t.Cleanup(resetGetOpts)
 	resetGetOpts()
