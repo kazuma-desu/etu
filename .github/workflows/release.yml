@@ -86,7 +86,7 @@ jobs:
         with:
           path: .
           format: spdx-json
-          output-file: "${ARCHIVE_NAME}-sbom.spdx.json"
+          output-file: "${{ env.ARCHIVE_NAME }}-sbom.spdx.json"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -137,7 +137,7 @@ jobs:
           sha256sum *.tar.gz *.zip > checksums.txt 2>/dev/null || true
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ steps.version.outputs.VERSION }}
           body: |
@@ -149,7 +149,7 @@ jobs:
 
             ### Verify Signature
             ```bash
-            cosign verify-blob --signature etu_${VERSION}_linux_amd64.tar.gz.sig --certificate etu_${VERSION}_linux_amd64.tar.gz.cert etu_${VERSION}_linux_amd64.tar.gz
+            cosign verify-blob --signature etu_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz.sig --certificate etu_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz.cert etu_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz
             ```
 
             ### Verify Checksum

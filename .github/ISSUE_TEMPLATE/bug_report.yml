@@ -60,8 +60,8 @@ body:
   - type: checkboxes
     id: terms
     attributes:
-      label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](../CONTRIBUTING.md)
+      label: Contributing Guidelines
+      description: By submitting this issue, you agree to follow our [Contributing Guidelines](https://github.com/kazuma-desu/etu/blob/main/CONTRIBUTING.md)
       options:
-        - label: I agree to follow this project's Code of Conduct
+        - label: I agree to follow this project's Contributing Guidelines
           required: true

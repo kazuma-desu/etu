@@ -19,7 +19,7 @@ We take security seriously. If you discover a security vulnerability within etu,
 
 Instead, please report security vulnerabilities via email to:
 
-📧 **security@kazuma-desu.dev** (or your security contact)
+📧 **kmuthisha@gmail.com**
 
 ### What to Include
 
