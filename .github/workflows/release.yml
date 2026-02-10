@@ -80,22 +80,20 @@ jobs:
           [ "${{ matrix.goos }}" = "windows" ] && ASSET="${ARCHIVE_NAME}.zip"
           sha256sum "$ASSET" > "$ASSET.sha256"
 
-      - name: Generate SBOM
-        uses: anchore/sbom-action@28d71544de8eaf1b958d335707167c5f783590ad # v0
-        with:
-          path: .
-          format: spdx-json
-          output-file: "${{ env.ARCHIVE_NAME }}-sbom.spdx.json"
-          upload-artifact: false
+      - name: Create verification archive
+        run: |
+          ASSET="${ARCHIVE_NAME}.tar.gz"
+          [ "${{ matrix.goos }}" = "windows" ] && ASSET="${ARCHIVE_NAME}.zip"
+          tar czf "${ARCHIVE_NAME}-verify.tar.gz" "${ASSET}.sig" "${ASSET}.cert" "${ASSET}.sha256"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: artifacts-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
-            etu_*.tar.gz*
-            etu_*.zip*
-            etu_*-sbom.spdx.json
+            etu_*.tar.gz
+            etu_*.zip
+            etu_*-verify.tar.gz
           retention-days: 1
 
   release:
@@ -138,7 +136,7 @@ jobs:
       - name: Create checksums file
         run: |
           cd artifacts
-          sha256sum *.tar.gz *.zip > checksums.txt 2>/dev/null || true
+          sha256sum ./*.tar.gz ./*.zip > checksums.txt 2>/dev/null || true
 
       - name: Create Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
@@ -149,23 +147,26 @@ jobs:
             ${{ steps.changelog.outputs.CHANGELOG }}
 
             ## Security
-            This release includes signed binaries and SBOMs.
+            This release includes signed binaries.
 
-            ### Verify Signature
+            ### Verification
+            Download the `-verify.tar.gz` file for your platform and extract it:
+            ```bash
+            tar xzf etu_${{ steps.version.outputs.VERSION_BARE }}_linux_amd64-verify.tar.gz
+            ```
+
+            Then verify the signature:
             ```bash
             cosign verify-blob --signature etu_${{ steps.version.outputs.VERSION_BARE }}_linux_amd64.tar.gz.sig --certificate etu_${{ steps.version.outputs.VERSION_BARE }}_linux_amd64.tar.gz.cert etu_${{ steps.version.outputs.VERSION_BARE }}_linux_amd64.tar.gz
             ```
 
-            ### Verify Checksum
+            Or verify the checksum:
             ```bash
             sha256sum -c checksums.txt
             ```
 
             ## Installation
             See README.md for platform-specific instructions.
-
-            ## SBOM
-            SPDX-format SBOMs are included for each platform.
           files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
