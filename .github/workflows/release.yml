@@ -86,6 +86,7 @@ jobs:
           path: .
           format: spdx-json
           output-file: "${{ env.ARCHIVE_NAME }}-sbom.spdx.json"
+          upload-artifact: false
 
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
