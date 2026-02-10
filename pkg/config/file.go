@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -62,14 +63,15 @@ func LoadConfig() (*Config, error) {
 			Contexts: make(map[string]*ContextConfig),
 		}, nil
 	}
+	if statErr != nil {
+		return nil, fmt.Errorf("failed to stat config file %s: %w", configPath, statErr)
+	}
 
 	// Check file permissions - warn if too open
-	if statErr == nil {
-		mode := info.Mode().Perm()
-		if mode&0077 != 0 {
-			fmt.Fprintf(os.Stderr, "Warning: Config file %s has permissions %o. Consider changing to 0600 for better security.\n",
-				configPath, mode)
-		}
+	mode := info.Mode().Perm()
+	if mode&0077 != 0 {
+		fmt.Fprintf(os.Stderr, "Warning: Config file %s has permissions %o. Consider changing to 0600 for better security.\n",
+			configPath, mode)
 	}
 
 	data, err := os.ReadFile(configPath)
@@ -208,5 +210,6 @@ func getAvailableContextNames(cfg *Config) string {
 	for name := range cfg.Contexts {
 		names = append(names, name)
 	}
+	sort.Strings(names)
 	return strings.Join(names, ", ")
 }

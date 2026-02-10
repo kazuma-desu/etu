@@ -76,11 +76,6 @@ func runLs(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	if len(resp.Kvs) == 0 {
-		logger.Log.Debug("No keys found")
-		return nil
-	}
-
 	switch outputFormat {
 	case "simple":
 		printLsSimple(resp)
@@ -108,12 +103,12 @@ func printLsJSON(resp *client.GetResponse) error {
 		keys[i] = kv.Key
 	}
 
-	output := map[string]any{
+	data := map[string]any{
 		"keys":  keys,
 		"count": resp.Count,
 	}
 
-	jsonBytes, err := json.Marshal(output)
+	jsonBytes, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
@@ -127,12 +122,12 @@ func printLsYAML(resp *client.GetResponse) error {
 		keys[i] = kv.Key
 	}
 
-	output := map[string]any{
+	data := map[string]any{
 		"keys":  keys,
 		"count": resp.Count,
 	}
 
-	yamlBytes, err := yaml.Marshal(output)
+	yamlBytes, err := yaml.Marshal(data)
 	if err != nil {
 		return err
 	}

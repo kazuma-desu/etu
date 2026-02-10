@@ -271,11 +271,13 @@ func stdinToTempFile() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer tmpFile.Close()
 
 	if _, err := io.Copy(tmpFile, os.Stdin); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
 		return "", fmt.Errorf("failed to write stdin to temp file: %w", err)
 	}
 
+	tmpFile.Close()
 	return tmpFile.Name(), nil
 }

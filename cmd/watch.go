@@ -102,7 +102,7 @@ func runWatch(_ *cobra.Command, args []string) error {
 		PrevKV:   watchOpts.prevKV,
 	}
 
-	if outputFormat != "json" {
+	if outputFormat != output.FormatJSON.String() {
 		if watchOpts.prefix {
 			output.Info(fmt.Sprintf("Watching keys with prefix: %s", key))
 		} else {
@@ -134,7 +134,7 @@ func runWatch(_ *cobra.Command, args []string) error {
 }
 
 func printWatchEvent(event client.WatchEvent) error {
-	if outputFormat == "json" {
+	if outputFormat == output.FormatJSON.String() {
 		data, err := json.Marshal(event)
 		if err != nil {
 			return fmt.Errorf("failed to marshal event: %w", err)

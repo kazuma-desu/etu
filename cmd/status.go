@@ -37,6 +37,16 @@ func init() {
 }
 
 func runStatus(_ *cobra.Command, _ []string) error {
+	// Validate output format early, before attempting connection
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatYAML.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	ctx, cancel := getOperationContext()
 	defer cancel()
 
@@ -74,6 +84,7 @@ func runStatus(_ *cobra.Command, _ []string) error {
 	case output.FormatYAML.String():
 		return printStatusYAML(cfg.Endpoints, statuses, firstError)
 	default:
+		// Safety net: should never reach here due to validateOutputFormat check above
 		return fmt.Errorf("✗ invalid output format: %s (use simple, json, or yaml)", outputFormat)
 	}
 }
@@ -121,7 +132,7 @@ func printStatusSimple(endpoints []string, statuses map[string]*client.StatusRes
 	fmt.Printf("Total:     %d\n", len(endpoints))
 
 	if firstError != nil {
-		return fmt.Errorf("\nwarning: some endpoints are unreachable")
+		return fmt.Errorf("warning: some endpoints are unreachable: %w", firstError)
 	}
 	return nil
 }
