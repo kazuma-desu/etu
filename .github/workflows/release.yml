@@ -8,12 +8,14 @@ on:
 env:
   GO_VERSION: "1.24.13"
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   build:
-    name: Build and Release
+    name: Build and Sign
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     strategy:
       matrix:
         include:
@@ -38,7 +40,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Get version from tag
+      - name: Get version
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
@@ -49,70 +51,90 @@ jobs:
           VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
           BINARY_NAME="etu"
-          if [ "$GOOS" = "windows" ]; then
-            BINARY_NAME="etu.exe"
-          fi
-
+          [ "$GOOS" = "windows" ] && BINARY_NAME="etu.exe"
           COMMIT=$(git rev-parse --short HEAD)
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-          go build -v -ldflags="-s -w \
-            -X github.com/kazuma-desu/etu/cmd.Version=$VERSION \
-            -X github.com/kazuma-desu/etu/cmd.Commit=$COMMIT \
-            -X github.com/kazuma-desu/etu/cmd.BuildDate=$BUILD_DATE" \
-            -o $BINARY_NAME .
-
-          # Create archive
+          go build -v -ldflags="-s -w -X github.com/kazuma-desu/etu/cmd.Version=$VERSION -X github.com/kazuma-desu/etu/cmd.Commit=$COMMIT -X github.com/kazuma-desu/etu/cmd.BuildDate=$BUILD_DATE" -o $BINARY_NAME .
           ARCHIVE_NAME="etu_${VERSION#v}_${GOOS}_${{ matrix.goarch }}"
           if [ "$GOOS" = "windows" ]; then
             zip "${ARCHIVE_NAME}.zip" $BINARY_NAME README.md LICENSE
-            echo "ASSET=${ARCHIVE_NAME}.zip" >> $GITHUB_ENV
           else
             tar czf "${ARCHIVE_NAME}.tar.gz" $BINARY_NAME README.md LICENSE
-            echo "ASSET=${ARCHIVE_NAME}.tar.gz" >> $GITHUB_ENV
           fi
+          echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_ENV
+          echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
 
-      - name: Upload artifact
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign artifact
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          ASSET="${ARCHIVE_NAME}.tar.gz"
+          [ "${{ matrix.goos }}" = "windows" ] && ASSET="${ARCHIVE_NAME}.zip"
+          cosign sign-blob --yes --output-signature "${ASSET}.sig" --output-certificate "${ASSET}.cert" "$ASSET"
+
+      - name: Generate SHA256
+        run: |
+          ASSET="${ARCHIVE_NAME}.tar.gz"
+          [ "${{ matrix.goos }}" = "windows" ] && ASSET="${ARCHIVE_NAME}.zip"
+          sha256sum "$ASSET" > "$ASSET.sha256"
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: "${ARCHIVE_NAME}-sbom.spdx.json"
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ASSET }}
-          path: ${{ env.ASSET }}
+          name: artifacts-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            etu_*.tar.gz*
+            etu_*.zip*
+            etu_*-sbom.spdx.json
           retention-days: 1
 
   release:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Get version from tag
+      - name: Get version
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Generate changelog
         id: changelog
         run: |
-          PREVIOUS_TAG=$(git describe --abbrev=0 --tags ${GITHUB_REF}^ 2>/dev/null || echo "")
-          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
-          if [ -z "$PREVIOUS_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          PREV=$(git describe --abbrev=0 --tags ${GITHUB_REF}^ 2>/dev/null || echo "")
+          if [ -z "$PREV" ]; then
+            LOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
           else
-            CHANGELOG=$(git log ${PREVIOUS_TAG}..${GITHUB_REF} --pretty=format:"- %s (%h)" --no-merges)
+            LOG=$(git log ${PREV}..${GITHUB_REF} --pretty=format:"- %s (%h)" --no-merges)
           fi
           echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "$LOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
+
+      - name: Create checksums file
+        run: |
+          cd artifacts
+          sha256sum *.tar.gz *.zip > checksums.txt 2>/dev/null || true
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -120,32 +142,26 @@ jobs:
           name: Release ${{ steps.version.outputs.VERSION }}
           body: |
             ## What's Changed
-
             ${{ steps.changelog.outputs.CHANGELOG }}
 
+            ## Security
+            This release includes signed binaries and SBOMs.
+
+            ### Verify Signature
+            ```bash
+            cosign verify-blob --signature etu_${VERSION}_linux_amd64.tar.gz.sig --certificate etu_${VERSION}_linux_amd64.tar.gz.cert etu_${VERSION}_linux_amd64.tar.gz
+            ```
+
+            ### Verify Checksum
+            ```bash
+            sha256sum -c checksums.txt
+            ```
+
             ## Installation
+            See README.md for platform-specific instructions.
 
-            ### Linux (x86_64)
-            ```bash
-            curl -LO https://github.com/kazuma-desu/etu/releases/download/${{ steps.version.outputs.VERSION }}/etu_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz
-            tar xzf etu_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz
-            sudo mv etu /usr/local/bin/
-            ```
-
-            ### macOS (Apple Silicon)
-            ```bash
-            curl -LO https://github.com/kazuma-desu/etu/releases/download/${{ steps.version.outputs.VERSION }}/etu_${{ steps.version.outputs.VERSION }}_darwin_arm64.tar.gz
-            tar xzf etu_${{ steps.version.outputs.VERSION }}_darwin_arm64.tar.gz
-            sudo mv etu /usr/local/bin/
-            ```
-
-            ### Windows
-            Download the zip file and extract it to a directory in your PATH.
-
-            **Full Changelog**: https://github.com/kazuma-desu/etu/compare/${{ steps.changelog.outputs.PREVIOUS_TAG }}...${{ steps.version.outputs.VERSION }}
-          files: |
-            artifacts/**/*
-          draft: false
-          prerelease: false
+            ## SBOM
+            SPDX-format SBOMs are included for each platform.
+          files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
