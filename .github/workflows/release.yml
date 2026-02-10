@@ -42,7 +42,9 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "VERSION_BARE=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Build binary
         env:
@@ -108,7 +110,9 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "VERSION_BARE=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Generate changelog
         id: changelog
@@ -147,7 +151,7 @@ jobs:
 
             ### Verify Signature
             ```bash
-            cosign verify-blob --signature etu_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz.sig --certificate etu_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz.cert etu_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz
+            cosign verify-blob --signature etu_${{ steps.version.outputs.VERSION_BARE }}_linux_amd64.tar.gz.sig --certificate etu_${{ steps.version.outputs.VERSION_BARE }}_linux_amd64.tar.gz.cert etu_${{ steps.version.outputs.VERSION_BARE }}_linux_amd64.tar.gz
             ```
 
             ### Verify Checksum
