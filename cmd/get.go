@@ -91,6 +91,17 @@ func init() {
 }
 
 func runGet(_ *cobra.Command, args []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatYAML.String(),
+		output.FormatTable.String(),
+		output.FormatTree.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	ctx, cancel := getOperationContext()
 	defer cancel()
 	key := args[0]
@@ -164,11 +175,8 @@ func runGet(_ *cobra.Command, args []string) error {
 		return printTable(resp)
 	case output.FormatTree.String():
 		return printTree(resp)
-	case output.FormatFields.String():
-		printFields(resp)
-		return nil
 	default:
-		return fmt.Errorf("✗ invalid output format: %s (use simple, json, yaml, table, tree, or fields)", outputFormat)
+		return fmt.Errorf("invalid output format: %s (use simple, json, yaml, table, or tree)", outputFormat)
 	}
 }
 
@@ -309,25 +317,6 @@ func printTable(resp *client.GetResponse) error {
 
 	fmt.Println(table)
 	return nil
-}
-
-func printFields(resp *client.GetResponse) {
-	for _, kv := range resp.Kvs {
-		meta := [][2]string{
-			{"CreateRevision", fmt.Sprintf("%d", kv.CreateRevision)},
-			{"ModRevision", fmt.Sprintf("%d", kv.ModRevision)},
-			{"Version", fmt.Sprintf("%d", kv.Version)},
-		}
-		if kv.Lease > 0 {
-			meta = append(meta, [2]string{"Lease", fmt.Sprintf("%d", kv.Lease)})
-		}
-
-		value := kv.Value
-		if getOpts.keysOnly {
-			value = ""
-		}
-		output.KeyValueWithMetadata(kv.Key, value, meta)
-	}
 }
 
 func printTree(resp *client.GetResponse) error {

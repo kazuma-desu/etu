@@ -31,60 +31,51 @@ func TestPrintWatchEvent_SimpleFormat(t *testing.T) {
 	originalFormat := outputFormat
 	defer func() { outputFormat = originalFormat }()
 
+	outputFormat = output.FormatSimple.String()
+
 	tests := []struct {
-		name     string
-		event    client.WatchEvent
-		wantErr  bool
-		contains []string
+		name    string
+		event   client.WatchEvent
+		wantErr bool
+		want    string
 	}{
 		{
-			name: "PUT event",
+			name: "PUT event prints raw value only",
 			event: client.WatchEvent{
 				Type:     client.WatchEventPut,
 				Key:      "/app/config",
 				Value:    "new-value",
 				Revision: 42,
 			},
-			wantErr:  false,
-			contains: []string{"PUT", "rev=42", "/app/config", "value: new-value"},
+			wantErr: false,
+			want:    "new-value",
 		},
 		{
-			name: "DELETE event",
+			name: "DELETE event prints empty value",
 			event: client.WatchEvent{
 				Type:     client.WatchEventDelete,
 				Key:      "/app/config",
 				Revision: 43,
 			},
-			wantErr:  false,
-			contains: []string{"DELETE", "rev=43", "/app/config"},
-		},
-		{
-			name: "PUT event with previous value",
-			event: client.WatchEvent{
-				Type:      client.WatchEventPut,
-				Key:       "/app/config",
-				Value:     "new-value",
-				PrevValue: strPtr("old-value"),
-				Revision:  44,
-			},
-			wantErr:  false,
-			contains: []string{"PUT", "rev=44", "/app/config", "prev: old-value", "value: new-value"},
+			wantErr: false,
+			want:    "",
 		},
 	}
 
-	outputFormat = output.FormatSimple.String()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output, err := testutil.CaptureStdout(func() error {
+			captured, err := testutil.CaptureStdout(func() error {
 				return printWatchEvent(tt.event)
 			})
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				for _, want := range tt.contains {
-					assert.Contains(t, output, want)
-				}
+				assert.Contains(t, captured, tt.want)
+				// Simple format should NOT include metadata
+				assert.NotContains(t, captured, "PUT")
+				assert.NotContains(t, captured, "DELETE")
+				assert.NotContains(t, captured, "rev=")
 			}
 		})
 	}
@@ -117,33 +108,6 @@ func TestPrintWatchEvent_JSONFormat(t *testing.T) {
 	assert.Contains(t, output, `"Revision":42`)
 }
 
-func TestPrintWatchEvent_YAMLFormat(t *testing.T) {
-	t.Cleanup(resetWatchOpts)
-	resetWatchOpts()
-
-	originalFormat := outputFormat
-	defer func() { outputFormat = originalFormat }()
-
-	outputFormat = output.FormatYAML.String()
-
-	event := client.WatchEvent{
-		Type:     client.WatchEventPut,
-		Key:      "/app/config",
-		Value:    "test-value",
-		Revision: 42,
-	}
-
-	output, err := testutil.CaptureStdout(func() error {
-		return printWatchEvent(event)
-	})
-	require.NoError(t, err)
-
-	assert.Contains(t, output, "type:")
-	assert.Contains(t, output, "PUT")
-	assert.Contains(t, output, "key:")
-	assert.Contains(t, output, "/app/config")
-}
-
 func TestRunWatch_InvalidRevision(t *testing.T) {
 	t.Cleanup(resetWatchOpts)
 	resetWatchOpts()
@@ -174,7 +138,7 @@ func TestRunWatch_WithContextCancelled(t *testing.T) {
 	resetWatchOpts()
 
 	mock := client.NewMockClient()
-	mock.WatchFunc = func(ctx context.Context, key string, opts *client.WatchOptions) client.WatchChan {
+	mock.WatchFunc = func(_ context.Context, _ string, _ *client.WatchOptions) client.WatchChan {
 		ch := make(chan client.WatchResponse)
 		close(ch)
 		return ch
@@ -186,22 +150,6 @@ func TestRunWatch_WithContextCancelled(t *testing.T) {
 	contextName = "nonexistent"
 	err := runWatch(nil, []string{"/test/key"})
 	require.Error(t, err)
-}
-
-func strPtr(s string) *string {
-	return &s
-}
-
-func createTempFileWithContent(t *testing.T, content string) string {
-	t.Helper()
-	tmpFile, err := os.CreateTemp("", "etu-test-*.txt")
-	require.NoError(t, err)
-
-	_, err = tmpFile.WriteString(content)
-	require.NoError(t, err)
-	tmpFile.Close()
-
-	return tmpFile.Name()
 }
 
 func TestRunWatch_MockClient(t *testing.T) {
@@ -228,7 +176,7 @@ contexts:
 
 	mock := client.NewMockClient()
 	eventCount := 0
-	mock.WatchFunc = func(ctx context.Context, key string, opts *client.WatchOptions) client.WatchChan {
+	mock.WatchFunc = func(ctx context.Context, _ string, _ *client.WatchOptions) client.WatchChan {
 		ch := make(chan client.WatchResponse)
 		go func() {
 			defer close(ch)
@@ -300,7 +248,7 @@ func TestRunWatch_WatchError(t *testing.T) {
 	}
 
 	mock := client.NewMockClient()
-	mock.WatchFunc = func(ctx context.Context, key string, opts *client.WatchOptions) client.WatchChan {
+	mock.WatchFunc = func(ctx context.Context, _ string, _ *client.WatchOptions) client.WatchChan {
 		ch := make(chan client.WatchResponse)
 		go func() {
 			defer close(ch)
@@ -332,7 +280,7 @@ func TestRunWatch_CompactRevision(t *testing.T) {
 	}
 
 	mock := client.NewMockClient()
-	mock.WatchFunc = func(ctx context.Context, key string, opts *client.WatchOptions) client.WatchChan {
+	mock.WatchFunc = func(ctx context.Context, _ string, _ *client.WatchOptions) client.WatchChan {
 		ch := make(chan client.WatchResponse)
 		go func() {
 			defer close(ch)

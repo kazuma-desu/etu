@@ -169,10 +169,12 @@ contexts:
 
 ### Global Flags
 
-Use `etu options` to see all global flags. Common flags visible in `--help`:
+Global flags are hidden from command help for clarity. Use `etu options` to see all available global flags.
+
+Common global flags include:
 
 - `--context <name>`: Use specific context
-- `--output <format>`: Output format (simple, json, table, tree)
+- `-o, --output <format>`: Output format (simple, json, yaml, table, tree)
 - `--timeout <duration>`: Timeout for operations (default: 30s)
 - `--log-level <level>`: Set log level (debug, info, warn, error)
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
@@ -38,7 +39,9 @@ Exit Codes:
   1  General error
   2  Validation error (invalid input, missing arguments)
   3  Connection error (failed to connect to etcd)
-  4  Key not found`,
+  4  Key not found
+
+Use 'etu options' to see all available global flags.`,
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			configureLogging()
 		},
@@ -79,6 +82,9 @@ func init() {
 	_ = rootCmd.PersistentFlags().MarkHidden("username")
 	_ = rootCmd.PersistentFlags().MarkHidden("password")
 	_ = rootCmd.PersistentFlags().MarkHidden("password-stdin")
+
+	// Hide all global flags from main help - use 'etu options' to see them
+	hideAllGlobalFlags()
 }
 
 // Execute runs the root command
@@ -112,4 +118,10 @@ func formatNames() []string {
 		names[i] = f.String()
 	}
 	return names
+}
+
+func hideAllGlobalFlags() {
+	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+		_ = rootCmd.PersistentFlags().MarkHidden(f.Name)
+	})
 }

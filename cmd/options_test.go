@@ -49,12 +49,12 @@ func TestOptionsCommand_HiddenFromMainHelp(t *testing.T) {
 	}
 }
 
-func TestOptionsCommand_VisibleFlags(t *testing.T) {
-	visibleFlags := []string{"context", "output", "timeout", "log-level"}
+func TestOptionsCommand_GlobalFlagsHidden(t *testing.T) {
+	hiddenFlags := []string{"context", "output", "timeout", "log-level"}
 
-	for _, flagName := range visibleFlags {
+	for _, flagName := range hiddenFlags {
 		flag := rootCmd.PersistentFlags().Lookup(flagName)
 		assert.NotNil(t, flag, "flag %s should exist", flagName)
-		assert.False(t, flag.Hidden, "flag %s should be visible", flagName)
+		assert.True(t, flag.Hidden, "flag %s should be hidden", flagName)
 	}
 }

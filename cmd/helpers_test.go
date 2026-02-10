@@ -288,38 +288,46 @@ func TestIsQuietOutput(t *testing.T) {
 	}
 }
 
-func TestNormalizeOutputFormat(t *testing.T) {
+func TestValidateOutputFormat(t *testing.T) {
 	tests := []struct {
 		supportedFormats []string
 		name             string
 		format           string
-		want             string
 		wantErr          bool
 	}{
 		{
-			name:             "valid format passes through",
+			name:             "valid format json",
 			format:           "json",
 			supportedFormats: []string{"simple", "json", "table"},
-			want:             "json",
 			wantErr:          false,
 		},
 		{
-			name:             "tree with tree support",
+			name:             "valid format simple",
+			format:           "simple",
+			supportedFormats: []string{"simple", "json", "table"},
+			wantErr:          false,
+		},
+		{
+			name:             "valid format tree when supported",
 			format:           "tree",
 			supportedFormats: []string{"simple", "json", "table", "tree"},
-			want:             "tree",
 			wantErr:          false,
 		},
 		{
-			name:             "tree without tree support falls back to table",
+			name:             "invalid format tree when not supported",
 			format:           "tree",
 			supportedFormats: []string{"simple", "json", "table"},
-			want:             "table",
-			wantErr:          false,
+			wantErr:          true,
 		},
 		{
-			name:             "invalid format errors",
-			format:           "invalid",
+			name:             "invalid format fields",
+			format:           "fields",
+			supportedFormats: []string{"simple", "json", "table"},
+			wantErr:          true,
+		},
+		{
+			name:             "invalid format xml",
+			format:           "xml",
 			supportedFormats: []string{"simple", "json", "table"},
 			wantErr:          true,
 		},
@@ -331,19 +339,15 @@ func TestNormalizeOutputFormat(t *testing.T) {
 			defer func() { outputFormat = original }()
 
 			outputFormat = tt.format
-			got, err := normalizeOutputFormat(tt.supportedFormats)
+			err := validateOutputFormat(tt.supportedFormats)
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("normalizeOutputFormat() error = nil, want error")
+					t.Errorf("validateOutputFormat() error = nil, want error")
 				}
 				return
 			}
 			if err != nil {
-				t.Errorf("normalizeOutputFormat() error = %v, want nil", err)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("normalizeOutputFormat() = %v, want %v", got, tt.want)
+				t.Errorf("validateOutputFormat() error = %v, want nil", err)
 			}
 		})
 	}

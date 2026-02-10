@@ -47,6 +47,15 @@ func init() {
 }
 
 func runValidate(cmd *cobra.Command, _ []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatTable.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	ctx, cancel := getOperationContext()
 	defer cancel()
 
@@ -68,12 +77,7 @@ func runValidate(cmd *cobra.Command, _ []string) error {
 	v := validator.NewValidator(strict)
 	result := v.Validate(pairs)
 
-	normalizedFormat, err := normalizeOutputFormat(formatsWithoutTree)
-	if err != nil {
-		return err
-	}
-
-	if err := output.PrintValidationWithFormat(result, strict, normalizedFormat); err != nil {
+	if err := output.PrintValidationWithFormat(result, strict, outputFormat); err != nil {
 		return err
 	}
 

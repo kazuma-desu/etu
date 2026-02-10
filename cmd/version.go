@@ -39,6 +39,14 @@ func init() {
 }
 
 func runVersion(_ *cobra.Command, _ []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	info := versionInfo{
 		Version:   Version,
 		Commit:    Commit,

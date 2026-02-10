@@ -89,12 +89,12 @@ contexts:
 	t.Setenv("ETUCONFIG", configPath)
 
 	mock := client.NewMockClient()
-	mock.GetFunc = func(ctx context.Context, key string) (string, error) {
+	mock.GetFunc = func(_ context.Context, _ string) (string, error) {
 		return "original-value", nil
 	}
 
 	putCalled := false
-	mock.PutFunc = func(ctx context.Context, key, value string) error {
+	mock.PutFunc = func(_ context.Context, _, _ string) error {
 		putCalled = true
 		return nil
 	}
@@ -120,7 +120,7 @@ func TestRunEdit_GetError(t *testing.T) {
 	}
 
 	mock := client.NewMockClient()
-	mock.GetFunc = func(ctx context.Context, key string) (string, error) {
+	mock.GetFunc = func(_ context.Context, _ string) (string, error) {
 		return "", errors.New("key not found")
 	}
 
@@ -138,7 +138,7 @@ func TestRunEdit_PutError(t *testing.T) {
 	}
 
 	mock := client.NewMockClient()
-	mock.PutFunc = func(ctx context.Context, key, value string) error {
+	mock.PutFunc = func(_ context.Context, _, _ string) error {
 		return errors.New("put failed")
 	}
 
@@ -292,7 +292,7 @@ func TestRunEdit_KeyValidation(t *testing.T) {
 
 func TestMockClient_GetRecording(t *testing.T) {
 	mock := client.NewMockClient()
-	mock.GetFunc = func(ctx context.Context, key string) (string, error) {
+	mock.GetFunc = func(_ context.Context, _ string) (string, error) {
 		return "test-value", nil
 	}
 

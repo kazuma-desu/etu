@@ -44,6 +44,17 @@ func init() {
 }
 
 func runParse(_ *cobra.Command, _ []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatYAML.String(),
+		output.FormatTable.String(),
+		output.FormatTree.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	ctx, cancel := getOperationContext()
 	defer cancel()
 
@@ -54,10 +65,5 @@ func runParse(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	normalizedFormat, err := normalizeOutputFormat(formatsWithTree)
-	if err != nil {
-		return err
-	}
-
-	return output.PrintConfigPairsWithFormat(pairs, normalizedFormat)
+	return output.PrintConfigPairsWithFormat(pairs, outputFormat)
 }

@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/output"
@@ -29,6 +28,7 @@ var (
 
 Monitors etcd for PUT and DELETE events on the specified key.
 Use --prefix to watch all keys with a given prefix.
+Use -o flag to control output format (simple=raw value, json=full event).
 Press Ctrl+C to stop watching.`,
 		Example: `  # Watch a single key
   etu watch /config/app/host
@@ -58,9 +58,16 @@ func init() {
 }
 
 func runWatch(_ *cobra.Command, args []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	key := args[0]
 
-	// Validate revision is non-negative
 	if watchOpts.rev < 0 {
 		return fmt.Errorf("✗ invalid --rev: must be non-negative")
 	}
@@ -95,7 +102,7 @@ func runWatch(_ *cobra.Command, args []string) error {
 		PrevKV:   watchOpts.prevKV,
 	}
 
-	if outputFormat == output.FormatSimple.String() {
+	if outputFormat != "json" {
 		if watchOpts.prefix {
 			output.Info(fmt.Sprintf("Watching keys with prefix: %s", key))
 		} else {
@@ -127,30 +134,15 @@ func runWatch(_ *cobra.Command, args []string) error {
 }
 
 func printWatchEvent(event client.WatchEvent) error {
-	switch outputFormat {
-	case output.FormatJSON.String():
+	if outputFormat == "json" {
 		data, err := json.Marshal(event)
 		if err != nil {
 			return fmt.Errorf("failed to marshal event: %w", err)
 		}
 		fmt.Println(string(data))
-	case output.FormatYAML.String():
-		data, err := yaml.Marshal(event)
-		if err != nil {
-			return fmt.Errorf("failed to marshal event: %w", err)
-		}
-		fmt.Println(string(data))
-	default: // simple format
-		typeStr := string(event.Type)
-		fmt.Printf("[%s] rev=%d %s\n", typeStr, event.Revision, event.Key)
-
-		if event.PrevValue != nil {
-			fmt.Printf("  prev: %s\n", *event.PrevValue)
-		}
-		if event.Type == client.WatchEventPut {
-			fmt.Printf("  value: %s\n", event.Value)
-		}
-		fmt.Println()
+	} else {
+		// Simple format: print only the raw value (matches etcdctl)
+		fmt.Println(event.Value)
 	}
 	return nil
 }
