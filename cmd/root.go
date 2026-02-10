@@ -32,16 +32,7 @@ var (
 	rootCmd = &cobra.Command{
 		Use:   "etu",
 		Short: "Etcd Terminal Utility - kubectl-like CLI for etcd",
-		Long: `A CLI tool for managing etcd configurations with kubectl-like UX.
-
-Exit Codes:
-  0  Success
-  1  General error
-  2  Validation error (invalid input, missing arguments)
-  3  Connection error (failed to connect to etcd)
-  4  Key not found
-
-Use 'etu options' to see all available global flags.`,
+		Long:  `A CLI tool for managing etcd configurations with kubectl-like UX.`,
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			configureLogging()
 		},

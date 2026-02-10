@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: https://github.com/kazuma-desu/etu/security/advisories/new
+    about: Please report security vulnerabilities here or see SECURITY.md
+  - name: Question or Discussion
+    url: https://github.com/kazuma-desu/etu/discussions
+    about: Please ask and answer questions here
