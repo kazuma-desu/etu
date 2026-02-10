@@ -125,17 +125,17 @@ func resolveEditor() (string, error) {
 	if editor == "" {
 		editor = os.Getenv("VISUAL")
 	}
-	if editor == "" {
-		// Fallback to common editors
-		for _, fallback := range []string{"vi", "vim", "nano", "emacs"} {
-			if _, lookupErr := exec.LookPath(fallback); lookupErr == nil {
-				editor = fallback
-				break
-			}
+	if editor != "" {
+		if _, err := exec.LookPath(editor); err != nil {
+			return "", fmt.Errorf("✗ editor not found: %s", editor)
+		}
+		return editor, nil
+	}
+	// Fallback to common editors
+	for _, fallback := range []string{"vi", "vim", "nano", "emacs"} {
+		if _, lookupErr := exec.LookPath(fallback); lookupErr == nil {
+			return fallback, nil
 		}
 	}
-	if editor == "" {
-		return "", fmt.Errorf("✗ no editor found: set $EDITOR or $VISUAL environment variable")
-	}
-	return editor, nil
+	return "", fmt.Errorf("✗ no editor found: set $EDITOR or $VISUAL environment variable")
 }

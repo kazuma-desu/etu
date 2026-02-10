@@ -89,6 +89,9 @@ func runStatus(_ *cobra.Command, _ []string) error {
 	}
 }
 
+// printStatusSimple prints cluster status and returns an error if any endpoint is unhealthy.
+// The full status is always printed to stdout before returning, enabling visibility into
+// partial cluster failures while still signaling command failure via the error return.
 func printStatusSimple(endpoints []string, statuses map[string]*client.StatusResponse, firstError error) error {
 	fmt.Println("Cluster Status")
 	fmt.Println("==============")

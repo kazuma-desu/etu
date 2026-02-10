@@ -57,7 +57,8 @@ func TestPrintLsJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, float64(2), result["count"])
-	keys := result["keys"].([]any)
+	keys, ok := result["keys"].([]any)
+	require.True(t, ok, "keys should be a slice")
 	assert.Len(t, keys, 2)
 	assert.Contains(t, keys, "/app/config/host")
 	assert.Contains(t, keys, "/app/config/port")

@@ -95,8 +95,9 @@ func runLs(_ *cobra.Command, args []string) error {
 		return printLsYAML(resp)
 	case output.FormatTable.String():
 		return printLsTable(resp)
+	default:
+		return fmt.Errorf("unexpected output format: %s", outputFormat)
 	}
-	return nil
 }
 
 func printLsSimple(resp *client.GetResponse) {
@@ -120,7 +121,7 @@ func printLsJSON(resp *client.GetResponse) error {
 		"count": resp.Count,
 	}
 
-	jsonBytes, err := json.Marshal(data)
+	jsonBytes, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
