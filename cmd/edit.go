@@ -47,7 +47,7 @@ func runEdit(_ *cobra.Command, args []string) error {
 	}
 
 	// Determine editor
-	editor, err := resolveEditor()
+	editorExe, editorArgs, err := resolveEditor()
 	if err != nil {
 		return err
 	}
@@ -75,8 +75,9 @@ func runEdit(_ *cobra.Command, args []string) error {
 	initialModTime := initialStat.ModTime()
 
 	// Open editor
-	logVerbose("Opening editor", "editor", editor, "file", filepath.Base(tmpPath))
-	editorCmd := exec.Command(editor, tmpPath)
+	logVerbose("Opening editor", "editor", editorExe, "file", filepath.Base(tmpPath))
+	editorArgs = append(editorArgs, tmpPath)
+	editorCmd := exec.Command(editorExe, editorArgs...)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
 	editorCmd.Stderr = os.Stderr
@@ -120,22 +121,27 @@ func runEdit(_ *cobra.Command, args []string) error {
 
 // resolveEditor determines the editor to use from environment variables
 // or fallback to common editors available in PATH.
-func resolveEditor() (string, error) {
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		editor = os.Getenv("VISUAL")
+// Returns the executable path and any additional arguments separately.
+func resolveEditor() (string, []string, error) {
+	// Prefer VISUAL over EDITOR per Unix convention
+	editorEnv := os.Getenv("VISUAL")
+	if editorEnv == "" {
+		editorEnv = os.Getenv("EDITOR")
 	}
-	if editor != "" {
-		if _, err := exec.LookPath(editor); err != nil {
-			return "", fmt.Errorf("✗ editor not found: %s", editor)
+	if editorEnv != "" {
+		tokens := strings.Fields(editorEnv)
+		exe := tokens[0]
+		args := tokens[1:]
+		if _, err := exec.LookPath(exe); err != nil {
+			return "", nil, fmt.Errorf("✗ editor not found: %s", exe)
 		}
-		return editor, nil
+		return exe, args, nil
 	}
 	// Fallback to common editors
 	for _, fallback := range []string{"vi", "vim", "nano", "emacs"} {
 		if _, lookupErr := exec.LookPath(fallback); lookupErr == nil {
-			return fallback, nil
+			return fallback, nil, nil
 		}
 	}
-	return "", fmt.Errorf("✗ no editor found: set $EDITOR or $VISUAL environment variable")
+	return "", nil, fmt.Errorf("✗ no editor found: set $EDITOR or $VISUAL environment variable")
 }

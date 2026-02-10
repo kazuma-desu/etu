@@ -78,21 +78,31 @@ func runStatus(_ *cobra.Command, _ []string) error {
 
 	switch outputFormat {
 	case output.FormatSimple.String():
-		return printStatusSimple(cfg.Endpoints, statuses, firstError)
+		if err := printStatusSimple(cfg.Endpoints, statuses, firstError); err != nil {
+			return err
+		}
 	case output.FormatJSON.String():
-		return printStatusJSON(cfg.Endpoints, statuses, firstError)
+		if err := printStatusJSON(cfg.Endpoints, statuses, firstError); err != nil {
+			return err
+		}
 	case output.FormatYAML.String():
-		return printStatusYAML(cfg.Endpoints, statuses, firstError)
+		if err := printStatusYAML(cfg.Endpoints, statuses, firstError); err != nil {
+			return err
+		}
 	default:
 		// Safety net: should never reach here due to validateOutputFormat check above
 		return fmt.Errorf("✗ invalid output format: %s (use simple, json, or yaml)", outputFormat)
 	}
+
+	// Return unified warning if any endpoint was unreachable
+	if firstError != nil {
+		return fmt.Errorf("warning: some endpoints are unreachable: %w", firstError)
+	}
+	return nil
 }
 
-// printStatusSimple prints cluster status and returns an error if any endpoint is unhealthy.
-// The full status is always printed to stdout before returning, enabling visibility into
-// partial cluster failures while still signaling command failure via the error return.
-func printStatusSimple(endpoints []string, statuses map[string]*client.StatusResponse, firstError error) error {
+// printStatusSimple prints cluster status to stdout.
+func printStatusSimple(endpoints []string, statuses map[string]*client.StatusResponse, _ error) error {
 	fmt.Println("Cluster Status")
 	fmt.Println("==============")
 	fmt.Println()
@@ -134,9 +144,6 @@ func printStatusSimple(endpoints []string, statuses map[string]*client.StatusRes
 	fmt.Printf("Unhealthy: %d\n", unhealthyCount)
 	fmt.Printf("Total:     %d\n", len(endpoints))
 
-	if firstError != nil {
-		return fmt.Errorf("warning: some endpoints are unreachable: %w", firstError)
-	}
 	return nil
 }
 

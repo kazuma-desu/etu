@@ -198,13 +198,14 @@ func TestRunEdit_EditorEnv(t *testing.T) {
 				os.Unsetenv("VISUAL")
 			}
 
-			editor, err := resolveEditor()
+			editor, args, err := resolveEditor()
 			if tt.wantEmpty {
 				assert.Error(t, err)
 				assert.Empty(t, editor)
 			} else {
 				assert.NoError(t, err)
 				assert.NotEmpty(t, editor)
+				assert.NotNil(t, args)
 			}
 		})
 	}

@@ -147,11 +147,8 @@ func TestPrintStatusSimple(t *testing.T) {
 			output, err := testutil.CaptureStdout(func() error {
 				return printStatusSimple(tt.endpoints, tt.statuses, tt.firstError)
 			})
-			if tt.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
+			// printStatusSimple always returns nil now; error is handled by caller
+			require.NoError(t, err)
 			for _, want := range tt.contains {
 				assert.Contains(t, output, want)
 			}
