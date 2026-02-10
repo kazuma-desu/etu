@@ -55,7 +55,7 @@ func runStatus(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("✗ not connected: %w\n\nUse 'etu login' to configure a context", err)
 	}
 
-	etcdClient, cleanup, err := newEtcdClient()
+	etcdClient, cleanup, err := newEtcdClient(cfg)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/client"
+	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
 	"github.com/kazuma-desu/etu/pkg/validator"
@@ -114,7 +115,12 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	etcdClient, cleanup, err := newEtcdClientOrDryRun(applyOpts.DryRun)
+	cfg, err := config.GetEtcdConfigWithContext(contextName)
+	if err != nil {
+		return fmt.Errorf("✗ not connected: %w\n\nUse 'etu login' to configure a context", err)
+	}
+
+	etcdClient, cleanup, err := newEtcdClientOrDryRun(applyOpts.DryRun, cfg)
 	if err != nil {
 		return err
 	}

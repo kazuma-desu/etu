@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/output"
 )
 
@@ -32,7 +33,12 @@ func runEdit(_ *cobra.Command, args []string) error {
 	key := args[0]
 
 	logVerboseInfo("Connecting to etcd")
-	etcdClient, cleanup, err := newEtcdClient()
+	cfg, err := config.GetEtcdConfigWithContext(contextName)
+	if err != nil {
+		return fmt.Errorf("✗ not connected: %w\n\nUse 'etu login' to configure a context", err)
+	}
+
+	etcdClient, cleanup, err := newEtcdClient(cfg)
 	if err != nil {
 		return err
 	}
