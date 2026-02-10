@@ -183,3 +183,55 @@ func TestPrintLsTable_Empty(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, output, "KEY")
 }
+
+func TestExtractKeys(t *testing.T) {
+	tests := []struct {
+		name     string
+		resp     *client.GetResponse
+		expected []string
+	}{
+		{
+			name: "multiple keys",
+			resp: &client.GetResponse{
+				Kvs: []*client.KeyValue{
+					{Key: "/app/config/host"},
+					{Key: "/app/config/port"},
+					{Key: "/app/name"},
+				},
+			},
+			expected: []string{"/app/config/host", "/app/config/port", "/app/name"},
+		},
+		{
+			name:     "empty response",
+			resp:     &client.GetResponse{Kvs: []*client.KeyValue{}},
+			expected: []string{},
+		},
+		{
+			name:     "nil response",
+			resp:     &client.GetResponse{},
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractKeys(tt.resp)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestPrintLsYAML_Empty(t *testing.T) {
+	t.Cleanup(resetLsOpts)
+	resetLsOpts()
+	resp := &client.GetResponse{
+		Kvs:   []*client.KeyValue{},
+		Count: 0,
+	}
+
+	output, err := testutil.CaptureStdout(func() error {
+		return printLsYAML(resp)
+	})
+	require.NoError(t, err)
+	assert.Contains(t, output, "keys: []")
+}

@@ -4,9 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
@@ -635,4 +639,75 @@ func BenchmarkWrapContextError(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = wrapContextError(errs[i%len(errs)])
 	}
+}
+
+func TestValidateKeyPrefix(t *testing.T) {
+	tests := []struct {
+		name    string
+		key     string
+		wantErr bool
+	}{
+		{
+			name:    "valid key with slash",
+			key:     "/app/config",
+			wantErr: false,
+		},
+		{
+			name:    "invalid key without slash",
+			key:     "app/config",
+			wantErr: true,
+		},
+		{
+			name:    "root key",
+			key:     "/",
+			wantErr: false,
+		},
+		{
+			name:    "empty key",
+			key:     "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateKeyPrefix(tt.key)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "key must start with '/'")
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestStdinToTempFile(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		// Create a pipe to simulate stdin
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		defer r.Close()
+
+		// Write test data
+		go func() {
+			defer w.Close()
+			w.WriteString("test content")
+		}()
+
+		// Redirect stdin
+		oldStdin := os.Stdin
+		os.Stdin = r
+		defer func() { os.Stdin = oldStdin }()
+
+		// Call function
+		path, err := stdinToTempFile()
+		require.NoError(t, err)
+		defer os.Remove(path)
+
+		// Verify file exists and has content
+		content, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.Equal(t, "test content", string(content))
+	})
 }
