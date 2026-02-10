@@ -72,25 +72,24 @@ func init() {
 	configCmd.AddCommand(viewConfigCmd)
 }
 
-func runGetContexts(_ *cobra.Command, _ []string) error {
-	allowedFormats := []string{
-		output.FormatSimple.String(),
-		output.FormatJSON.String(),
-		output.FormatYAML.String(),
-		output.FormatTable.String(),
-	}
+// loadAndValidateConfig handles the common pattern of:
+// 1. Validating output format
+// 2. Loading config
+// 3. Building context views
+// Returns the config, context views map, and any error.
+func loadAndValidateConfig(allowedFormats []string, checkEmpty bool) (*config.Config, map[string]*output.ContextView, error) {
 	if err := validateOutputFormat(allowedFormats); err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return fmt.Errorf(errFailedToLoadConfiguration, err)
+		return nil, nil, fmt.Errorf(errFailedToLoadConfiguration, err)
 	}
 
-	if len(cfg.Contexts) == 0 {
+	if checkEmpty && len(cfg.Contexts) == 0 {
 		output.Info("No contexts found. Use 'etu login <context-name>' to create one.")
-		return nil
+		return cfg, nil, nil
 	}
 
 	contextViews := make(map[string]*output.ContextView, len(cfg.Contexts))
@@ -99,6 +98,23 @@ func runGetContexts(_ *cobra.Command, _ []string) error {
 			Username:  ctx.Username,
 			Endpoints: ctx.Endpoints,
 		}
+	}
+
+	return cfg, contextViews, nil
+}
+
+func runGetContexts(_ *cobra.Command, _ []string) error {
+	cfg, contextViews, err := loadAndValidateConfig(
+		[]string{
+			output.FormatSimple.String(),
+			output.FormatJSON.String(),
+			output.FormatYAML.String(),
+			output.FormatTable.String(),
+		},
+		true,
+	)
+	if err != nil {
+		return err
 	}
 
 	if err := output.PrintContextsWithFormat(contextViews, cfg.CurrentContext, outputFormat); err != nil {
@@ -202,27 +218,17 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 }
 
 func runViewConfig(_ *cobra.Command, _ []string) error {
-	allowedFormats := []string{
-		output.FormatSimple.String(),
-		output.FormatJSON.String(),
-		output.FormatYAML.String(),
-		output.FormatTable.String(),
-	}
-	if err := validateOutputFormat(allowedFormats); err != nil {
-		return err
-	}
-
-	cfg, err := config.LoadConfig()
+	cfg, contextViews, err := loadAndValidateConfig(
+		[]string{
+			output.FormatSimple.String(),
+			output.FormatJSON.String(),
+			output.FormatYAML.String(),
+			output.FormatTable.String(),
+		},
+		false,
+	)
 	if err != nil {
-		return fmt.Errorf(errFailedToLoadConfiguration, err)
-	}
-
-	contextViews := make(map[string]*output.ContextView, len(cfg.Contexts))
-	for name, ctx := range cfg.Contexts {
-		contextViews[name] = &output.ContextView{
-			Username:  ctx.Username,
-			Endpoints: ctx.Endpoints,
-		}
+		return err
 	}
 
 	configView := &output.ConfigView{

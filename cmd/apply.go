@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/client"
+	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
 	"github.com/kazuma-desu/etu/pkg/validator"
@@ -114,7 +115,16 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	etcdClient, cleanup, err := newEtcdClientOrDryRun(applyOpts.DryRun)
+	var cfg *client.Config
+	if !applyOpts.DryRun {
+		var cfgErr error
+		cfg, cfgErr = config.GetEtcdConfigWithContext(contextName)
+		if cfgErr != nil {
+			return wrapNotConnectedError(cfgErr)
+		}
+	}
+
+	etcdClient, cleanup, err := newEtcdClientOrDryRun(applyOpts.DryRun, cfg)
 	if err != nil {
 		return err
 	}

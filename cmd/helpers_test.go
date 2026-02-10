@@ -590,7 +590,7 @@ func TestLogVerboseInfo(t *testing.T) {
 }
 
 func TestNewEtcdClientOrDryRun_DryRun(t *testing.T) {
-	client, cleanup, err := newEtcdClientOrDryRun(true)
+	client, cleanup, err := newEtcdClientOrDryRun(true, nil)
 	if err != nil {
 		t.Fatalf("newEtcdClientOrDryRun(true) error = %v, want nil", err)
 	}

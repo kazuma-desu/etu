@@ -120,12 +120,7 @@ func wrapContextError(err error) error {
 	return err
 }
 
-func newEtcdClient() (client.EtcdClient, func(), error) {
-	cfg, err := config.GetEtcdConfigWithContext(contextName)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get etcd config: %w\n\nHint: Use 'etu login' to create a context or 'etu config use-context' to select one", err)
-	}
-
+func newEtcdClient(cfg *client.Config) (client.EtcdClient, func(), error) {
 	if overrideErr := applyGlobalOverrides(cfg); overrideErr != nil {
 		return nil, nil, overrideErr
 	}
@@ -199,12 +194,12 @@ func readPasswordFromStdin() (string, error) {
 	return strings.TrimSpace(password), nil
 }
 
-func newEtcdClientOrDryRun(dryRun bool) (client.EtcdClient, func(), error) {
+func newEtcdClientOrDryRun(dryRun bool, cfg *client.Config) (client.EtcdClient, func(), error) {
 	if dryRun {
 		// DryRunClient has no resources to release, so cleanup is a no-op
 		return client.NewDryRunClient(), func() { /* no-op: DryRunClient has no resources to release */ }, nil
 	}
-	return newEtcdClient()
+	return newEtcdClient(cfg)
 }
 
 func validateOutputFormat(allowedFormats []string) error {

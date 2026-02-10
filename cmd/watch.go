@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/client"
+	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/output"
 )
 
@@ -72,7 +73,12 @@ func runWatch(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("✗ invalid --rev: must be non-negative")
 	}
 
-	etcdClient, cleanup, err := newEtcdClient()
+	cfg, err := config.GetEtcdConfigWithContext(contextName)
+	if err != nil {
+		return wrapNotConnectedError(err)
+	}
+
+	etcdClient, cleanup, err := newEtcdClient(cfg)
 	if err != nil {
 		return err
 	}

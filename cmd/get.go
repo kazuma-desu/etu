@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/client"
+	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/models"
 	"github.com/kazuma-desu/etu/pkg/output"
@@ -116,7 +117,12 @@ func runGet(_ *cobra.Command, args []string) error {
 	}
 
 	// Connect to etcd
-	etcdClient, cleanup, err := newEtcdClient()
+	cfg, err := config.GetEtcdConfigWithContext(contextName)
+	if err != nil {
+		return wrapNotConnectedError(err)
+	}
+
+	etcdClient, cleanup, err := newEtcdClient(cfg)
 	if err != nil {
 		return err
 	}

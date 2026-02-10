@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kazuma-desu/etu/pkg/client"
+	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/output"
 )
 
@@ -75,7 +76,12 @@ func runDeleteSingle(ctx context.Context, key string) error {
 		return nil
 	}
 
-	etcdClient, cleanup, err := newEtcdClient()
+	cfg, err := config.GetEtcdConfigWithContext(contextName)
+	if err != nil {
+		return wrapNotConnectedError(err)
+	}
+
+	etcdClient, cleanup, err := newEtcdClient(cfg)
 	if err != nil {
 		return err
 	}
@@ -96,7 +102,12 @@ func runDeleteSingle(ctx context.Context, key string) error {
 }
 
 func runDeletePrefix(ctx context.Context, prefix string) error {
-	etcdClient, cleanup, err := newEtcdClient()
+	cfg, err := config.GetEtcdConfigWithContext(contextName)
+	if err != nil {
+		return wrapNotConnectedError(err)
+	}
+
+	etcdClient, cleanup, err := newEtcdClient(cfg)
 	if err != nil {
 		return err
 	}

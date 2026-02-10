@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/kazuma-desu/etu/pkg/client"
+	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
 	"github.com/kazuma-desu/etu/pkg/output"
 )
@@ -68,7 +69,12 @@ func runLs(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	etcdClient, cleanup, err := newEtcdClient()
+	cfg, err := config.GetEtcdConfigWithContext(contextName)
+	if err != nil {
+		return wrapNotConnectedError(err)
+	}
+
+	etcdClient, cleanup, err := newEtcdClient(cfg)
 	if err != nil {
 		return err
 	}
