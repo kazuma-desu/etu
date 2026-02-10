@@ -194,7 +194,7 @@ func runLoginInteractive() error {
 func runLoginAutomated() error {
 	ctxName := strings.TrimSpace(loginContextName)
 	if ctxName == "" {
-		return fmt.Errorf("--context-name is required")
+		return fmt.Errorf("✗ --context-name is required")
 	}
 
 	if err := validateContextNameFormat(ctxName); err != nil {
@@ -203,12 +203,12 @@ func runLoginAutomated() error {
 
 	cfg, err := config.LoadConfig()
 	if err == nil && cfg.Contexts[ctxName] != nil {
-		return fmt.Errorf("context '%s' already exists", ctxName)
+		return fmt.Errorf("✗ context '%s' already exists", ctxName)
 	}
 
 	endpoints := loginEndpoints
 	if len(endpoints) == 0 {
-		return fmt.Errorf("--endpoints is required")
+		return fmt.Errorf("✗ --endpoints is required")
 	}
 
 	// Normalize endpoints: trim whitespace and filter out empty strings
@@ -221,7 +221,7 @@ func runLoginAutomated() error {
 	}
 
 	if len(endpointsNormalized) == 0 {
-		return fmt.Errorf("--endpoints cannot be empty")
+		return fmt.Errorf("✗ --endpoints cannot be empty")
 	}
 
 	for _, ep := range endpointsNormalized {
@@ -238,7 +238,7 @@ func runLoginAutomated() error {
 	// Handle password-stdin (skip if --no-auth is set)
 	if loginPasswordStdin && !loginNoAuth {
 		if loginPassword != "" {
-			return fmt.Errorf("--password and --password-stdin are mutually exclusive")
+			return fmt.Errorf("✗ --password and --password-stdin are mutually exclusive")
 		}
 		stdinPassword, err := readPasswordFromStdin()
 		if err != nil {
@@ -250,7 +250,14 @@ func runLoginAutomated() error {
 	if !loginNoTest {
 		output.Info("Testing connection...")
 		if !testConnectionQuiet(endpointsNormalized, username, password, loginCACert, loginCert, loginKey, loginInsecureSkipTLSVerify) {
-			return fmt.Errorf("connection failed - use --no-test to skip")
+			return fmt.Errorf(`✗ connection failed
+
+Troubleshooting:
+  1. Check that etcd is running and accessible
+  2. Verify endpoints are correct (e.g., http://localhost:2379)
+  3. Check credentials if authentication is enabled
+  4. For TLS issues, verify certificates are correct
+  5. Use --no-test to skip connection test`)
 		}
 	}
 
@@ -339,16 +346,16 @@ func testConnectionQuiet(endpoints []string, username, password, caCert, cert, k
 func validateContextNameFormat(s string) error {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return fmt.Errorf("enter a context name")
+		return fmt.Errorf("✗ enter a context name")
 	}
 	if len(s) < 2 {
-		return fmt.Errorf("at least 2 characters")
+		return fmt.Errorf("✗ at least 2 characters")
 	}
 	if len(s) > 63 {
-		return fmt.Errorf("max 63 characters")
+		return fmt.Errorf("✗ max 63 characters")
 	}
 	if strings.Contains(s, " ") {
-		return fmt.Errorf("spaces not allowed, use dashes")
+		return fmt.Errorf("✗ spaces not allowed, use dashes")
 	}
 	for _, r := range s {
 		isLower := r >= 'a' && r <= 'z'
@@ -356,7 +363,7 @@ func validateContextNameFormat(s string) error {
 		isDigit := r >= '0' && r <= '9'
 		isSpecial := r == '-' || r == '_'
 		if !isLower && !isUpper && !isDigit && !isSpecial {
-			return fmt.Errorf("invalid character '%c' — use letters, numbers, dash, underscore", r)
+			return fmt.Errorf("✗ invalid character '%c' — use letters, numbers, dash, underscore", r)
 		}
 	}
 	return nil
@@ -368,7 +375,7 @@ func validateContextName(s string) error {
 	}
 	cfg, err := config.LoadConfig()
 	if err == nil && cfg.Contexts[strings.TrimSpace(s)] != nil {
-		return fmt.Errorf("context '%s' already exists", strings.TrimSpace(s))
+		return fmt.Errorf("✗ context '%s' already exists", strings.TrimSpace(s))
 	}
 	return nil
 }
@@ -376,20 +383,20 @@ func validateContextName(s string) error {
 func validateEndpointFormat(endpoint string) error {
 	endpoint = strings.TrimSpace(endpoint)
 	if endpoint == "" {
-		return fmt.Errorf("empty endpoint")
+		return fmt.Errorf("✗ empty endpoint")
 	}
 
 	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
-		return fmt.Errorf("'%s' — must start with http:// or https://", truncate(endpoint, 20))
+		return fmt.Errorf("'%s' — must start with http:// or https://", output.Truncate(endpoint, 20))
 	}
 
 	parsed, err := url.Parse(endpoint)
 	if err != nil {
-		return fmt.Errorf("'%s' — invalid URL", truncate(endpoint, 20))
+		return fmt.Errorf("'%s' — invalid URL", output.Truncate(endpoint, 20))
 	}
 
 	if parsed.Host == "" {
-		return fmt.Errorf("'%s' — missing hostname", truncate(endpoint, 20))
+		return fmt.Errorf("'%s' — missing hostname", output.Truncate(endpoint, 20))
 	}
 
 	return nil
@@ -398,7 +405,7 @@ func validateEndpointFormat(endpoint string) error {
 func validateEndpoints(s string) error {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return fmt.Errorf("enter at least one endpoint")
+		return fmt.Errorf("✗ enter at least one endpoint")
 	}
 
 	validCount := 0
@@ -416,17 +423,10 @@ func validateEndpoints(s string) error {
 	}
 
 	if validCount == 0 {
-		return fmt.Errorf("enter at least one endpoint")
+		return fmt.Errorf("✗ enter at least one endpoint")
 	}
 
 	return nil
-}
-
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
 }
 
 func parseEndpoints(s string) []string {

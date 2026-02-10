@@ -58,8 +58,8 @@ func runDelete(_ *cobra.Command, args []string) error {
 
 	key := args[0]
 
-	if !strings.HasPrefix(key, "/") {
-		return fmt.Errorf("key must start with '/': %s", key)
+	if err := validateKeyPrefix(key); err != nil {
+		return err
 	}
 
 	if deleteOpts.prefix {

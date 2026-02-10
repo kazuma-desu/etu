@@ -68,7 +68,7 @@ func runConvert(_ *cobra.Command, _ []string) error {
 	}
 
 	if filePath == "" {
-		return fmt.Errorf("input file required: use -f <file> or pipe data to stdin")
+		return fmt.Errorf("✗ input file required: use -f <file> or pipe data to stdin")
 	}
 
 	pairs, err := parseConfigFile(ctx, filePath, models.FormatType(convertOpts.Format), appCfg)

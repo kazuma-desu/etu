@@ -32,28 +32,6 @@ func resetGetOpts() {
 	getOpts.showMetadata = false
 }
 
-func TestTruncateValue(t *testing.T) {
-	tests := []struct {
-		name     string
-		value    string
-		maxLen   int
-		expected string
-	}{
-		{"short string", "hello", 10, "hello"},
-		{"exact length", "hello", 5, "hello"},
-		{"truncate", "hello world", 8, "hello..."},
-		{"newlines", "hello\nworld", 20, "hello world"},
-		{"tabs", "hello\tworld", 20, "hello world"},
-		{"very short maxLen", "hello world", 3, "..."},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, truncateValue(tt.value, tt.maxLen))
-		})
-	}
-}
-
 func TestPrintSimple(t *testing.T) {
 	t.Cleanup(resetGetOpts)
 	resetGetOpts()
@@ -213,50 +191,6 @@ func TestPrintTable(t *testing.T) {
 		assert.Contains(t, output, "VALUE")
 		assert.Contains(t, output, "CREATE_REV")
 		assert.Contains(t, output, "MOD_REV")
-	})
-}
-
-func TestPrintFields(t *testing.T) {
-	t.Cleanup(resetGetOpts)
-	resetGetOpts()
-	resp := &client.GetResponse{
-		Kvs: []*client.KeyValue{
-			{
-				Key:            "key1",
-				Value:          "val1",
-				CreateRevision: 10,
-				ModRevision:    20,
-				Version:        2,
-				Lease:          123,
-			},
-		},
-		Count: 1,
-	}
-
-	t.Run("default fields", func(t *testing.T) {
-		getOpts.keysOnly = false
-		output, err := testutil.CaptureStdout(func() error {
-			printFields(resp)
-			return nil
-		})
-		require.NoError(t, err)
-		assert.Contains(t, output, "key1")
-		assert.Contains(t, output, "val1")
-		assert.Contains(t, output, "CreateRevision: 10")
-		assert.Contains(t, output, "ModRevision: 20")
-		assert.Contains(t, output, "Version: 2")
-		assert.Contains(t, output, "Lease: 123")
-	})
-
-	t.Run("keys only", func(t *testing.T) {
-		getOpts.keysOnly = true
-		output, err := testutil.CaptureStdout(func() error {
-			printFields(resp)
-			return nil
-		})
-		require.NoError(t, err)
-		assert.Contains(t, output, "key1")
-		assert.NotContains(t, output, "val1")
 	})
 }
 

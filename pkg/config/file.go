@@ -55,10 +55,21 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// If config doesn't exist, return empty config
-	if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
+	info, statErr := os.Stat(configPath)
+	if os.IsNotExist(statErr) {
 		return &Config{
 			Contexts: make(map[string]*ContextConfig),
 		}, nil
+	}
+	if statErr != nil {
+		return nil, fmt.Errorf("failed to stat config file %s: %w", configPath, statErr)
+	}
+
+	// Check file permissions - warn if too open
+	mode := info.Mode().Perm()
+	if mode&0077 != 0 {
+		fmt.Fprintf(os.Stderr, "Warning: Config file %s has permissions %o. Consider changing to 0600 for better security.\n",
+			configPath, mode)
 	}
 
 	data, err := os.ReadFile(configPath)
@@ -124,7 +135,7 @@ func GetCurrentContext() (*ContextConfig, string, error) {
 
 	ctxConfig, exists := cfg.Contexts[cfg.CurrentContext]
 	if !exists {
-		return nil, "", fmt.Errorf("current context %q not found in config", cfg.CurrentContext)
+		return nil, "", fmt.Errorf("current context %q not found", cfg.CurrentContext)
 	}
 
 	return ctxConfig, cfg.CurrentContext, nil

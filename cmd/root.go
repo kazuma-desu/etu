@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/kazuma-desu/etu/pkg/config"
 	"github.com/kazuma-desu/etu/pkg/logger"
@@ -31,7 +32,16 @@ var (
 	rootCmd = &cobra.Command{
 		Use:   "etu",
 		Short: "Etcd Terminal Utility - kubectl-like CLI for etcd",
-		Long:  `A CLI tool for managing etcd configurations with kubectl-like UX.`,
+		Long: `A CLI tool for managing etcd configurations with kubectl-like UX.
+
+Exit Codes:
+  0  Success
+  1  General error
+  2  Validation error (invalid input, missing arguments)
+  3  Connection error (failed to connect to etcd)
+  4  Key not found
+
+Use 'etu options' to see all available global flags.`,
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			configureLogging()
 		},
@@ -64,14 +74,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&globalPasswordStdin, "password-stdin", false,
 		"read password from stdin (mutually exclusive with --password)")
 
-	// Hide auth/TLS flags from main help - use 'etu options' to see them
-	_ = rootCmd.PersistentFlags().MarkHidden("cacert")
-	_ = rootCmd.PersistentFlags().MarkHidden("cert")
-	_ = rootCmd.PersistentFlags().MarkHidden("key")
-	_ = rootCmd.PersistentFlags().MarkHidden("insecure-skip-tls-verify")
-	_ = rootCmd.PersistentFlags().MarkHidden("username")
-	_ = rootCmd.PersistentFlags().MarkHidden("password")
-	_ = rootCmd.PersistentFlags().MarkHidden("password-stdin")
+	// Hide all global flags from main help - use 'etu options' to see them
+	hideAllGlobalFlags()
 }
 
 // Execute runs the root command
@@ -105,4 +109,19 @@ func formatNames() []string {
 		names[i] = f.String()
 	}
 	return names
+}
+
+// hideAllGlobalFlags hides most persistent flags from the main help output.
+// Commonly-used flags like --output and --context are kept visible for discoverability.
+// Use 'etu options' to see all available global flags.
+func hideAllGlobalFlags() {
+	visibleFlags := map[string]bool{
+		"output":  true,
+		"context": true,
+	}
+	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+		if !visibleFlags[f.Name] {
+			_ = rootCmd.PersistentFlags().MarkHidden(f.Name)
+		}
+	})
 }

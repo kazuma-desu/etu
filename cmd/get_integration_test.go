@@ -207,6 +207,14 @@ func TestGetCommand_Integration(t *testing.T) {
 		require.Contains(t, err.Error(), "key not found")
 	})
 
+	t.Run("Get with invalid key without slash prefix", func(t *testing.T) {
+		resetGetFlags()
+
+		err := runGet(getCmd, []string{"invalid-key"})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "key must start with '/'")
+	})
+
 	t.Run("Get with sort order", func(t *testing.T) {
 		resetGetFlags()
 		getOpts.prefix = true

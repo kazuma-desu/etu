@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -92,9 +91,24 @@ func init() {
 }
 
 func runGet(_ *cobra.Command, args []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatYAML.String(),
+		output.FormatTable.String(),
+		output.FormatTree.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	ctx, cancel := getOperationContext()
 	defer cancel()
 	key := args[0]
+
+	if err := validateKeyPrefix(key); err != nil {
+		return err
+	}
 
 	// Handle range_end if provided
 	if len(args) > 1 {
@@ -145,7 +159,7 @@ func runGet(_ *cobra.Command, args []string) error {
 			logger.Log.Debug("No keys found")
 			return nil
 		}
-		return fmt.Errorf("key not found: %s", key)
+		return fmt.Errorf("✗ key not found: %s\n\nHint: Check the key path or use 'etu ls' to list available keys", key)
 	}
 
 	// Output results based on format
@@ -161,11 +175,9 @@ func runGet(_ *cobra.Command, args []string) error {
 		return printTable(resp)
 	case output.FormatTree.String():
 		return printTree(resp)
-	case output.FormatFields.String():
-		printFields(resp)
-		return nil
 	default:
-		return fmt.Errorf("invalid output format: %s (use simple, json, yaml, table, tree, or fields)", outputFormat)
+		// Safety net: should never reach here due to validateOutputFormat check above
+		return fmt.Errorf("invalid output format: %s (use simple, json, yaml, table, or tree)", outputFormat)
 	}
 }
 
@@ -280,7 +292,7 @@ func printTable(resp *client.GetResponse) error {
 		headers = []string{"KEY", "VALUE", "CREATE_REV", "MOD_REV", "VERSION", "LEASE"}
 		rows = make([][]string, len(resp.Kvs))
 		for i, kv := range resp.Kvs {
-			value := truncateValue(kv.Value, 30)
+			value := output.Truncate(kv.Value, 30)
 			rows[i] = []string{
 				kv.Key,
 				value,
@@ -294,7 +306,7 @@ func printTable(resp *client.GetResponse) error {
 		headers = []string{"KEY", "VALUE"}
 		rows = make([][]string, len(resp.Kvs))
 		for i, kv := range resp.Kvs {
-			value := truncateValue(kv.Value, 50)
+			value := output.Truncate(kv.Value, 50)
 			rows[i] = []string{kv.Key, value}
 		}
 	}
@@ -306,25 +318,6 @@ func printTable(resp *client.GetResponse) error {
 
 	fmt.Println(table)
 	return nil
-}
-
-func printFields(resp *client.GetResponse) {
-	for _, kv := range resp.Kvs {
-		meta := [][2]string{
-			{"CreateRevision", fmt.Sprintf("%d", kv.CreateRevision)},
-			{"ModRevision", fmt.Sprintf("%d", kv.ModRevision)},
-			{"Version", fmt.Sprintf("%d", kv.Version)},
-		}
-		if kv.Lease > 0 {
-			meta = append(meta, [2]string{"Lease", fmt.Sprintf("%d", kv.Lease)})
-		}
-
-		value := kv.Value
-		if getOpts.keysOnly {
-			value = ""
-		}
-		output.KeyValueWithMetadata(kv.Key, value, meta)
-	}
 }
 
 func printTree(resp *client.GetResponse) error {
@@ -344,15 +337,4 @@ func printTree(resp *client.GetResponse) error {
 	}
 
 	return output.PrintTree(pairs)
-}
-
-func truncateValue(value string, maxLen int) string {
-	// Replace newlines with space for table display
-	value = strings.ReplaceAll(value, "\n", " ")
-	value = strings.ReplaceAll(value, "\t", " ")
-
-	if len(value) <= maxLen {
-		return value
-	}
-	return value[:maxLen-3] + "..."
 }

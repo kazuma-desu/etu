@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/lipgloss"
+	"gopkg.in/yaml.v3"
 )
 
 // DiffStatus represents the status of a key in the diff
@@ -43,10 +44,12 @@ func PrintDiffResult(result *DiffResult, format string, showUnchanged bool) erro
 		return printDiffSimple(result, showUnchanged)
 	case FormatJSON.String():
 		return printDiffJSON(result, showUnchanged)
+	case FormatYAML.String():
+		return printDiffYAML(result, showUnchanged)
 	case FormatTable.String():
 		return printDiffTable(result, showUnchanged)
 	default:
-		return fmt.Errorf("unsupported format: %s (use simple, json, or table)", format)
+		return fmt.Errorf("unsupported format: %s (use simple, json, yaml, or table)", format)
 	}
 }
 
@@ -200,6 +203,62 @@ func printDiffJSON(result *DiffResult, showUnchanged bool) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(output)
+}
+
+func printDiffYAML(result *DiffResult, showUnchanged bool) error {
+	type yamlEntry struct {
+		Key      string `yaml:"key"`
+		Status   string `yaml:"status"`
+		OldValue string `yaml:"old_value,omitempty"`
+		NewValue string `yaml:"new_value,omitempty"`
+	}
+
+	type yamlOutput struct {
+		Entries   []yamlEntry `yaml:"entries"`
+		Added     int         `yaml:"added"`
+		Modified  int         `yaml:"modified"`
+		Deleted   int         `yaml:"deleted"`
+		Unchanged int         `yaml:"unchanged,omitempty"`
+	}
+
+	entries := make([]yamlEntry, 0)
+	if showUnchanged {
+		for _, e := range result.Entries {
+			entries = append(entries, yamlEntry{
+				Key:      e.Key,
+				Status:   string(e.Status),
+				OldValue: e.OldValue,
+				NewValue: e.NewValue,
+			})
+		}
+	} else {
+		for _, e := range result.Entries {
+			if e.Status != DiffStatusUnchanged {
+				entries = append(entries, yamlEntry{
+					Key:      e.Key,
+					Status:   string(e.Status),
+					OldValue: e.OldValue,
+					NewValue: e.NewValue,
+				})
+			}
+		}
+	}
+
+	output := yamlOutput{
+		Added:     result.Added,
+		Modified:  result.Modified,
+		Deleted:   result.Deleted,
+		Unchanged: result.Unchanged,
+		Entries:   entries,
+	}
+
+	data, err := yaml.Marshal(output)
+	if err != nil {
+		return fmt.Errorf("failed to marshal diff to YAML: %w", err)
+	}
+
+	_, err = os.Stdout.Write(data)
+	return err
 }
 
 // printDiffTable prints diff as a table

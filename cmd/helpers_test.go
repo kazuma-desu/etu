@@ -4,9 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kazuma-desu/etu/pkg/client"
 	"github.com/kazuma-desu/etu/pkg/config"
@@ -288,38 +292,46 @@ func TestIsQuietOutput(t *testing.T) {
 	}
 }
 
-func TestNormalizeOutputFormat(t *testing.T) {
+func TestValidateOutputFormat(t *testing.T) {
 	tests := []struct {
 		supportedFormats []string
 		name             string
 		format           string
-		want             string
 		wantErr          bool
 	}{
 		{
-			name:             "valid format passes through",
+			name:             "valid format json",
 			format:           "json",
 			supportedFormats: []string{"simple", "json", "table"},
-			want:             "json",
 			wantErr:          false,
 		},
 		{
-			name:             "tree with tree support",
+			name:             "valid format simple",
+			format:           "simple",
+			supportedFormats: []string{"simple", "json", "table"},
+			wantErr:          false,
+		},
+		{
+			name:             "valid format tree when supported",
 			format:           "tree",
 			supportedFormats: []string{"simple", "json", "table", "tree"},
-			want:             "tree",
 			wantErr:          false,
 		},
 		{
-			name:             "tree without tree support falls back to table",
+			name:             "invalid format tree when not supported",
 			format:           "tree",
 			supportedFormats: []string{"simple", "json", "table"},
-			want:             "table",
-			wantErr:          false,
+			wantErr:          true,
 		},
 		{
-			name:             "invalid format errors",
-			format:           "invalid",
+			name:             "invalid format fields",
+			format:           "fields",
+			supportedFormats: []string{"simple", "json", "table"},
+			wantErr:          true,
+		},
+		{
+			name:             "invalid format xml",
+			format:           "xml",
 			supportedFormats: []string{"simple", "json", "table"},
 			wantErr:          true,
 		},
@@ -331,19 +343,15 @@ func TestNormalizeOutputFormat(t *testing.T) {
 			defer func() { outputFormat = original }()
 
 			outputFormat = tt.format
-			got, err := normalizeOutputFormat(tt.supportedFormats)
+			err := validateOutputFormat(tt.supportedFormats)
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("normalizeOutputFormat() error = nil, want error")
+					t.Errorf("validateOutputFormat() error = nil, want error")
 				}
 				return
 			}
 			if err != nil {
-				t.Errorf("normalizeOutputFormat() error = %v, want nil", err)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("normalizeOutputFormat() = %v, want %v", got, tt.want)
+				t.Errorf("validateOutputFormat() error = %v, want nil", err)
 			}
 		})
 	}
@@ -631,4 +639,75 @@ func BenchmarkWrapContextError(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = wrapContextError(errs[i%len(errs)])
 	}
+}
+
+func TestValidateKeyPrefix(t *testing.T) {
+	tests := []struct {
+		name    string
+		key     string
+		wantErr bool
+	}{
+		{
+			name:    "valid key with slash",
+			key:     "/app/config",
+			wantErr: false,
+		},
+		{
+			name:    "invalid key without slash",
+			key:     "app/config",
+			wantErr: true,
+		},
+		{
+			name:    "root key",
+			key:     "/",
+			wantErr: false,
+		},
+		{
+			name:    "empty key",
+			key:     "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateKeyPrefix(tt.key)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "key must start with '/'")
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestStdinToTempFile(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		// Create a pipe to simulate stdin
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		defer r.Close()
+
+		// Write test data
+		go func() {
+			defer w.Close()
+			w.WriteString("test content")
+		}()
+
+		// Redirect stdin
+		oldStdin := os.Stdin
+		os.Stdin = r
+		defer func() { os.Stdin = oldStdin }()
+
+		// Call function
+		path, err := stdinToTempFile()
+		require.NoError(t, err)
+		defer os.Remove(path)
+
+		// Verify file exists and has content
+		content, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.Equal(t, "test content", string(content))
+	})
 }

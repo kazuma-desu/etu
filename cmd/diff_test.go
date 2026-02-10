@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kazuma-desu/etu/pkg/models"
 )
 
 func TestFormatValue(t *testing.T) {
@@ -46,7 +49,7 @@ func TestFormatValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := formatValue(tt.input)
+			got := models.FormatValue(tt.input)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
@@ -60,8 +63,24 @@ func TestDiffFullFlagRequiresPrefix(t *testing.T) {
 	diffOpts.Full = true
 	diffOpts.Prefix = ""
 
-	err := runDiff(nil, nil)
+	err := runDiff(diffCmd, nil)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "--full requires --prefix")
+}
+
+func TestDiffDeprecatedFormatFlag(t *testing.T) {
+	originalOpts := diffOpts
+	defer func() { diffOpts = originalOpts }()
+
+	diffOpts.FilePath = "test.txt"
+	diffOpts.Format = "simple"
+	diffOpts.DeprecatedFormat = "json"
+
+	var stderr strings.Builder
+	diffCmd.SetErr(&stderr)
+
+	_ = runDiff(diffCmd, nil)
+
+	assert.Contains(t, stderr.String(), "deprecated")
 }

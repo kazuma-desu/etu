@@ -349,7 +349,6 @@ func TestFormatConstants(t *testing.T) {
 	assert.Equal(t, Format("yaml"), FormatYAML)
 	assert.Equal(t, Format("table"), FormatTable)
 	assert.Equal(t, Format("tree"), FormatTree)
-	assert.Equal(t, Format("fields"), FormatFields)
 }
 
 // TestFormatIsValid validates format detection.
@@ -363,7 +362,6 @@ func TestFormatIsValid(t *testing.T) {
 		{FormatYAML, true},
 		{FormatTable, true},
 		{FormatTree, true},
-		{FormatFields, true},
 		{Format("invalid"), false},
 		{Format(""), false},
 	}
@@ -387,7 +385,6 @@ func TestParseFormat(t *testing.T) {
 		{"yaml", false, FormatYAML},
 		{"table", false, FormatTable},
 		{"tree", false, FormatTree},
-		{"fields", false, FormatFields},
 		{"invalid", true, ""},
 		{"", true, ""},
 	}
@@ -416,13 +413,12 @@ func BenchmarkParseFormat(b *testing.B) {
 func TestAllFormats(t *testing.T) {
 	formats := AllFormats()
 
-	assert.Len(t, formats, 6)
+	assert.Len(t, formats, 5)
 	assert.Contains(t, formats, FormatSimple)
 	assert.Contains(t, formats, FormatJSON)
 	assert.Contains(t, formats, FormatYAML)
 	assert.Contains(t, formats, FormatTable)
 	assert.Contains(t, formats, FormatTree)
-	assert.Contains(t, formats, FormatFields)
 
 	// Verify it's a copy by modifying the returned slice
 	originalLen := len(formats)

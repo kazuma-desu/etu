@@ -1,8 +1,10 @@
 package config
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -527,4 +529,83 @@ func TestGetEtcdConfigWithContext_EmptyEndpoints(t *testing.T) {
 	_, err = GetEtcdConfigWithContext("empty")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no etcd endpoints configured")
+}
+
+func TestLoadConfig_PermissionWarning(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	configPath := filepath.Join(tmpDir, ".config", "etu", "config.yaml")
+	err := os.MkdirAll(filepath.Dir(configPath), 0700)
+	require.NoError(t, err)
+
+	configContent := `current-context: dev
+contexts:
+  dev:
+    endpoints:
+      - http://localhost:2379
+`
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	// Capture stderr to verify warning is emitted
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	cfg, err := LoadConfig()
+
+	w.Close()
+	os.Stderr = oldStderr
+
+	var buf strings.Builder
+	io.Copy(&buf, r)
+	captured := buf.String()
+
+	require.NoError(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, "dev", cfg.CurrentContext)
+	assert.Contains(t, captured, "Warning: Config file")
+	assert.Contains(t, captured, "has permissions 644")
+}
+
+func TestLoadConfig_CorrectPermissions_NoWarning(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	configPath := filepath.Join(tmpDir, ".config", "etu", "config.yaml")
+	err := os.MkdirAll(filepath.Dir(configPath), 0700)
+	require.NoError(t, err)
+
+	configContent := `current-context: prod
+contexts:
+  prod:
+    endpoints:
+      - http://prod:2379
+`
+	err = os.WriteFile(configPath, []byte(configContent), 0600)
+	require.NoError(t, err)
+
+	// Capture stderr to verify no warning is emitted
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	cfg, err := LoadConfig()
+
+	w.Close()
+	os.Stderr = oldStderr
+
+	var buf strings.Builder
+	io.Copy(&buf, r)
+	captured := buf.String()
+
+	require.NoError(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, "prod", cfg.CurrentContext)
+	assert.NotContains(t, captured, "Warning: Config file")
 }

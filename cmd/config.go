@@ -73,6 +73,16 @@ func init() {
 }
 
 func runGetContexts(_ *cobra.Command, _ []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatYAML.String(),
+		output.FormatTable.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		return fmt.Errorf(errFailedToLoadConfiguration, err)
@@ -83,18 +93,6 @@ func runGetContexts(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	// Normalize format (tree not supported for config get-contexts)
-	supportedFormats := []string{
-		output.FormatSimple.String(),
-		output.FormatJSON.String(),
-		output.FormatTable.String(),
-	}
-	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
-	if err != nil {
-		return fmt.Errorf("invalid output format: %w", err)
-	}
-
-	// Convert config contexts to output view types
 	contextViews := make(map[string]*output.ContextView, len(cfg.Contexts))
 	for name, ctx := range cfg.Contexts {
 		contextViews[name] = &output.ContextView{
@@ -103,8 +101,7 @@ func runGetContexts(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	// Print contexts in requested format
-	if err := output.PrintContextsWithFormat(contextViews, cfg.CurrentContext, normalizedFormat); err != nil {
+	if err := output.PrintContextsWithFormat(contextViews, cfg.CurrentContext, outputFormat); err != nil {
 		return fmt.Errorf("failed to print contexts: %w", err)
 	}
 
@@ -162,14 +159,14 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 		// Validate log level
 		validLevels := []string{"debug", "info", "warn", "error"}
 		if !slices.Contains(validLevels, value) {
-			return fmt.Errorf("invalid log level %s, valid: debug, info, warn, error", value)
+			return fmt.Errorf("✗ invalid log level %s, valid: debug, info, warn, error", value)
 		}
 		cfg.LogLevel = value
 	case "default-format":
 		// Validate format
-		validFormats := []string{"auto", "etcdctl"}
+		validFormats := []string{"auto", "etcdctl", "yaml", "json"}
 		if !slices.Contains(validFormats, value) {
-			return fmt.Errorf("invalid format %s, valid: auto, etcdctl", value)
+			return fmt.Errorf("✗ invalid format %s, valid: auto, etcdctl, yaml, json", value)
 		}
 		cfg.DefaultFormat = value
 	case "strict":
@@ -180,7 +177,7 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 		case "false":
 			cfg.Strict = false
 		default:
-			return fmt.Errorf("invalid boolean value %s, valid: true, false", value)
+			return fmt.Errorf("✗ invalid boolean value %s, valid: true, false", value)
 		}
 	case "no-validate":
 		// Parse boolean
@@ -190,10 +187,10 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 		case "false":
 			cfg.NoValidate = false
 		default:
-			return fmt.Errorf("invalid boolean value %s, valid: true, false", value)
+			return fmt.Errorf("✗ invalid boolean value %s, valid: true, false", value)
 		}
 	default:
-		return fmt.Errorf("unknown configuration key: %s", key)
+		return fmt.Errorf("✗ unknown configuration key: %s", key)
 	}
 
 	if err := config.SaveConfig(cfg); err != nil {
@@ -205,23 +202,21 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 }
 
 func runViewConfig(_ *cobra.Command, _ []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatYAML.String(),
+		output.FormatTable.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		return fmt.Errorf(errFailedToLoadConfiguration, err)
 	}
 
-	// Normalize format (tree not supported for config view)
-	supportedFormats := []string{
-		output.FormatSimple.String(),
-		output.FormatJSON.String(),
-		output.FormatTable.String(),
-	}
-	normalizedFormat, err := output.NormalizeFormat(outputFormat, supportedFormats)
-	if err != nil {
-		return fmt.Errorf("invalid output format: %w", err)
-	}
-
-	// Convert config contexts to output view types
 	contextViews := make(map[string]*output.ContextView, len(cfg.Contexts))
 	for name, ctx := range cfg.Contexts {
 		contextViews[name] = &output.ContextView{
@@ -230,7 +225,6 @@ func runViewConfig(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	// Convert config to output view type
 	configView := &output.ConfigView{
 		CurrentContext: cfg.CurrentContext,
 		LogLevel:       cfg.LogLevel,
@@ -240,8 +234,7 @@ func runViewConfig(_ *cobra.Command, _ []string) error {
 		Contexts:       contextViews,
 	}
 
-	// Print config in requested format
-	if err := output.PrintConfigViewWithFormat(configView, normalizedFormat); err != nil {
+	if err := output.PrintConfigViewWithFormat(configView, outputFormat); err != nil {
 		return fmt.Errorf("failed to print configuration: %w", err)
 	}
 

@@ -112,10 +112,10 @@ func wrapContextError(err error) error {
 		return nil
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
-		return fmt.Errorf("operation timed out after %v: consider increasing --timeout", operationTimeout)
+		return fmt.Errorf("✗ operation timed out after %v: consider increasing --timeout", operationTimeout)
 	}
 	if errors.Is(err, context.Canceled) {
-		return fmt.Errorf("operation canceled by user")
+		return fmt.Errorf("✗ operation canceled by user")
 	}
 	return err
 }
@@ -123,7 +123,7 @@ func wrapContextError(err error) error {
 func newEtcdClient() (client.EtcdClient, func(), error) {
 	cfg, err := config.GetEtcdConfigWithContext(contextName)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get etcd config: %w", err)
+		return nil, nil, fmt.Errorf("failed to get etcd config: %w\n\nHint: Use 'etu login' to create a context or 'etu config use-context' to select one", err)
 	}
 
 	if overrideErr := applyGlobalOverrides(cfg); overrideErr != nil {
@@ -132,7 +132,7 @@ func newEtcdClient() (client.EtcdClient, func(), error) {
 
 	etcdClient, err := client.NewClient(cfg)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create etcd client: %w", err)
+		return nil, nil, fmt.Errorf("failed to create etcd client: %w\n\nTroubleshooting:\n  1. Check that etcd is running\n  2. Verify endpoints are correct\n  3. Check network connectivity\n  4. For TLS issues, verify certificates", err)
 	}
 
 	cleanup := func() {
@@ -157,7 +157,7 @@ func applyGlobalOverrides(cfg *client.Config) error {
 	}
 
 	if globalPassword != "" && globalPasswordStdin {
-		return fmt.Errorf("--password and --password-stdin are mutually exclusive")
+		return fmt.Errorf("✗ --password and --password-stdin are mutually exclusive")
 	}
 
 	if globalPasswordStdin {
@@ -207,23 +207,9 @@ func newEtcdClientOrDryRun(dryRun bool) (client.EtcdClient, func(), error) {
 	return newEtcdClient()
 }
 
-func normalizeOutputFormat(supportedFormats []string) (string, error) {
-	return output.NormalizeFormat(outputFormat, supportedFormats)
+func validateOutputFormat(allowedFormats []string) error {
+	return output.ValidateFormat(outputFormat, allowedFormats)
 }
-
-var (
-	formatsWithoutTree = []string{
-		output.FormatSimple.String(),
-		output.FormatJSON.String(),
-		output.FormatTable.String(),
-	}
-	formatsWithTree = []string{
-		output.FormatSimple.String(),
-		output.FormatJSON.String(),
-		output.FormatTable.String(),
-		output.FormatTree.String(),
-	}
-)
 
 func isQuietOutput() bool {
 	// Check global output format (used by most commands)
@@ -271,4 +257,30 @@ func resolveNoValidateOption(flagValue, flagChanged bool, appCfg *config.Config)
 		return appCfg.NoValidate
 	}
 	return false
+}
+
+func validateKeyPrefix(key string) error {
+	if !strings.HasPrefix(key, "/") {
+		return fmt.Errorf("✗ key must start with '/': %s", key)
+	}
+	return nil
+}
+
+func stdinToTempFile() (string, error) {
+	tmpFile, err := os.CreateTemp("", "etu-stdin-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+
+	if _, err := io.Copy(tmpFile, os.Stdin); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("failed to write stdin to temp file: %w", err)
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("failed to close temp file: %w", err)
+	}
+	return tmpFile.Name(), nil
 }

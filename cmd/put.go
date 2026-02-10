@@ -58,8 +58,8 @@ func runPut(_ *cobra.Command, args []string) error {
 
 	key := args[0]
 
-	if !strings.HasPrefix(key, "/") {
-		return fmt.Errorf("key must start with '/': %s", key)
+	if err := validateKeyPrefix(key); err != nil {
+		return err
 	}
 
 	value, err := resolveValue(args, os.Stdin)
@@ -87,7 +87,7 @@ func runPut(_ *cobra.Command, args []string) error {
 	}
 
 	if putOpts.dryRun {
-		output.Info(fmt.Sprintf("Would put: %s = %s", key, truncateForDisplay(value, 50)))
+		output.Info(fmt.Sprintf("Would put: %s = %s", key, output.Truncate(value, 50)))
 	} else {
 		output.Success(fmt.Sprintf("Put: %s", key))
 	}
@@ -106,7 +106,7 @@ func readValueFromStdin(stdin io.Reader) (string, error) {
 	if f, ok := stdin.(*os.File); ok {
 		stat, err := f.Stat()
 		if err == nil && (stat.Mode()&os.ModeCharDevice) != 0 {
-			return "", fmt.Errorf("no value provided: use 'etu put <key> <value>' or pipe value via stdin")
+			return "", fmt.Errorf("✗ no value provided: use 'etu put <key> <value>' or pipe value via stdin")
 		}
 	}
 
@@ -125,7 +125,7 @@ func readValueFromStdin(stdin io.Reader) (string, error) {
 
 	value := builder.String()
 	if value == "" {
-		return "", fmt.Errorf("empty value received from stdin")
+		return "", fmt.Errorf("✗ empty value received from stdin")
 	}
 
 	return value, nil
@@ -143,23 +143,8 @@ func validateKeyValue(key, value string) error {
 				errMsgs = append(errMsgs, issue.Message)
 			}
 		}
-		return fmt.Errorf("validation failed: %s", strings.Join(errMsgs, "; "))
+		return fmt.Errorf("✗ validation failed: %s", strings.Join(errMsgs, "; "))
 	}
 
 	return nil
-}
-
-func truncateForDisplay(s string, maxLen int) string {
-	if maxLen <= 0 {
-		return ""
-	}
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	runes := []rune(s)
-	if len(runes) <= maxLen {
-		return s
-	}
-	if maxLen <= 3 {
-		return string(runes[:maxLen])
-	}
-	return string(runes[:maxLen-3]) + "..."
 }

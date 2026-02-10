@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -21,6 +22,10 @@ var (
 		Example: `  # Apply configuration
   etu apply -f config.txt
 
+  # Apply from stdin
+  cat config.yaml | etu apply -f -
+  etu apply -f - < config.yaml
+
   # Preview changes without applying
   etu apply -f config.txt --dry-run
 
@@ -37,7 +42,7 @@ func init() {
 	rootCmd.AddCommand(applyCmd)
 
 	applyCmd.Flags().StringVarP(&applyOpts.FilePath, "file", "f", "",
-		"path to configuration file (required)")
+		"path to configuration file or '-' for stdin (required)")
 	applyCmd.Flags().StringVar((*string)(&applyOpts.Format), "format", "",
 		"file format: auto, etcdctl (overrides config)")
 	applyCmd.Flags().BoolVar(&applyOpts.DryRun, "dry-run", false,
@@ -55,6 +60,15 @@ func init() {
 }
 
 func runApply(cmd *cobra.Command, _ []string) error {
+	allowedFormats := []string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatTable.String(),
+	}
+	if err := validateOutputFormat(allowedFormats); err != nil {
+		return err
+	}
+
 	ctx, cancel := getOperationContext()
 	defer cancel()
 
@@ -62,7 +76,17 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	noValidate := resolveNoValidateOption(applyOpts.NoValidate, cmd.Flags().Changed("no-validate"), appCfg)
 	strict := resolveStrictOption(applyOpts.Strict, cmd.Flags().Changed("strict"), appCfg)
 
-	pairs, err := parseConfigFile(ctx, applyOpts.FilePath, applyOpts.Format, appCfg)
+	filePath := applyOpts.FilePath
+	if filePath == "-" {
+		tmpPath, err := stdinToTempFile()
+		if err != nil {
+			return err
+		}
+		defer os.Remove(tmpPath)
+		filePath = tmpPath
+	}
+
+	pairs, err := parseConfigFile(ctx, filePath, applyOpts.Format, appCfg)
 	if err != nil {
 		return err
 	}
@@ -82,17 +106,12 @@ func runApply(cmd *cobra.Command, _ []string) error {
 			if !isQuietOutput() {
 				output.Error("Validation failed - not applying to etcd")
 			}
-			return fmt.Errorf("validation failed")
+			return fmt.Errorf("✗ validation failed")
 		}
 
 		if !isQuietOutput() {
 			output.Success("Validation passed")
 		}
-	}
-
-	normalizedFormat, err := normalizeOutputFormat(formatsWithoutTree)
-	if err != nil {
-		return err
 	}
 
 	etcdClient, cleanup, err := newEtcdClientOrDryRun(applyOpts.DryRun)
@@ -104,7 +123,7 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	logVerboseInfo(fmt.Sprintf("Applying %d items to etcd", len(pairs)))
 
 	var onProgress client.ProgressFunc
-	if normalizedFormat == output.FormatSimple.String() && !applyOpts.DryRun {
+	if outputFormat == output.FormatSimple.String() && !applyOpts.DryRun {
 		onProgress = func(current, total int, key string) {
 			output.PrintApplyProgress(current, total, key)
 		}
@@ -120,7 +139,6 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	}
 
 	if recorder, ok := etcdClient.(client.OperationRecorder); ok {
-		// Convert client operations to output view type
 		ops := recorder.Operations()
 		viewOps := make([]output.DryRunOperation, len(ops))
 		for i, op := range ops {
@@ -130,8 +148,8 @@ func runApply(cmd *cobra.Command, _ []string) error {
 				Value: op.Value,
 			}
 		}
-		return output.PrintDryRunOperations(viewOps, normalizedFormat)
+		return output.PrintDryRunOperations(viewOps, outputFormat)
 	}
 
-	return output.PrintApplyResultsWithFormat(pairs, normalizedFormat, applyOpts.DryRun)
+	return output.PrintApplyResultsWithFormat(pairs, outputFormat, applyOpts.DryRun)
 }

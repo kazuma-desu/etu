@@ -102,7 +102,9 @@ etu config delete-context <context>
 ### Key Operations
 
 ```bash
-etu get <key> [--prefix] [--keys-only]    # Get keys
+etu ls <prefix>                           # List keys under prefix
+etu ls /app -o json                       # List keys in JSON format
+etu get <key> [--prefix] [--keys-only]    # Get keys with values
 etu put <key> <value> [--dry-run]         # Put key-value
 etu put <key> - < file.txt                # Put from stdin
 etu delete <key> [--prefix] [--force]     # Delete keys
@@ -115,6 +117,22 @@ etu edit <key>                            # Edit in $EDITOR
 etu apply -f <file> [--dry-run] [--strict]   # Apply to etcd
 etu diff -f <file> [--prefix <p>] [--full]   # Compare with etcd
 ```
+
+### Cluster Management
+
+```bash
+etu status                                # Show cluster health and status
+etu status -o json                        # Show status in JSON format
+etu status -o yaml                        # Show status in YAML format
+```
+
+The `status` command displays:
+- Endpoint connectivity and health
+- Server version
+- Database size
+- Leader information
+- Raft index and term
+- Any cluster errors
 
 ### Settings
 
@@ -151,10 +169,12 @@ contexts:
 
 ### Global Flags
 
-Use `etu options` to see all global flags. Common flags visible in `--help`:
+Global flags are hidden from command help for clarity. Use `etu options` to see all available global flags.
+
+Common global flags include:
 
 - `--context <name>`: Use specific context
-- `--output <format>`: Output format (simple, json, table, tree)
+- `-o, --output <format>`: Output format (simple, json, yaml, table, tree)
 - `--timeout <duration>`: Timeout for operations (default: 30s)
 - `--log-level <level>`: Set log level (debug, info, warn, error)
 
@@ -302,6 +322,35 @@ etu completion powershell | Out-String | Invoke-Expression
 
 # Add to profile for persistence
 etu completion powershell >> $PROFILE
+```
+
+## Exit Codes
+
+etu uses standard exit codes for automation and scripting:
+
+| Code | Meaning | Description |
+|------|---------|-------------|
+| 0 | Success | Command executed successfully |
+| 1 | General error | An unexpected error occurred |
+| 2 | Validation error | Invalid input, missing arguments, or validation failed |
+| 3 | Connection error | Failed to connect to etcd cluster |
+| 4 | Key not found | The requested key does not exist in etcd |
+
+These codes can be used in shell scripts for error handling:
+
+```bash
+etu get /config/app/host
+exit_code=$?
+
+if [ $exit_code -eq 4 ]; then
+    echo "Key not found, using default"
+    host="localhost"
+elif [ $exit_code -eq 0 ]; then
+    echo "Key retrieved successfully"
+else
+    echo "Error occurred (exit code: $exit_code)"
+    exit $exit_code
+fi
 ```
 
 ## Roadmap
