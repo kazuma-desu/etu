@@ -64,7 +64,7 @@ jobs:
           args: --timeout=5m --output.checkstyle.path=golangci-lint-report.xml
 
       - name: Upload lint report
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: lint-report
@@ -133,7 +133,7 @@ jobs:
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -v -o etu-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} .
 
       - name: Upload artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: etu-${{ matrix.goos }}-${{ matrix.goarch }}
           path: etu-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
