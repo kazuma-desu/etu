@@ -353,6 +353,77 @@ else
 fi
 ```
 
+## Troubleshooting
+
+### Common Issues
+
+#### Connection Refused
+
+**Problem**: `Error: connection refused`
+
+**Solutions**:
+- Verify etcd is running: `etcdctl endpoint health`
+- Check endpoints URL (http vs https)
+- Verify firewall rules allow connection
+- For TLS: ensure certificates are valid and not expired
+
+#### Key Not Found
+
+**Problem**: `Error: key not found`
+
+**Solutions**:
+- Use `etu ls <prefix>` to list available keys
+- Check if you're using the correct context
+- Verify the key path starts with `/`
+- Use `--prefix` flag for prefix matching
+
+#### Permission Denied
+
+**Problem**: `Error: permission denied`
+
+**Solutions**:
+- Check credentials with `etu config current-context`
+- Verify etcd user has required permissions
+- For auth-enabled clusters, ensure you're authenticated
+
+#### Config File Issues
+
+**Problem**: Warnings about config file permissions
+
+**Solution**:
+```bash
+chmod 600 ~/.config/etu/config.yaml
+```
+
+#### Context Not Found
+
+**Problem**: `Error: context "xyz" not found`
+
+**Solutions**:
+- List available contexts: `etu config get-contexts`
+- Set current context: `etu config use-context <name>`
+- Add new context: `etu login --context-name <name> ...`
+
+### Debug Mode
+
+Enable debug logging to see detailed information:
+
+```bash
+etu --log-level debug get /key
+```
+
+Or set globally:
+
+```bash
+etu config set log-level debug
+```
+
+### Getting Help
+
+- Check [GitHub Issues](https://github.com/kazuma-desu/etu/issues)
+- Review [Documentation](https://github.com/kazuma-desu/etu/blob/main/README.md)
+- Start a [Discussion](https://github.com/kazuma-desu/etu/discussions)
+
 ## Roadmap
 
 - Additional parsers (Helm, TOML)
