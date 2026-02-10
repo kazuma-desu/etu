@@ -47,21 +47,9 @@ func runEdit(_ *cobra.Command, args []string) error {
 	}
 
 	// Determine editor
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		editor = os.Getenv("VISUAL")
-	}
-	if editor == "" {
-		// Fallback to common editors
-		for _, fallback := range []string{"vi", "vim", "nano", "emacs"} {
-			if _, lookupErr := exec.LookPath(fallback); lookupErr == nil {
-				editor = fallback
-				break
-			}
-		}
-	}
-	if editor == "" {
-		return fmt.Errorf("✗ no editor found: set $EDITOR or $VISUAL environment variable")
+	editor, err := resolveEditor()
+	if err != nil {
+		return err
 	}
 
 	// Create temporary file
@@ -128,4 +116,26 @@ func runEdit(_ *cobra.Command, args []string) error {
 	output.Success(fmt.Sprintf("Updated %s", key))
 
 	return nil
+}
+
+// resolveEditor determines the editor to use from environment variables
+// or fallback to common editors available in PATH.
+func resolveEditor() (string, error) {
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		editor = os.Getenv("VISUAL")
+	}
+	if editor == "" {
+		// Fallback to common editors
+		for _, fallback := range []string{"vi", "vim", "nano", "emacs"} {
+			if _, lookupErr := exec.LookPath(fallback); lookupErr == nil {
+				editor = fallback
+				break
+			}
+		}
+	}
+	if editor == "" {
+		return "", fmt.Errorf("✗ no editor found: set $EDITOR or $VISUAL environment variable")
+	}
+	return editor, nil
 }
