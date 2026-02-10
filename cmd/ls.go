@@ -105,12 +105,16 @@ func printLsSimple(resp *client.GetResponse) {
 	}
 }
 
-func printLsJSON(resp *client.GetResponse) error {
+func extractKeys(resp *client.GetResponse) []string {
 	keys := make([]string, len(resp.Kvs))
 	for i, kv := range resp.Kvs {
 		keys[i] = kv.Key
 	}
+	return keys
+}
 
+func printLsJSON(resp *client.GetResponse) error {
+	keys := extractKeys(resp)
 	data := map[string]any{
 		"keys":  keys,
 		"count": resp.Count,
@@ -125,11 +129,7 @@ func printLsJSON(resp *client.GetResponse) error {
 }
 
 func printLsYAML(resp *client.GetResponse) error {
-	keys := make([]string, len(resp.Kvs))
-	for i, kv := range resp.Kvs {
-		keys[i] = kv.Key
-	}
-
+	keys := extractKeys(resp)
 	data := map[string]any{
 		"keys":  keys,
 		"count": resp.Count,

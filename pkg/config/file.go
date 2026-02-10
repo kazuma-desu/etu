@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v3"
@@ -137,7 +135,7 @@ func GetCurrentContext() (*ContextConfig, string, error) {
 
 	ctxConfig, exists := cfg.Contexts[cfg.CurrentContext]
 	if !exists {
-		return nil, "", fmt.Errorf("current context %q not found in config\n\nHint: Run 'etu config get-contexts' to see available contexts", cfg.CurrentContext)
+		return nil, "", fmt.Errorf("current context %q not found", cfg.CurrentContext)
 	}
 
 	return ctxConfig, cfg.CurrentContext, nil
@@ -167,8 +165,7 @@ func DeleteContext(name string) error {
 	}
 
 	if _, exists := cfg.Contexts[name]; !exists {
-		availableContexts := getAvailableContextNames(cfg)
-		return fmt.Errorf("context %q not found\n\nAvailable contexts: %s\n\nHint: Run 'etu config get-contexts' to see all configured contexts", name, availableContexts)
+		return fmt.Errorf("context %q not found", name)
 	}
 
 	delete(cfg.Contexts, name)
@@ -194,22 +191,9 @@ func UseContext(name string) error {
 	}
 
 	if _, exists := cfg.Contexts[name]; !exists {
-		availableContexts := getAvailableContextNames(cfg)
-		return fmt.Errorf("context %q not found\n\nAvailable contexts: %s\n\nHint: Run 'etu config get-contexts' to see all configured contexts", name, availableContexts)
+		return fmt.Errorf("context %q not found", name)
 	}
 
 	cfg.CurrentContext = name
 	return SaveConfig(cfg)
-}
-
-func getAvailableContextNames(cfg *Config) string {
-	if len(cfg.Contexts) == 0 {
-		return "(none)"
-	}
-	names := make([]string, 0, len(cfg.Contexts))
-	for name := range cfg.Contexts {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return strings.Join(names, ", ")
 }

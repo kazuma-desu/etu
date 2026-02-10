@@ -76,6 +76,7 @@ func runGetContexts(_ *cobra.Command, _ []string) error {
 	allowedFormats := []string{
 		output.FormatSimple.String(),
 		output.FormatJSON.String(),
+		output.FormatYAML.String(),
 		output.FormatTable.String(),
 	}
 	if err := validateOutputFormat(allowedFormats); err != nil {

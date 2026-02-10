@@ -137,9 +137,7 @@ func printStatusSimple(endpoints []string, statuses map[string]*client.StatusRes
 	return nil
 }
 
-func printStatusJSON(endpoints []string, statuses map[string]*client.StatusResponse, firstError error) error {
-	output := make(map[string]any)
-
+func buildStatusData(endpoints []string, statuses map[string]*client.StatusResponse, firstError error) map[string]any {
 	endpointList := make([]map[string]any, 0, len(endpoints))
 	for _, endpoint := range endpoints {
 		status := statuses[endpoint]
@@ -162,56 +160,11 @@ func printStatusJSON(endpoints []string, statuses map[string]*client.StatusRespo
 		endpointList = append(endpointList, endpointInfo)
 	}
 
-	output["endpoints"] = endpointList
-
 	healthyCount := 0
 	for _, endpoint := range endpoints {
 		if statuses[endpoint] != nil {
 			healthyCount++
 		}
-	}
-	output["summary"] = map[string]int{
-		"healthy":   healthyCount,
-		"unhealthy": len(endpoints) - healthyCount,
-		"total":     len(endpoints),
-	}
-
-	if firstError != nil {
-		output["warning"] = "some endpoints are unreachable"
-	}
-
-	jsonBytes, err := json.MarshalIndent(output, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal JSON: %w", err)
-	}
-	fmt.Println(string(jsonBytes))
-	return nil
-}
-
-func printStatusYAML(endpoints []string, statuses map[string]*client.StatusResponse, firstError error) error {
-	endpointList := make([]any, 0, len(endpoints))
-	healthyCount := 0
-
-	for _, endpoint := range endpoints {
-		status := statuses[endpoint]
-		info := map[string]any{
-			"endpoint": endpoint,
-			"healthy":  status != nil,
-		}
-		if status != nil {
-			healthyCount++
-			info["version"] = status.Version
-			info["dbSize"] = status.DbSize
-			info["leader"] = status.Leader
-			info["raftIndex"] = status.RaftIndex
-			info["raftTerm"] = status.RaftTerm
-			info["raftAppliedIndex"] = status.RaftAppliedIndex
-			info["isLearner"] = status.IsLearner
-			if len(status.Errors) > 0 {
-				info["errors"] = status.Errors
-			}
-		}
-		endpointList = append(endpointList, info)
 	}
 
 	result := map[string]any{
@@ -227,7 +180,22 @@ func printStatusYAML(endpoints []string, statuses map[string]*client.StatusRespo
 		result["warning"] = "some endpoints are unreachable"
 	}
 
-	yamlBytes, err := output.SerializeYAML(result)
+	return result
+}
+
+func printStatusJSON(endpoints []string, statuses map[string]*client.StatusResponse, firstError error) error {
+	data := buildStatusData(endpoints, statuses, firstError)
+	jsonBytes, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+	fmt.Println(string(jsonBytes))
+	return nil
+}
+
+func printStatusYAML(endpoints []string, statuses map[string]*client.StatusResponse, firstError error) error {
+	data := buildStatusData(endpoints, statuses, firstError)
+	yamlBytes, err := output.SerializeYAML(data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal YAML: %w", err)
 	}

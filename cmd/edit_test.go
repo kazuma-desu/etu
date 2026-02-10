@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -285,8 +284,12 @@ func TestRunEdit_KeyValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isValid := len(tt.key) > 0 && tt.key[0] == '/'
-			assert.Equal(t, tt.isValid, isValid)
+			err := validateKeyPrefix(tt.key)
+			if tt.isValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
 		})
 	}
 }
@@ -329,23 +332,4 @@ func TestMockClient_Reset(t *testing.T) {
 func TestEditCommand_Lookup(t *testing.T) {
 	assert.NotNil(t, editCmd)
 	assert.True(t, strings.HasPrefix(editCmd.Use, "edit"))
-}
-
-func TestEditFormatValue(t *testing.T) {
-	tests := []struct {
-		input    any
-		expected string
-	}{
-		{"string", "string"},
-		{42, "42"},
-		{true, "true"},
-		{3.14, "3.14"},
-	}
-
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%v", tt.input), func(t *testing.T) {
-			result := fmt.Sprintf("%v", tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
 }
