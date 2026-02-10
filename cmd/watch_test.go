@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -71,7 +70,11 @@ func TestPrintWatchEvent_SimpleFormat(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.Contains(t, captured, tt.want)
+				if tt.want == "" {
+					assert.Empty(t, strings.TrimSpace(captured))
+				} else {
+					assert.Contains(t, captured, tt.want)
+				}
 				// Simple format should NOT include metadata
 				assert.NotContains(t, captured, "PUT")
 				assert.NotContains(t, captured, "DELETE")
@@ -97,15 +100,15 @@ func TestPrintWatchEvent_JSONFormat(t *testing.T) {
 		Revision: 42,
 	}
 
-	output, err := testutil.CaptureStdout(func() error {
+	capturedOutput, err := testutil.CaptureStdout(func() error {
 		return printWatchEvent(event)
 	})
 	require.NoError(t, err)
 
-	assert.Contains(t, output, `"Type":"PUT"`)
-	assert.Contains(t, output, `"Key":"/app/config"`)
-	assert.Contains(t, output, `"Value":"test-value"`)
-	assert.Contains(t, output, `"Revision":42`)
+	assert.Contains(t, capturedOutput, `"Type":"PUT"`)
+	assert.Contains(t, capturedOutput, `"Key":"/app/config"`)
+	assert.Contains(t, capturedOutput, `"Value":"test-value"`)
+	assert.Contains(t, capturedOutput, `"Revision":42`)
 }
 
 func TestRunWatch_InvalidRevision(t *testing.T) {
@@ -133,25 +136,6 @@ func TestRunWatch_NotConnected(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
-func TestRunWatch_WithContextCancelled(t *testing.T) {
-	t.Cleanup(resetWatchOpts)
-	resetWatchOpts()
-
-	mock := client.NewMockClient()
-	mock.WatchFunc = func(_ context.Context, _ string, _ *client.WatchOptions) client.WatchChan {
-		ch := make(chan client.WatchResponse)
-		close(ch)
-		return ch
-	}
-
-	origContextName := contextName
-	defer func() { contextName = origContextName }()
-
-	contextName = "nonexistent"
-	err := runWatch(nil, []string{"/test/key"})
-	require.Error(t, err)
-}
-
 func TestRunWatch_MockClient(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping mock client test in short mode")
@@ -160,22 +144,7 @@ func TestRunWatch_MockClient(t *testing.T) {
 	t.Cleanup(resetWatchOpts)
 	resetWatchOpts()
 
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yaml")
-
-	configContent := `current-context: test-context
-contexts:
-  test-context:
-    endpoints:
-      - http://localhost:2379
-`
-	err := os.WriteFile(configPath, []byte(configContent), 0600)
-	require.NoError(t, err)
-
-	t.Setenv("ETUCONFIG", configPath)
-
 	mock := client.NewMockClient()
-	eventCount := 0
 	mock.WatchFunc = func(ctx context.Context, _ string, _ *client.WatchOptions) client.WatchChan {
 		ch := make(chan client.WatchResponse)
 		go func() {
@@ -194,7 +163,6 @@ contexts:
 						},
 					},
 				}:
-					eventCount++
 					time.Sleep(10 * time.Millisecond)
 				}
 			}
@@ -211,7 +179,7 @@ contexts:
 		eventCountFromMock++
 	}
 
-	assert.GreaterOrEqual(t, eventCountFromMock, 0, "Mock should have returned events")
+	assert.Greater(t, eventCountFromMock, 0, "Mock should have returned events")
 }
 
 func TestWatchOpts_Reset(t *testing.T) {
@@ -267,11 +235,14 @@ func TestRunWatch_WatchError(t *testing.T) {
 	defer cancel()
 
 	ch := mock.Watch(ctx, "/test", nil)
+	seenErr := false
 	for resp := range ch {
 		if resp.Err != nil {
+			seenErr = true
 			assert.Contains(t, resp.Err.Error(), "watch failed")
 		}
 	}
+	assert.True(t, seenErr, "Expected to receive an error response")
 }
 
 func TestRunWatch_CompactRevision(t *testing.T) {
@@ -299,14 +270,19 @@ func TestRunWatch_CompactRevision(t *testing.T) {
 	defer cancel()
 
 	ch := mock.Watch(ctx, "/test", nil)
+	sawCompact := false
+	var observedRevision int64
 	for resp := range ch {
 		if resp.CompactRevision > 0 {
-			assert.Equal(t, int64(50), resp.CompactRevision)
+			sawCompact = true
+			observedRevision = resp.CompactRevision
 		}
 	}
+	assert.True(t, sawCompact, "Expected to receive a compact revision response")
+	assert.Equal(t, int64(50), observedRevision)
 }
 
-func TestPrintWatchEvent_JSONMarshalError(t *testing.T) {
+func TestPrintWatchEvent_JSONBasic(t *testing.T) {
 	if runtime.GOOS == "js" {
 		t.Skip("Skipping on JS/WASM platform")
 	}

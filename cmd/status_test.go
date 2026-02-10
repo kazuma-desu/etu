@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -276,15 +278,30 @@ func TestRunStatus_NotConnected(t *testing.T) {
 func TestRunStatus_InvalidOutputFormat(t *testing.T) {
 	origFormat := outputFormat
 	origContextName := contextName
+	origConfig := os.Getenv("ETUCONFIG")
 	defer func() {
 		outputFormat = origFormat
 		contextName = origContextName
+		os.Setenv("ETUCONFIG", origConfig)
 	}()
 
-	outputFormat = "invalid"
-	contextName = ""
+	// Create a temp config with a valid context so runStatus reaches format validation
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	configContent := `current-context: test-context
+contexts:
+  test-context:
+    endpoints:
+      - http://localhost:2379
+`
+	err := os.WriteFile(configPath, []byte(configContent), 0600)
+	require.NoError(t, err)
 
-	err := runStatus(nil, nil)
+	os.Setenv("ETUCONFIG", configPath)
+	outputFormat = "invalid"
+	contextName = "test-context"
+
+	err = runStatus(nil, nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid output format")
+	assert.Contains(t, err.Error(), "invalid format")
 }

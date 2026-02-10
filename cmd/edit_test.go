@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -99,7 +100,7 @@ contexts:
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 100)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	value, err := mock.Get(ctx, "/test/key")
@@ -124,7 +125,7 @@ func TestRunEdit_GetError(t *testing.T) {
 		return "", errors.New("key not found")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 100)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	_, err := mock.Get(ctx, "/test/key")
@@ -142,7 +143,7 @@ func TestRunEdit_PutError(t *testing.T) {
 		return errors.New("put failed")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 100)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	err := mock.Put(ctx, "/test/key", "value")
@@ -296,7 +297,7 @@ func TestMockClient_GetRecording(t *testing.T) {
 		return "test-value", nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 100)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	value, err := mock.Get(ctx, "/test/key")
@@ -310,7 +311,7 @@ func TestMockClient_GetRecording(t *testing.T) {
 func TestMockClient_Reset(t *testing.T) {
 	mock := client.NewMockClient()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 100)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	mock.Get(ctx, "/test")
