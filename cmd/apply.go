@@ -115,9 +115,13 @@ func runApply(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	cfg, err := config.GetEtcdConfigWithContext(contextName)
-	if err != nil {
-		return fmt.Errorf("✗ not connected: %w\n\nUse 'etu login' to configure a context", err)
+	var cfg *client.Config
+	if !applyOpts.DryRun {
+		var cfgErr error
+		cfg, cfgErr = config.GetEtcdConfigWithContext(contextName)
+		if cfgErr != nil {
+			return wrapNotConnectedError(cfgErr)
+		}
 	}
 
 	etcdClient, cleanup, err := newEtcdClientOrDryRun(applyOpts.DryRun, cfg)

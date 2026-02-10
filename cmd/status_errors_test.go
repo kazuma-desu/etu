@@ -12,7 +12,7 @@ import (
 	"github.com/kazuma-desu/etu/pkg/testutil"
 )
 
-func TestPrintStatusJSON_Error(t *testing.T) {
+func TestPrintStatusJSON_Success(t *testing.T) {
 	endpoints := []string{"http://localhost:2379"}
 	statuses := map[string]*client.StatusResponse{
 		"http://localhost:2379": {
@@ -33,7 +33,7 @@ func TestPrintStatusJSON_Error(t *testing.T) {
 	assert.Contains(t, result, "summary")
 }
 
-func TestPrintStatusYAML_Error(t *testing.T) {
+func TestPrintStatusYAML_Success(t *testing.T) {
 	endpoints := []string{"http://localhost:2379"}
 	statuses := map[string]*client.StatusResponse{
 		"http://localhost:2379": {

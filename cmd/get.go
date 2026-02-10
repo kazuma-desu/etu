@@ -119,7 +119,7 @@ func runGet(_ *cobra.Command, args []string) error {
 	// Connect to etcd
 	cfg, err := config.GetEtcdConfigWithContext(contextName)
 	if err != nil {
-		return fmt.Errorf("✗ not connected: %w\n\nUse 'etu login' to configure a context", err)
+		return wrapNotConnectedError(err)
 	}
 
 	etcdClient, cleanup, err := newEtcdClient(cfg)
