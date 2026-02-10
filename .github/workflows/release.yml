@@ -138,7 +138,7 @@ jobs:
       - name: Create checksums file
         run: |
           cd artifacts
-          sha256sum *.tar.gz *.zip > checksums.txt 2>/dev/null || true
+          sha256sum ./*.tar.gz ./*.zip > checksums.txt 2>/dev/null || true
 
       - name: Create Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
