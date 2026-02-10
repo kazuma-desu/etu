@@ -111,12 +111,17 @@ func formatNames() []string {
 	return names
 }
 
-// hideAllGlobalFlags hides all persistent flags from the main help output.
-// This blanket approach hides every persistent flag, including any added later.
-// If a subcommand needs a visible persistent flag, this function would need
-// to be modified to use an allowlist/denylist approach.
+// hideAllGlobalFlags hides most persistent flags from the main help output.
+// Commonly-used flags like --output and --context are kept visible for discoverability.
+// Use 'etu options' to see all available global flags.
 func hideAllGlobalFlags() {
+	visibleFlags := map[string]bool{
+		"output":  true,
+		"context": true,
+	}
 	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
-		_ = rootCmd.PersistentFlags().MarkHidden(f.Name)
+		if !visibleFlags[f.Name] {
+			_ = rootCmd.PersistentFlags().MarkHidden(f.Name)
+		}
 	})
 }

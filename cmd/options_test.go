@@ -50,11 +50,23 @@ func TestOptionsCommand_HiddenFromMainHelp(t *testing.T) {
 }
 
 func TestOptionsCommand_GlobalFlagsHidden(t *testing.T) {
-	hiddenFlags := []string{"context", "output", "timeout", "log-level"}
+	// Commonly-used flags like --context and --output are kept visible for discoverability
+	hiddenFlags := []string{"timeout", "log-level"}
 
 	for _, flagName := range hiddenFlags {
 		flag := rootCmd.PersistentFlags().Lookup(flagName)
 		assert.NotNil(t, flag, "flag %s should exist", flagName)
 		assert.True(t, flag.Hidden, "flag %s should be hidden", flagName)
+	}
+}
+
+func TestOptionsCommand_CommonFlagsVisible(t *testing.T) {
+	// --context and --output are kept visible since they appear in nearly every command's examples
+	visibleFlags := []string{"context", "output"}
+
+	for _, flagName := range visibleFlags {
+		flag := rootCmd.PersistentFlags().Lookup(flagName)
+		assert.NotNil(t, flag, "flag %s should exist", flagName)
+		assert.False(t, flag.Hidden, "flag %s should be visible", flagName)
 	}
 }
