@@ -278,6 +278,9 @@ func stdinToTempFile() (string, error) {
 		return "", fmt.Errorf("failed to write stdin to temp file: %w", err)
 	}
 
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("failed to close temp file: %w", err)
+	}
 	return tmpFile.Name(), nil
 }

@@ -59,6 +59,15 @@ func runLs(_ *cobra.Command, args []string) error {
 		return err
 	}
 
+	if err := validateOutputFormat([]string{
+		output.FormatSimple.String(),
+		output.FormatJSON.String(),
+		output.FormatYAML.String(),
+		output.FormatTable.String(),
+	}); err != nil {
+		return err
+	}
+
 	etcdClient, cleanup, err := newEtcdClient()
 	if err != nil {
 		return err
@@ -77,18 +86,17 @@ func runLs(_ *cobra.Command, args []string) error {
 	}
 
 	switch outputFormat {
-	case "simple":
+	case output.FormatSimple.String():
 		printLsSimple(resp)
 		return nil
-	case "json":
+	case output.FormatJSON.String():
 		return printLsJSON(resp)
-	case "yaml":
+	case output.FormatYAML.String():
 		return printLsYAML(resp)
-	case "table":
+	case output.FormatTable.String():
 		return printLsTable(resp)
-	default:
-		return fmt.Errorf("✗ invalid output format: %s (use simple, json, yaml, or table)", outputFormat)
 	}
+	return nil
 }
 
 func printLsSimple(resp *client.GetResponse) {
