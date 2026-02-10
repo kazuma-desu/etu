@@ -61,6 +61,13 @@ We aim to respond to security reports within:
    ```bash
    echo "$ETCD_PASSWORD" | etu put /key value --password-stdin
    ```
+   
+   > **Security Note**: `echo` may expose the password in the process list (`ps`). 
+   > For better security in scripts, use a here-string (Bash):
+   > ```bash
+   > etu put /key value --password-stdin <<< "$ETCD_PASSWORD"
+   > ```
+   > Or ensure the environment variable is injected securely by your CI/CD platform.
 
 3. **Rotate credentials regularly**: Change etcd passwords periodically
 

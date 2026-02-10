@@ -68,8 +68,6 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Sign artifact
-        env:
-          COSIGN_EXPERIMENTAL: 1
         run: |
           ASSET="${ARCHIVE_NAME}.tar.gz"
           [ "${{ matrix.goos }}" = "windows" ] && ASSET="${ARCHIVE_NAME}.zip"
