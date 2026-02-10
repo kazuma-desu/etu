@@ -164,9 +164,9 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 		cfg.LogLevel = value
 	case "default-format":
 		// Validate format
-		validFormats := []string{"auto", "etcdctl"}
+		validFormats := []string{"auto", "etcdctl", "yaml", "json"}
 		if !slices.Contains(validFormats, value) {
-			return fmt.Errorf("✗ invalid format %s, valid: auto, etcdctl", value)
+			return fmt.Errorf("✗ invalid format %s, valid: auto, etcdctl, yaml, json", value)
 		}
 		cfg.DefaultFormat = value
 	case "strict":
