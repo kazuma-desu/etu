@@ -149,6 +149,7 @@ func printStatusSimple(endpoints []string, statuses map[string]*client.StatusRes
 
 func buildStatusData(endpoints []string, statuses map[string]*client.StatusResponse, firstError error) map[string]any {
 	endpointList := make([]map[string]any, 0, len(endpoints))
+	healthyCount := 0
 	for _, endpoint := range endpoints {
 		status := statuses[endpoint]
 		endpointInfo := map[string]any{
@@ -156,6 +157,7 @@ func buildStatusData(endpoints []string, statuses map[string]*client.StatusRespo
 			"healthy":  status != nil,
 		}
 		if status != nil {
+			healthyCount++
 			endpointInfo["version"] = status.Version
 			endpointInfo["dbSize"] = status.DbSize
 			endpointInfo["leader"] = status.Leader
@@ -168,13 +170,6 @@ func buildStatusData(endpoints []string, statuses map[string]*client.StatusRespo
 			}
 		}
 		endpointList = append(endpointList, endpointInfo)
-	}
-
-	healthyCount := 0
-	for _, endpoint := range endpoints {
-		if statuses[endpoint] != nil {
-			healthyCount++
-		}
 	}
 
 	result := map[string]any{
