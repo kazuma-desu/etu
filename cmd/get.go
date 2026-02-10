@@ -176,6 +176,7 @@ func runGet(_ *cobra.Command, args []string) error {
 	case output.FormatTree.String():
 		return printTree(resp)
 	default:
+		// Safety net: should never reach here due to validateOutputFormat check above
 		return fmt.Errorf("invalid output format: %s (use simple, json, yaml, table, or tree)", outputFormat)
 	}
 }

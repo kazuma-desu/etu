@@ -74,15 +74,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&globalPasswordStdin, "password-stdin", false,
 		"read password from stdin (mutually exclusive with --password)")
 
-	// Hide auth/TLS flags from main help - use 'etu options' to see them
-	_ = rootCmd.PersistentFlags().MarkHidden("cacert")
-	_ = rootCmd.PersistentFlags().MarkHidden("cert")
-	_ = rootCmd.PersistentFlags().MarkHidden("key")
-	_ = rootCmd.PersistentFlags().MarkHidden("insecure-skip-tls-verify")
-	_ = rootCmd.PersistentFlags().MarkHidden("username")
-	_ = rootCmd.PersistentFlags().MarkHidden("password")
-	_ = rootCmd.PersistentFlags().MarkHidden("password-stdin")
-
 	// Hide all global flags from main help - use 'etu options' to see them
 	hideAllGlobalFlags()
 }
@@ -120,6 +111,10 @@ func formatNames() []string {
 	return names
 }
 
+// hideAllGlobalFlags hides all persistent flags from the main help output.
+// This blanket approach hides every persistent flag, including any added later.
+// If a subcommand needs a visible persistent flag, this function would need
+// to be modified to use an allowlist/denylist approach.
 func hideAllGlobalFlags() {
 	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
 		_ = rootCmd.PersistentFlags().MarkHidden(f.Name)

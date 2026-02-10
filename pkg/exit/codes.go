@@ -19,8 +19,8 @@ const (
 	KeyNotFound = 4
 )
 
-// CodeDescriptions maps exit codes to their descriptions.
-var CodeDescriptions = map[int]string{
+// codeDescriptions maps exit codes to their descriptions.
+var codeDescriptions = map[int]string{
 	Success:         "Success",
 	GeneralError:    "General error",
 	ValidationError: "Validation error",
@@ -30,7 +30,7 @@ var CodeDescriptions = map[int]string{
 
 // GetDescription returns the description for an exit code.
 func GetDescription(code int) string {
-	if desc, ok := CodeDescriptions[code]; ok {
+	if desc, ok := codeDescriptions[code]; ok {
 		return desc
 	}
 	return "Unknown error"

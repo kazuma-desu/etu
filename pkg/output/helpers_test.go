@@ -134,6 +134,6 @@ func TestTruncate_LongString(t *testing.T) {
 	long := strings.Repeat("a", 100)
 	result := Truncate(long, 50)
 
-	assert.Len(t, result, 50)
+	assert.Equal(t, 50, len([]rune(result)))
 	assert.True(t, strings.HasSuffix(result, "..."))
 }

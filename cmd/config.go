@@ -202,6 +202,7 @@ func runSetConfig(_ *cobra.Command, args []string) error {
 
 func runViewConfig(_ *cobra.Command, _ []string) error {
 	allowedFormats := []string{
+		output.FormatSimple.String(),
 		output.FormatJSON.String(),
 		output.FormatYAML.String(),
 		output.FormatTable.String(),
